@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Support Admin Dashboard</title>
+	<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+	<div class="app-shell">
+		<header class="topbar">
+			<div>
+				<h1>Support Team Dashboard</h1>
+				<p>Track ticket queues, sentiment trends, and recurring issues.</p>
+			</div>
+			<nav>
+				<a href="/">Back to Customer Portal</a>
+			</nav>
+		</header>
+
+		<main class="stack-layout">
+			<section class="stats-grid">
+				<article class="stat-card">
+					<h3>Total Tickets</h3>
+					<p id="totalTickets">0</p>
+				</article>
+				<article class="stat-card">
+					<h3>Open</h3>
+					<p id="openTickets">0</p>
+				</article>
+				<article class="stat-card">
+					<h3>Negative Sentiment</h3>
+					<p id="negativeTickets">0</p>
+				</article>
+			</section>
+
+			<section class="card">
+				<h2>Ticket Queue</h2>
+				<div class="table-wrap">
+					<table>
+						<thead>
+							<tr>
+								<th>Ticket ID</th>
+								<th>Title</th>
+								<th>Category</th>
+								<th>Sentiment</th>
+								<th>Status</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody id="ticketsBody"></tbody>
+					</table>
+				</div>
+				<p id="statusMessage" class="muted"></p>
+			</section>
+
+			<section class="card">
+				<h2>Recurring Issues</h2>
+				<ul id="recurringList" class="recurring-list"></ul>
+			</section>
+		</main>
+	</div>
+
+	<script src="/script.js"></script>
+</body>
+</html>

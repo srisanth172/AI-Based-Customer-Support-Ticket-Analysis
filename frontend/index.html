@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>AI Customer Support</title>
+	<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+	<div class="app-shell">
+		<header class="topbar">
+			<div>
+				<h1>Customer Support Center</h1>
+				<p>Submit tickets and chat with AI support instantly.</p>
+			</div>
+			<nav>
+				<a href="/admin">Open Admin Dashboard</a>
+			</nav>
+		</header>
+
+		<main class="grid-two">
+			<section class="card">
+				<h2>Submit a Ticket</h2>
+				<form id="ticketForm" class="stack-form">
+					<label for="title">Title</label>
+					<input id="title" name="title" type="text" placeholder="Short issue title" required>
+
+					<label for="description">Description</label>
+					<textarea id="description" name="description" rows="5" placeholder="Describe your issue" required></textarea>
+
+					<label for="category">Category</label>
+					<select id="category" name="category" required>
+						<option value="" disabled selected>Select a category</option>
+						<option value="Billing">Billing</option>
+						<option value="Technical">Technical</option>
+						<option value="Account">Account</option>
+						<option value="General">General</option>
+					</select>
+
+					<label for="customerEmail">Email (optional)</label>
+					<input id="customerEmail" name="customerEmail" type="email" placeholder="you@example.com">
+
+					<button id="ticketSubmitButton" type="submit">Submit Ticket</button>
+				</form>
+				<div id="ticketResult" class="message-box" aria-live="polite"></div>
+			</section>
+
+			<section class="card chatbot-card">
+				<h2>AI Chat Assistant</h2>
+				<div id="chatWindow" class="chat-window" aria-live="polite"></div>
+				<form id="chatForm" class="chat-input-row">
+					<input id="chatInput" type="text" placeholder="Ask a support question..." required>
+					<button id="chatSendButton" type="submit">Send</button>
+				</form>
+				<p class="muted">Low-confidence or negative messages are automatically escalated.</p>
+			</section>
+		</main>
+	</div>
+
+	<script src="/script.js"></script>
+	<script src="/chatbot.js"></script>
+</body>
+</html>
