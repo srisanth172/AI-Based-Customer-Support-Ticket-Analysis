@@ -3,62 +3,726 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Support Admin Dashboard</title>
+	<title>Nexus Support | Admin Dashboard</title>
 	<link rel="stylesheet" href="/style.css">
+	<style>
+		:root {
+			--surface-0: #ffffff;
+			--surface-50: #f8faff;
+			--surface-100: #eff4ff;
+			--surface-200: #dce7ff;
+			--border-subtle: #dbe5f2;
+			--border-light: #c4d3f0;
+			--text-primary: #0f172a;
+			--text-secondary: #334155;
+			--text-muted: #64748b;
+			--brand-50: #eef3ff;
+			--brand-100: #dbe6ff;
+			--brand-300: #afc3ff;
+			--brand-500: #4f7cff;
+			--brand-600: #355fdd;
+			--brand-700: #23429c;
+			--red-50: #fef2f2;
+			--red-600: #b91c1c;
+		}
+
+		.admin-shell {
+			display: grid;
+			gap: 18px;
+		}
+
+		.admin-topbar {
+			padding: 16px 20px;
+		}
+
+		.admin-topbar .topbar-title {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		.topbar-badge {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			height: 26px;
+			padding: 0 10px;
+			border-radius: 999px;
+			font-size: 0.72rem;
+			font-weight: 700;
+			color: var(--brand-700);
+			background: var(--brand-100);
+			border: 1px solid var(--brand-300);
+		}
+
+		.admin-wrapper {
+			display: grid;
+			grid-template-columns: 230px 1fr;
+			gap: 16px;
+			align-items: start;
+		}
+
+		.sidebar {
+			padding: 14px;
+			position: sticky;
+			top: 16px;
+		}
+
+		.sidebar-section-label {
+			font-size: 0.68rem;
+			font-weight: 700;
+			color: var(--text-muted);
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+			margin: 8px 6px;
+		}
+
+		.sidebar-link {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			width: 100%;
+			text-align: left;
+			padding: 9px 10px;
+			border-radius: 10px;
+			font-size: 0.84rem;
+			font-weight: 600;
+			color: var(--text-secondary);
+			background: transparent;
+			border: 1px solid transparent;
+			cursor: default;
+			box-shadow: none;
+			transform: none;
+		}
+
+		.sidebar-link.active {
+			background: var(--brand-50);
+			color: var(--brand-700);
+			border-color: var(--brand-100);
+		}
+
+		.sidebar-link .s-badge {
+			margin-left: auto;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			height: 20px;
+			padding: 0 7px;
+			border-radius: 999px;
+			font-size: 0.66rem;
+			font-weight: 700;
+			background: var(--brand-600);
+			color: #ffffff;
+		}
+
+		.sidebar-note {
+			margin-top: 12px;
+			padding-top: 12px;
+			border-top: 1px solid var(--border-subtle);
+			font-size: 0.76rem;
+			line-height: 1.45;
+			color: var(--text-muted);
+		}
+
+		.admin-main {
+			display: grid;
+			gap: 16px;
+		}
+
+		.admin-page-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 12px;
+			flex-wrap: wrap;
+		}
+
+		.admin-page-header h2 {
+			margin: 0;
+			font-size: 1.35rem;
+			font-family: "Sora", "Plus Jakarta Sans", sans-serif;
+			letter-spacing: -0.02em;
+		}
+
+		.page-header-actions {
+			display: flex;
+			gap: 8px;
+			align-items: center;
+		}
+
+		.admin-stats {
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+		}
+
+		.admin-stats .stat-card h3 {
+			font-size: 0.82rem;
+		}
+
+		.analytics-grid {
+			align-items: stretch;
+		}
+
+		.table-card {
+			padding: 0;
+			overflow: hidden;
+		}
+
+		.table-card-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			gap: 12px;
+			padding: 16px 18px;
+			border-bottom: 1px solid var(--border-subtle);
+			flex-wrap: wrap;
+		}
+
+		.table-card-title {
+			margin: 0;
+			font-size: 1rem;
+			font-family: "Sora", "Plus Jakarta Sans", sans-serif;
+		}
+
+		.filter-row {
+			display: flex;
+			gap: 8px;
+			flex-wrap: wrap;
+			align-items: center;
+		}
+
+		.filter-row input,
+		.filter-row select {
+			width: auto;
+			min-width: 128px;
+			padding: 8px 10px;
+			border-radius: 10px;
+			font-size: 0.8rem;
+		}
+
+		.search-wrapper {
+			position: relative;
+		}
+
+		.search-wrapper input {
+			padding-left: 30px;
+			min-width: 220px;
+		}
+
+		.search-icon {
+			position: absolute;
+			left: 10px;
+			top: 50%;
+			transform: translateY(-50%);
+			font-size: 0.78rem;
+			color: var(--text-muted);
+		}
+
+		.table-wrap {
+			margin: 0;
+		}
+
+		#ticketsTable {
+			background: transparent;
+			border-radius: 0;
+		}
+
+		#ticketsTable th {
+			font-size: 0.7rem;
+			letter-spacing: 0.08em;
+			border-bottom: 1px solid var(--border-subtle);
+			padding: 10px 12px;
+			cursor: pointer;
+			white-space: nowrap;
+		}
+
+		#ticketsTable td {
+			padding: 11px 12px;
+		}
+
+		#ticketsTable th.sorted {
+			color: var(--brand-700);
+		}
+
+		.sort-arrow {
+			display: inline-block;
+			margin-left: 3px;
+			opacity: 0.5;
+		}
+
+		#ticketsTable th.sorted .sort-arrow {
+			opacity: 1;
+		}
+
+		.ticket-id-cell {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			padding: 2px 7px;
+			border-radius: 7px;
+			font-family: "Consolas", "Courier New", monospace;
+			font-size: 0.73rem;
+			color: var(--brand-700);
+			background: var(--brand-50);
+			border: 1px solid var(--brand-100);
+		}
+
+		.muted-inline {
+			font-size: 0.74rem;
+			color: var(--text-muted);
+			margin-top: 2px;
+		}
+
+		.sentiment-cell {
+			display: grid;
+			gap: 4px;
+		}
+
+		.sentiment-track {
+			height: 6px;
+			background: var(--surface-100);
+			border-radius: 999px;
+			overflow: hidden;
+		}
+
+		.sentiment-fill {
+			height: 100%;
+			border-radius: 999px;
+		}
+
+		.sentiment-fill.positive {
+			background: #16a34a;
+		}
+
+		.sentiment-fill.neutral {
+			background: #2563eb;
+		}
+
+		.sentiment-fill.negative {
+			background: #dc2626;
+		}
+
+		.td-actions {
+			display: flex;
+			gap: 6px;
+			align-items: center;
+			margin-bottom: 7px;
+		}
+
+		.act-btn {
+			width: auto;
+			padding: 5px 9px;
+			border-radius: 8px;
+			font-size: 0.75rem;
+			font-weight: 700;
+			background: var(--surface-100);
+			color: var(--brand-700);
+			border: 1px solid var(--brand-100);
+			box-shadow: none;
+			transform: none;
+		}
+
+		.act-btn:hover {
+			background: var(--brand-50);
+		}
+
+		.table-card .status-controls {
+			min-width: 200px;
+		}
+
+		.table-card .status-controls select,
+		.table-card .status-controls button {
+			font-size: 0.78rem;
+			padding: 6px 8px;
+		}
+
+		.empty-state {
+			padding: 26px 18px;
+			text-align: center;
+			color: var(--text-muted);
+			border-top: 1px solid var(--border-subtle);
+		}
+
+		.pagination {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			gap: 10px;
+			padding: 12px 18px;
+			border-top: 1px solid var(--border-subtle);
+			font-size: 0.8rem;
+			color: var(--text-muted);
+		}
+
+		.pagination-btns {
+			display: flex;
+			gap: 6px;
+			align-items: center;
+		}
+
+		.pg-btn {
+			width: 30px;
+			height: 30px;
+			border-radius: 8px;
+			border: 1px solid var(--border-light);
+			background: var(--surface-0);
+			color: var(--text-secondary);
+			font-size: 0.76rem;
+			font-weight: 700;
+			cursor: pointer;
+		}
+
+		.pg-btn:hover {
+			background: var(--brand-50);
+			color: var(--brand-700);
+			border-color: var(--brand-300);
+		}
+
+		.pg-btn.active {
+			background: var(--brand-600);
+			border-color: var(--brand-600);
+			color: #ffffff;
+		}
+
+		.modal-overlay {
+			position: fixed;
+			inset: 0;
+			background: rgba(15, 23, 42, 0.48);
+			backdrop-filter: blur(4px);
+			z-index: 200;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 16px;
+		}
+
+		.modal {
+			width: 100%;
+			max-width: 580px;
+			max-height: 84vh;
+			overflow: auto;
+			background: var(--surface-0);
+			border: 1px solid var(--border-subtle);
+			border-radius: 16px;
+			box-shadow: 0 24px 42px rgba(15, 23, 42, 0.22);
+			padding: 18px;
+		}
+
+		.modal-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+			gap: 10px;
+			margin-bottom: 12px;
+		}
+
+		.modal-title {
+			margin: 0;
+			font-size: 1.06rem;
+			font-family: "Sora", "Plus Jakarta Sans", sans-serif;
+		}
+
+		.modal-subtitle {
+			margin: 3px 0 0;
+			font-size: 0.78rem;
+			color: var(--text-muted);
+		}
+
+		.modal-close {
+			width: 32px;
+			height: 32px;
+			border-radius: 50%;
+			font-size: 1rem;
+			padding: 0;
+			background: var(--surface-100);
+			color: var(--text-secondary);
+			border: 1px solid var(--border-subtle);
+			box-shadow: none;
+			transform: none;
+		}
+
+		.modal-grid {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 10px;
+		}
+
+		.modal-field {
+			display: grid;
+			gap: 4px;
+		}
+
+		.modal-label {
+			font-size: 0.68rem;
+			text-transform: uppercase;
+			letter-spacing: 0.06em;
+			font-weight: 700;
+			color: var(--text-muted);
+		}
+
+		.modal-value {
+			font-size: 0.88rem;
+			color: var(--text-primary);
+		}
+
+		.modal-block {
+			margin-top: 10px;
+		}
+
+		.modal-box {
+			margin-top: 4px;
+			padding: 10px;
+			border-radius: 10px;
+			border: 1px solid var(--border-subtle);
+			background: var(--surface-50);
+			font-size: 0.84rem;
+			line-height: 1.5;
+			white-space: pre-wrap;
+		}
+
+		.modal-actions {
+			margin-top: 14px;
+			padding-top: 12px;
+			border-top: 1px solid var(--border-subtle);
+			display: flex;
+			gap: 8px;
+			align-items: center;
+			flex-wrap: wrap;
+		}
+
+		.modal-actions select {
+			max-width: 180px;
+			font-size: 0.82rem;
+		}
+
+		.modal-actions button {
+			width: auto;
+		}
+
+		.status-text {
+			font-size: 0.78rem;
+			color: var(--text-muted);
+			margin: 0 18px 14px;
+		}
+
+		@media (max-width: 1080px) {
+			.admin-wrapper {
+				grid-template-columns: 1fr;
+			}
+
+			.sidebar {
+				position: static;
+			}
+
+			.admin-stats {
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+			}
+		}
+
+		@media (max-width: 760px) {
+			.admin-stats,
+			.modal-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.search-wrapper input {
+				min-width: 190px;
+			}
+		}
+	</style>
 </head>
-<body>
-	<div class="app-shell">
-		<header class="topbar">
-			<div>
-				<h1>Support Team Dashboard</h1>
-				<p>Track ticket queues, sentiment trends, and recurring issues.</p>
-			</div>
-			<nav>
-				<a href="/">Back to Customer Portal</a>
-			</nav>
-		</header>
-
-		<main class="stack-layout">
-			<section class="stats-grid">
-				<article class="stat-card">
-					<h3>Total Tickets</h3>
-					<p id="totalTickets">0</p>
-				</article>
-				<article class="stat-card">
-					<h3>Open</h3>
-					<p id="openTickets">0</p>
-				</article>
-				<article class="stat-card">
-					<h3>Negative Sentiment</h3>
-					<p id="negativeTickets">0</p>
-				</article>
-			</section>
-
-			<section class="card">
-				<h2>Ticket Queue</h2>
-				<div class="table-wrap">
-					<table>
-						<thead>
-							<tr>
-								<th>Ticket ID</th>
-								<th>Title</th>
-								<th>Category</th>
-								<th>Sentiment</th>
-								<th>Status</th>
-								<th>Actions</th>
-							</tr>
-						</thead>
-						<tbody id="ticketsBody"></tbody>
-					</table>
+<body data-page="admin">
+	<div class="page-wrap">
+		<section id="adminView" class="admin-shell">
+			<header class="portal-header admin-topbar">
+				<div>
+					<div class="topbar-title">
+						<h1>Admin Operations Dashboard</h1>
+						<span class="topbar-badge">ADMIN</span>
+					</div>
+					<p id="adminWelcome" class="muted">Monitor queue health, update statuses, and track live sentiment and issue trends.</p>
 				</div>
-				<p id="statusMessage" class="muted"></p>
-			</section>
+				<div class="header-actions">
+					<span class="status-pill open">Role Isolated Access</span>
+					<button id="logoutAdminButton" type="button" class="ghost-button">Logout</button>
+				</div>
+			</header>
 
-			<section class="card">
-				<h2>Recurring Issues</h2>
-				<ul id="recurringList" class="recurring-list"></ul>
-			</section>
-		</main>
+			<div class="admin-wrapper">
+				<aside class="sidebar card-soft">
+					<div class="sidebar-section-label">Main</div>
+					<button type="button" class="sidebar-link active"><span>Dashboard</span></button>
+					<button type="button" class="sidebar-link"><span>All Tickets</span><span class="s-badge" id="sidebarOpenCount">0</span></button>
+
+					<div class="sidebar-section-label">Analytics</div>
+					<button type="button" class="sidebar-link"><span>Reports</span></button>
+					<button type="button" class="sidebar-link"><span>Sentiment</span></button>
+
+					<div class="sidebar-note">
+						Customer and Admin portals are isolated by role validation. Admin navigation excludes customer routes.
+					</div>
+				</aside>
+
+				<main class="admin-main">
+					<div class="admin-page-header">
+						<div>
+							<h2>Support Activity Overview</h2>
+							<p class="muted">Operational view of queue, sentiment, recurring issues, and ticket lifecycle.</p>
+						</div>
+						<div class="page-header-actions">
+							<button id="refreshTicketsButton" type="button" class="ghost-button">Refresh</button>
+							<button id="exportTicketsButton" type="button">Export CSV</button>
+						</div>
+					</div>
+
+					<section class="stats-grid admin-stats">
+						<article class="stat-card">
+							<h3>Total Tickets</h3>
+							<p id="totalTickets">0</p>
+						</article>
+						<article class="stat-card">
+							<h3>Open Tickets</h3>
+							<p id="openTickets">0</p>
+						</article>
+						<article class="stat-card">
+							<h3>Negative Sentiment</h3>
+							<p id="negativeTickets">0</p>
+						</article>
+						<article class="stat-card">
+							<h3>Resolved Tickets</h3>
+							<p id="resolvedTickets">0</p>
+						</article>
+					</section>
+
+					<section class="grid-two analytics-grid">
+						<article class="card-soft">
+							<h2>Sentiment Analytics</h2>
+							<canvas id="sentimentChart" width="450" height="220"></canvas>
+						</article>
+						<article class="card-soft">
+							<h2>Recurring Issues</h2>
+							<ul id="recurringList" class="recurring-list"></ul>
+						</article>
+					</section>
+
+					<section class="card-soft table-card">
+						<div class="table-card-header">
+							<h3 class="table-card-title">Priority Ticket Queue</h3>
+							<div class="filter-row">
+								<div class="search-wrapper">
+									<span class="search-icon">Q</span>
+									<input id="searchInput" type="text" placeholder="Search by ticket, customer, title, or category">
+								</div>
+								<select id="statusFilter">
+									<option value="">All Status</option>
+									<option value="open">Open</option>
+									<option value="in-progress">In Progress</option>
+									<option value="resolved">Resolved</option>
+								</select>
+								<select id="priorityFilter">
+									<option value="">All Priority</option>
+									<option value="high">High</option>
+									<option value="medium">Medium</option>
+									<option value="low">Low</option>
+								</select>
+							</div>
+						</div>
+
+						<div class="table-wrap">
+							<table id="ticketsTable">
+								<thead>
+									<tr>
+										<th data-sort-key="ticket_id">Ticket ID <span class="sort-arrow">v</span></th>
+										<th data-sort-key="customer">Customer <span class="sort-arrow">v</span></th>
+										<th data-sort-key="category">Category <span class="sort-arrow">v</span></th>
+										<th data-sort-key="priority">Priority <span class="sort-arrow">v</span></th>
+										<th data-sort-key="status">Status <span class="sort-arrow">v</span></th>
+										<th data-sort-key="sentiment">Sentiment <span class="sort-arrow">v</span></th>
+										<th data-sort-key="updated_at">Updated <span class="sort-arrow">v</span></th>
+										<th>Actions</th>
+									</tr>
+								</thead>
+								<tbody id="ticketsBody"></tbody>
+							</table>
+						</div>
+
+						<div id="emptyState" class="empty-state hidden">
+							No tickets match your current filters.
+						</div>
+
+						<div id="paginationBar" class="pagination">
+							<span id="paginationInfo">Loading tickets...</span>
+							<div id="paginationBtns" class="pagination-btns"></div>
+						</div>
+
+						<p id="statusMessage" class="status-text"></p>
+					</section>
+				</main>
+			</div>
+		</section>
+	</div>
+
+	<div id="ticketModal" class="modal-overlay hidden">
+		<div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTicketId">
+			<div class="modal-header">
+				<div>
+					<h3 id="modalTicketId" class="modal-title">Ticket Details</h3>
+					<p id="modalSubTitle" class="modal-subtitle"></p>
+				</div>
+				<button id="modalCloseButton" type="button" class="modal-close" aria-label="Close">X</button>
+			</div>
+
+			<div class="modal-grid">
+				<div class="modal-field">
+					<span class="modal-label">Customer</span>
+					<span id="modalCustomer" class="modal-value">-</span>
+				</div>
+				<div class="modal-field">
+					<span class="modal-label">Email</span>
+					<span id="modalEmail" class="modal-value">-</span>
+				</div>
+				<div class="modal-field">
+					<span class="modal-label">Category</span>
+					<span id="modalCategory" class="modal-value">-</span>
+				</div>
+				<div class="modal-field">
+					<span class="modal-label">Priority</span>
+					<span id="modalPriority" class="modal-value">-</span>
+				</div>
+				<div class="modal-field">
+					<span class="modal-label">Status</span>
+					<span id="modalStatus" class="modal-value">-</span>
+				</div>
+				<div class="modal-field">
+					<span class="modal-label">Sentiment</span>
+					<span id="modalSentiment" class="modal-value">-</span>
+				</div>
+			</div>
+
+			<div class="modal-block">
+				<span class="modal-label">Subject</span>
+				<div id="modalSubject" class="modal-box">-</div>
+			</div>
+
+			<div class="modal-block">
+				<span class="modal-label">Description</span>
+				<div id="modalDescription" class="modal-box">-</div>
+			</div>
+
+			<div class="modal-block">
+				<span class="modal-label">Escalation Reason</span>
+				<div id="modalEscalation" class="modal-box">None</div>
+			</div>
+
+			<div class="modal-actions">
+				<select id="modalStatusSelect">
+					<option value="open">Open</option>
+					<option value="in-progress">In Progress</option>
+					<option value="resolved">Resolved</option>
+				</select>
+				<button id="modalUpdateStatusButton" type="button">Update Status</button>
+				<button id="modalCloseButtonSecondary" type="button" class="ghost-button">Close</button>
+			</div>
+		</div>
 	</div>
 
 	<script src="/script.js"></script>

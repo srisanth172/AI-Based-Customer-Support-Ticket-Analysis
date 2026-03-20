@@ -1,19 +1,24 @@
 from collections import Counter
+import json
+from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics.pairwise import cosine_similarity
 from textblob import TextBlob
 
+from config import settings
 from utils import clamp_confidence, preprocess_text
 
 
 SAMPLE_TICKET_DATA = [
     {"text": "payment failed and charged twice", "category": "Billing"},
-    {"text": "unable to login with valid password", "category": "Account"},
+    {"text": "unable to login with valid password", "category": "Technical"},
     {"text": "site is slow and crashes frequently", "category": "Technical"},
     {"text": "need invoice for last month", "category": "Billing"},
-    {"text": "reset password email not received", "category": "Account"},
+    {"text": "reset password email not received", "category": "General"},
     {"text": "api integration returns server error", "category": "Technical"},
     {"text": "want to update plan and pricing", "category": "General"},
     {"text": "how to cancel subscription", "category": "General"},
@@ -57,15 +62,15 @@ def predict_category(text: str) -> tuple[str, float]:
 def analyze_sentiment(text: str) -> str:
     content = (text or "").strip()
     if not content:
-        return "Neutral"
+        return "neutral"
 
     sentiment = TextBlob(content).sentiment
     polarity = float(getattr(sentiment, "polarity", 0.0))
     if polarity > 0.15:
-        return "Positive"
+        return "positive"
     if polarity < -0.15:
-        return "Negative"
-    return "Neutral"
+        return "negative"
+    return "neutral"
 
 
 def find_duplicate_ticket(text: str, historical_texts: list[str], threshold: float = 0.78) -> tuple[bool, int | None, float]:
@@ -104,15 +109,142 @@ def identify_recurring_issues(tickets: list[dict], minimum_count: int = 2) -> li
 
 
 def generate_chat_response(user_message: str) -> tuple[str, float]:
-    content = preprocess_text(user_message)
-    if not content:
-        return "Please share a little more detail so I can help you better.", 0.35
+    result = generate_chat_intelligence(user_message=user_message, conversation=[])
+    return result["reply"], float(result["confidence"])
 
-    if any(keyword in content for keyword in ["refund", "charged", "billing", "invoice"]):
-        return "I can help with billing. Please share your order ID or invoice number.", 0.83
-    if any(keyword in content for keyword in ["login", "password", "account", "sign in"]):
-        return "For account access, please try password reset and confirm if 2FA is enabled.", 0.79
-    if any(keyword in content for keyword in ["error", "crash", "bug", "not working"]):
-        return "Please share the exact error message and device/browser details.", 0.76
 
-    return "I can route this to a support agent. Can you provide more context?", 0.49
+def _call_openrouter(messages: list[dict[str, str]], temperature: float = 0.35) -> str:
+    if not settings.openrouter_api_key:
+        raise RuntimeError("OPENROUTER_API_KEY is not configured.")
+
+    headers = {
+        "Authorization": f"Bearer {settings.openrouter_api_key}",
+        "HTTP-Referer": settings.openrouter_site_url,
+        "X-Title": settings.openrouter_app_name,
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": settings.openrouter_model,
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": 500,
+    }
+
+    request = Request(
+        url="https://openrouter.ai/api/v1/chat/completions",
+        data=json.dumps(payload).encode("utf-8"),
+        headers=headers,
+        method="POST",
+    )
+
+    try:
+        with urlopen(request, timeout=45) as response:
+            body = json.loads(response.read().decode("utf-8"))
+            return str(body["choices"][0]["message"]["content"])
+    except HTTPError as error:
+        error_text = error.read().decode("utf-8", errors="ignore")
+        raise RuntimeError(f"OpenRouter HTTP error: {error.code} {error_text}") from error
+    except URLError as error:
+        raise RuntimeError(f"OpenRouter network error: {error}") from error
+
+
+def _extract_json(content: str) -> dict[str, Any]:
+    raw = (content or "").strip()
+    if raw.startswith("```"):
+        raw = raw.strip("`")
+        raw = raw.replace("json", "", 1).strip()
+
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        start = raw.find("{")
+        end = raw.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            return json.loads(raw[start : end + 1])
+        raise
+
+
+def generate_chat_intelligence(user_message: str, conversation: list[dict] | None = None) -> dict:
+    history = conversation or []
+    history_context = "\n".join(
+        [f"{entry.get('role', 'user')}: {entry.get('content', '')}" for entry in history[-8:]]
+    )
+
+    system_prompt = (
+        "You are a customer support AI assistant. Respond naturally and concisely. "
+        "Analyze if the message is a complaint and if the user asks for a human agent. "
+        "Return strict JSON with keys: reply, complaint_detected, wants_human_agent, confidence, "
+        "suggested_title, suggested_category. Confidence should be between 0 and 1. "
+        "Categories must be one of Billing, Technical, General."
+    )
+
+    user_prompt = (
+        "Conversation history:\n"
+        f"{history_context or 'none'}\n\n"
+        "Current message:\n"
+        f"{user_message}"
+    )
+
+    try:
+        response_content = _call_openrouter(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.45,
+        )
+        payload = _extract_json(response_content)
+
+        reply = str(payload.get("reply", "")).strip() or "Could you share a little more detail?"
+        complaint_detected = bool(payload.get("complaint_detected", False))
+        wants_human_agent = bool(payload.get("wants_human_agent", False))
+        confidence = clamp_confidence(float(payload.get("confidence", 0.5)))
+        suggested_title = str(payload.get("suggested_title", "Support request")).strip() or "Support request"
+        suggested_category = str(payload.get("suggested_category", "General")).strip().title()
+        if suggested_category not in {"Billing", "Technical", "General"}:
+            suggested_category = "General"
+
+        return {
+            "reply": reply,
+            "complaint_detected": complaint_detected,
+            "wants_human_agent": wants_human_agent,
+            "confidence": confidence,
+            "suggested_title": suggested_title,
+            "suggested_category": suggested_category,
+        }
+    except Exception as error:
+        fallback_sentiment = analyze_sentiment(user_message)
+        return {
+            "reply": "I am unable to reach the AI service right now. Please try again shortly.",
+            "complaint_detected": fallback_sentiment == "negative",
+            "wants_human_agent": False,
+            "confidence": 0.0,
+            "suggested_title": "Support request",
+            "suggested_category": "General",
+            "error": str(error),
+        }
+
+
+def classify_ticket_confirmation(message: str) -> str:
+    prompt = (
+        "Classify the user's reply in JSON with one key 'decision'. "
+        "decision must be one of: yes, no, unclear. "
+        "User reply: "
+        f"{message}"
+    )
+
+    try:
+        response_content = _call_openrouter(
+            messages=[
+                {"role": "system", "content": "You classify intent strictly."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0,
+        )
+        payload = _extract_json(response_content)
+        decision = str(payload.get("decision", "unclear")).strip().lower()
+        if decision not in {"yes", "no", "unclear"}:
+            return "unclear"
+        return decision
+    except Exception:
+        return "unclear"

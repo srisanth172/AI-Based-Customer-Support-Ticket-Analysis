@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Support Portal | Register</title>
+	<link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="register">
+	<div class="page-wrap auth-single-wrap">
+		<section class="auth-panel card-soft">
+			<h2>Create Account</h2>
+			<p class="muted">Create a new account to access the customer dashboard.</p>
+
+			<form id="registerForm" class="stack-form">
+				<label for="registerUsername">Username</label>
+				<input id="registerUsername" name="username" type="text" placeholder="john_doe" required>
+
+				<label for="registerEmail">Email</label>
+				<input id="registerEmail" name="email" type="email" placeholder="you@company.com" required>
+
+				<label for="registerPassword">Password</label>
+				<input id="registerPassword" name="password" type="password" minlength="6" required>
+
+				<label for="registerConfirmPassword">Confirm Password</label>
+				<input id="registerConfirmPassword" name="confirm_password" type="password" minlength="6" required>
+
+				<label for="registerRole">Role</label>
+				<select id="registerRole" name="role" required>
+					<option value="customer" selected>Customer</option>
+					<option value="admin">Admin</option>
+				</select>
+
+				<button id="registerSubmitButton" type="submit">Register</button>
+			</form>
+
+			<div id="registerMessage" class="message-box" aria-live="polite"></div>
+			<div class="auth-links">
+				<a href="/login">Back to login</a>
+				<a href="/forgot-password">Forgot password?</a>
+			</div>
+		</section>
+	</div>
+
+	<script src="/script.js"></script>
+</body>
+</html>

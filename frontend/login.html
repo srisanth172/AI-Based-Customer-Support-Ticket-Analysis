@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Support Portal | Login</title>
+	<link rel="stylesheet" href="/style.css">
+</head>
+<body data-page="login">
+	<div class="page-wrap auth-wrap">
+		<section class="auth-hero card-soft">
+			<p class="kicker">AI Customer Support</p>
+			<h1>Faster support with intelligent ticket triage</h1>
+			<p class="muted">Sign in to submit and track support requests or manage the support queue as an admin.</p>
+			<ul class="feature-list">
+				<li>AI-powered sentiment and priority scoring</li>
+				<li>Role-based customer and admin dashboards</li>
+				<li>Smart queue ordering and status tracking</li>
+			</ul>
+		</section>
+
+		<section class="auth-panel card-soft">
+			<h2>Sign In</h2>
+			<form id="loginForm" class="stack-form">
+				<label for="loginEmail">Email</label>
+				<input id="loginEmail" name="email" type="email" placeholder="you@company.com" required>
+
+				<label for="loginPassword">Password</label>
+				<input id="loginPassword" name="password" type="password" required>
+
+				<div class="puzzle-row">
+					<div class="grow">
+						<label for="puzzleAnswer">Verification: <span id="puzzleQuestion">loading...</span></label>
+						<input id="puzzleAnswer" name="puzzle_answer" type="text" required>
+					</div>
+					<button id="refreshPuzzleButton" type="button" class="ghost-button">Refresh</button>
+				</div>
+
+				<button id="loginSubmitButton" type="submit">Login</button>
+			</form>
+
+			<div id="loginMessage" class="message-box" aria-live="polite"></div>
+
+			<div class="auth-links">
+				<a href="/register">Create account</a>
+				<a href="/forgot-password">Forgot password?</a>
+			</div>
+
+			<div class="demo-credentials">
+				<p><strong>Customer Demo:</strong> customer@support.local / customer123</p>
+				<p><strong>Admin Demo:</strong> admin@support.local / admin123</p>
+			</div>
+		</section>
+	</div>
+
+	<script src="/script.js"></script>
+</body>
+</html>

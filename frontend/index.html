@@ -3,61 +3,432 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>AI Customer Support</title>
+	<title>Customer Support</title>
 	<link rel="stylesheet" href="/style.css">
+	<style>
+		.customer-shell {
+			display: grid;
+			gap: 18px;
+		}
+
+		.section-header {
+			background: rgba(255, 255, 255, 0.7);
+			border: 1px solid rgba(255, 255, 255, 0.65);
+			border-radius: 16px;
+			padding: 18px 22px;
+			box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
+			backdrop-filter: blur(14px);
+		}
+
+		.section-header h2 {
+			margin: 0;
+			font-family: "Sora", "Plus Jakarta Sans", sans-serif;
+			font-size: 1.25rem;
+			letter-spacing: -0.02em;
+		}
+
+		.section-header p {
+			margin: 6px 0 0;
+			color: var(--muted);
+		}
+
+		.chat-popup {
+			position: fixed;
+			right: 24px;
+			bottom: 24px;
+			z-index: 1001;
+			width: 380px;
+			max-width: calc(100vw - 32px);
+			background: var(--surface-0);
+			border: 1px solid var(--border-subtle);
+			border-radius: 16px;
+			box-shadow: var(--shadow-xl);
+			padding: 12px;
+			display: grid;
+			gap: 10px;
+		}
+
+		.chat-popup-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 8px;
+		}
+
+		.chat-popup-title {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			font-weight: 700;
+			font-size: 0.9rem;
+			color: var(--text-primary);
+		}
+
+		.chat-popup .chat-window {
+			margin-bottom: 0;
+			min-height: 260px;
+			max-height: 360px;
+		}
+
+		.chat-popup .chat-input-row button {
+			width: auto;
+		}
+
+		.hybrid-grid {
+			display: grid;
+			grid-template-columns: 1.18fr 1fr;
+			gap: 18px;
+			align-items: start;
+		}
+
+		.submit-section {
+			position: relative;
+		}
+
+		.split-row {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 10px;
+		}
+
+		.char-counter {
+			margin-top: 5px;
+			font-size: 0.78rem;
+			text-align: right;
+			color: var(--muted);
+		}
+
+		.support-stack {
+			display: grid;
+			gap: 18px;
+		}
+
+		.hero-card {
+			background:
+				radial-gradient(circle at 16% 15%, rgba(37, 99, 235, 0.2), transparent 48%),
+				radial-gradient(circle at 90% 10%, rgba(6, 182, 212, 0.22), transparent 43%),
+				linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(241, 247, 255, 0.72));
+		}
+
+		.hero-card h3 {
+			margin: 0;
+			font-family: "Sora", "Plus Jakarta Sans", sans-serif;
+			font-size: 1.3rem;
+			letter-spacing: -0.02em;
+		}
+
+		.hero-card p {
+			margin: 8px 0 0;
+			color: var(--muted);
+		}
+
+		.hero-stats {
+			margin-top: 14px;
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 8px;
+		}
+
+		.hero-stat-item {
+			padding: 10px;
+			border-radius: 12px;
+			background: rgba(255, 255, 255, 0.74);
+			border: 1px solid rgba(203, 213, 225, 0.55);
+		}
+
+		.hero-stat-num {
+			font-weight: 800;
+			font-size: 1.05rem;
+		}
+
+		.hero-stat-lbl {
+			margin-top: 2px;
+			font-size: 0.78rem;
+			color: var(--muted);
+		}
+
+		.info-chips {
+			display: grid;
+			gap: 10px;
+		}
+
+		.quick-chip {
+			display: flex;
+			align-items: flex-start;
+			gap: 12px;
+			padding: 12px 14px;
+			width: 100%;
+			text-align: left;
+			border-radius: 12px;
+			border: 1px solid var(--line);
+			background: rgba(255, 255, 255, 0.8);
+			color: #1e293b;
+			box-shadow: none;
+			transform: none;
+		}
+
+		.quick-chip:hover {
+			transform: translateX(3px);
+			box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+		}
+
+		.quick-chip-emoji {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 34px;
+			height: 34px;
+			border-radius: 10px;
+			background: rgba(37, 99, 235, 0.14);
+			font-size: 1rem;
+			flex-shrink: 0;
+		}
+
+		.quick-chip-title {
+			display: block;
+			font-size: 0.85rem;
+			font-weight: 700;
+			margin-bottom: 2px;
+		}
+
+		.quick-chip-sub {
+			display: block;
+			font-size: 0.78rem;
+			color: var(--muted);
+			font-weight: 500;
+		}
+
+		.chat-header-inline {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			gap: 10px;
+			margin-bottom: 8px;
+		}
+
+		.chat-header-inline h2 {
+			margin-bottom: 0;
+		}
+
+		@media (max-width: 1080px) {
+			.hybrid-grid {
+				grid-template-columns: 1fr;
+			}
+		}
+
+		@media (max-width: 760px) {
+			.split-row,
+			.hero-stats {
+				grid-template-columns: 1fr;
+			}
+
+			.chat-popup {
+				right: 16px;
+				bottom: 16px;
+				width: calc(100vw - 32px);
+			}
+		}
+	</style>
 </head>
-<body>
-	<div class="app-shell">
-		<header class="topbar">
-			<div>
-				<h1>Customer Support Center</h1>
-				<p>Submit tickets and chat with AI support instantly.</p>
+
+<body data-page="customer">
+	<div class="page-wrap">
+		<section id="customerView" class="customer-shell">
+			<header class="portal-header">
+				<div>
+					<h1>Customer Support</h1>
+					<p id="customerWelcome" class="muted">Track support requests and get help from AI assistant.</p>
+				</div>
+				<div class="header-actions">
+					<span class="status-pill open">AI Support Online</span>
+					<button id="logoutCustomerButton" type="button" class="ghost-button">Logout</button>
+				</div>
+			</header>
+
+			<div class="section-header">
+				<h2>Submit requests and get instant help from Nexus AI.</h2>
+				<p>Your current flow is unchanged. This view blends your existing portal with a richer customer experience layout.</p>
 			</div>
-			<nav>
-				<a href="/admin">Open Admin Dashboard</a>
-			</nav>
-		</header>
 
-		<main class="grid-two">
-			<section class="card">
-				<h2>Submit a Ticket</h2>
-				<form id="ticketForm" class="stack-form">
-					<label for="title">Title</label>
-					<input id="title" name="title" type="text" placeholder="Short issue title" required>
+			<main class="hybrid-grid">
+				<section class="card-soft submit-section">
+					<h2>Submit Support Ticket</h2>
+					<p class="muted">Share details and we will route your issue to the right team quickly.</p>
+					<form id="ticketForm" class="stack-form">
+						<div class="split-row">
+							<div>
+								<label for="customerName">Full Name</label>
+								<input id="customerName" name="customerName" type="text" autocomplete="name" placeholder="e.g. Arjun Sharma">
+							</div>
+							<div>
+								<label for="customerEmail">Email</label>
+								<input id="customerEmail" name="customerEmail" type="email" autocomplete="email" placeholder="you@example.com" required>
+							</div>
+						</div>
 
-					<label for="description">Description</label>
-					<textarea id="description" name="description" rows="5" placeholder="Describe your issue" required></textarea>
+						<label for="category">Category</label>
+						<select id="category" name="category" required>
+							<option value="" disabled selected>Select a category</option>
+							<option value="Billing">Billing & Payments</option>
+							<option value="Technical">Technical Issue</option>
+							<option value="Account">Account & Access</option>
+							<option value="Shipping">Shipping & Delivery</option>
+							<option value="Product">Product / Service</option>
+							<option value="General">General</option>
+						</select>
 
-					<label for="category">Category</label>
-					<select id="category" name="category" required>
-						<option value="" disabled selected>Select a category</option>
-						<option value="Billing">Billing</option>
-						<option value="Technical">Technical</option>
-						<option value="Account">Account</option>
-						<option value="General">General</option>
-					</select>
+						<label for="title">Subject</label>
+						<input id="title" name="title" type="text" maxlength="100" placeholder="Brief summary of your issue" required>
 
-					<label for="customerEmail">Email (optional)</label>
-					<input id="customerEmail" name="customerEmail" type="email" placeholder="you@example.com">
+						<label for="description">Description</label>
+						<textarea id="description" name="description" rows="6" maxlength="1000" placeholder="Describe your issue with relevant details, steps, and error messages." required></textarea>
+						<div class="char-counter"><span id="charCount">0</span> / 1000</div>
 
-					<button id="ticketSubmitButton" type="submit">Submit Ticket</button>
-				</form>
-				<div id="ticketResult" class="message-box" aria-live="polite"></div>
-			</section>
+						<button id="ticketSubmitButton" type="submit">Submit Ticket</button>
+					</form>
+					<div id="ticketResult" class="message-box" aria-live="polite"></div>
+				</section>
 
-			<section class="card chatbot-card">
-				<h2>AI Chat Assistant</h2>
-				<div id="chatWindow" class="chat-window" aria-live="polite"></div>
-				<form id="chatForm" class="chat-input-row">
-					<input id="chatInput" type="text" placeholder="Ask a support question..." required>
-					<button id="chatSendButton" type="submit">Send</button>
-				</form>
-				<p class="muted">Low-confidence or negative messages are automatically escalated.</p>
-			</section>
-		</main>
+				<div class="support-stack">
+					<section class="card-soft hero-card">
+						<h3>How can we help today?</h3>
+						<p>Use AI for instant answers and fast issue triage, or submit detailed requests with full context.</p>
+						<div class="hero-stats">
+							<div class="hero-stat-item">
+								<div class="hero-stat-num">~2h</div>
+								<div class="hero-stat-lbl">Avg. First Response</div>
+							</div>
+							<div class="hero-stat-item">
+								<div class="hero-stat-num">98%</div>
+								<div class="hero-stat-lbl">Resolution Rate</div>
+							</div>
+							<div class="hero-stat-item">
+								<div class="hero-stat-num">24/7</div>
+								<div class="hero-stat-lbl">AI Assistant</div>
+							</div>
+						</div>
+					</section>
+
+					<section class="card-soft">
+						<h2>Quick Help</h2>
+						<div class="info-chips">
+							<button type="button" class="quick-chip" data-quick-message="How do I track my ticket status?">
+								<span class="quick-chip-emoji">🔍</span>
+								<span>
+									<span class="quick-chip-title">Check Ticket Status</span>
+									<span class="quick-chip-sub">Ask AI for a quick status guidance flow.</span>
+								</span>
+							</button>
+							<button type="button" class="quick-chip" data-quick-message="What are your support hours and SLA?">
+								<span class="quick-chip-emoji">🕐</span>
+								<span>
+									<span class="quick-chip-title">Support Hours and SLA</span>
+									<span class="quick-chip-sub">Know turnaround expectations instantly.</span>
+								</span>
+							</button>
+							<button type="button" class="quick-chip" data-quick-message="I need help with billing and payment issues.">
+								<span class="quick-chip-emoji">💳</span>
+								<span>
+									<span class="quick-chip-title">Billing Questions</span>
+									<span class="quick-chip-sub">Invoices, refunds, and payment troubleshooting.</span>
+								</span>
+							</button>
+						</div>
+					</section>
+				</div>
+			</main>
+		</section>
+	</div>
+
+	<button id="chatTrigger" class="chat-trigger" type="button" aria-label="Open AI assistant">💬</button>
+
+	<div id="chatPopup" class="chat-popup hidden" aria-hidden="true">
+		<div class="chat-popup-header">
+			<div class="chat-popup-title">
+				<span>🤖</span>
+				<span>Nexus AI Assistant</span>
+			</div>
+			<button id="chatCloseButton" type="button" class="btn-icon" aria-label="Close chat">✕</button>
+		</div>
+		<div id="chatWindow" class="chat-window" aria-live="polite"></div>
+		<form id="chatForm" class="chat-input-row">
+			<input id="chatInput" type="text" placeholder="Ask a question or describe your issue" required>
+			<button id="chatSendButton" type="submit">Send</button>
+		</form>
 	</div>
 
 	<script src="/script.js"></script>
 	<script src="/chatbot.js"></script>
+	<script>
+		(function initializeCustomerExtras() {
+			const descriptionInput = document.getElementById("description");
+			const charCount = document.getElementById("charCount");
+			const chatPopup = document.getElementById("chatPopup");
+			const chatTrigger = document.getElementById("chatTrigger");
+			const chatCloseButton = document.getElementById("chatCloseButton");
+			const chatInput = document.getElementById("chatInput");
+
+			function openChatPopup() {
+				if (!chatPopup) {
+					return;
+				}
+				chatPopup.classList.remove("hidden");
+				chatPopup.setAttribute("aria-hidden", "false");
+				chatTrigger?.classList.add("open");
+				chatInput?.focus();
+			}
+
+			function closeChatPopup() {
+				if (!chatPopup) {
+					return;
+				}
+				chatPopup.classList.add("hidden");
+				chatPopup.setAttribute("aria-hidden", "true");
+				chatTrigger?.classList.remove("open");
+			}
+
+			chatTrigger?.addEventListener("click", () => {
+				if (chatPopup?.classList.contains("hidden")) {
+					openChatPopup();
+					return;
+				}
+				closeChatPopup();
+			});
+
+			chatCloseButton?.addEventListener("click", closeChatPopup);
+
+			document.addEventListener("keydown", (event) => {
+				if (event.key === "Escape") {
+					closeChatPopup();
+				}
+			});
+			if (descriptionInput && charCount) {
+				const updateCount = () => {
+					charCount.textContent = String(descriptionInput.value.length);
+				};
+				descriptionInput.addEventListener("input", updateCount);
+				updateCount();
+			}
+
+			document.querySelectorAll("[data-quick-message]").forEach((button) => {
+				button.addEventListener("click", () => {
+					const chatInput = document.getElementById("chatInput");
+					const chatForm = document.getElementById("chatForm");
+					const prompt = String(button.getAttribute("data-quick-message") || "").trim();
+
+					openChatPopup();
+
+					if (chatInput) {
+						chatInput.value = prompt;
+						chatInput.focus();
+					}
+
+					if (chatForm && prompt) {
+						chatForm.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+					}
+				});
+			});
+		})();
+	</script>
 </body>
 </html>
