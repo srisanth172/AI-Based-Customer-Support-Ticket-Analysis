@@ -4,3 +4,4 @@ scikit-learn>=1.4.0
 textblob>=0.18.0
 itsdangerous>=2.2.0
 python-dotenv>=1.0.0
+gunicorn>=21.2.0
