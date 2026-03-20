@@ -1,14 +1,4 @@
 {
   "buildCommand": "",
-  "outputDirectory": "frontend",
-  "routes": [
-    {
-      "src": "/(.*\\..*)",
-      "dest": "frontend/$1"
-    },
-    {
-      "src": "/.*",
-      "dest": "frontend/index.html"
-    }
-  ]
+  "outputDirectory": "frontend"
 }
