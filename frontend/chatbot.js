@@ -15,6 +15,93 @@ let awaitingConfirmation = false;
 let pendingTicketContext = null;
 
 
+function inferCategoryFromMessage(message) {
+	const lower = String(message || "").toLowerCase();
+	if (/(invoice|refund|payment|billing|charge|subscription)/.test(lower)) {
+		return "Billing";
+	}
+	if (/(error|bug|crash|login|password|api|slow|issue|not working|failed)/.test(lower)) {
+		return "Technical";
+	}
+	return "General";
+}
+
+
+function isAffirmative(message) {
+	const lower = String(message || "").trim().toLowerCase();
+	return /(^(yes|y|yeah|yep|sure|ok|okay)$|please do|go ahead|create ticket|do it)/.test(lower);
+}
+
+
+function isNegative(message) {
+	const lower = String(message || "").trim().toLowerCase();
+	return /(^(no|n|nope|nah)$|not now|don't|do not|cancel)/.test(lower);
+}
+
+
+function buildOfflineGuidance(message) {
+	const category = inferCategoryFromMessage(message);
+	const lower = String(message || "").toLowerCase();
+	const needsEscalation = /(frustrated|angry|issue|problem|error|failed|bug|human|agent|representative)/.test(lower);
+
+	let response = "Thanks for the details. I can help you here, or create a support ticket so the team can follow up.";
+	if (category === "Billing") {
+		response = "This looks like a billing request. Share invoice date and account email, and I can create a support ticket now.";
+	} else if (category === "Technical") {
+		response = "This looks like a technical issue. Share exact steps and error text, and I can create a support ticket now.";
+	}
+
+	if (needsEscalation) {
+		response = `${response}\n\nWould you like me to create a support ticket for this issue?`;
+	}
+
+	return {
+		response,
+		ask_ticket_confirmation: needsEscalation,
+		escalate_to_human: needsEscalation,
+		escalation_ticket_id: null,
+		pending_ticket_context: {
+			title: `${category} support request: ${String(message || "").slice(0, 64)}`,
+			description: String(message || "").trim() || "Customer requested support via chat.",
+			category,
+		},
+	};
+}
+
+
+async function createTicketFromPendingContext(context) {
+	const payload = {
+		title: String(context?.title || "Chat support request").slice(0, 120),
+		description: String(context?.description || "Customer requested support via chat.").trim(),
+		category: String(context?.category || "General"),
+		customer_email: getCustomerEmailForChat(),
+		force_escalate: true,
+	};
+
+	const response = await fetch(`${CHAT_API_BASE}/create_ticket`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			...getChatAuthHeaders(),
+		},
+		body: JSON.stringify(payload),
+	});
+
+	const data = await response.json().catch(() => ({}));
+	if (!response.ok || !data.ticket_id) {
+		throw new Error(data.error || "Could not create ticket right now.");
+	}
+
+	return {
+		response: `Done. I created a support ticket for you. Ticket ID: ${data.ticket_id}`,
+		ask_ticket_confirmation: false,
+		escalate_to_human: true,
+		escalation_ticket_id: data.ticket_id,
+		pending_ticket_context: null,
+	};
+}
+
+
 function getChatAuthHeaders() {
 	try {
 		const raw = localStorage.getItem(CHAT_AUTH_STORAGE_KEY);
@@ -62,20 +149,62 @@ async function sendChatMessage(message) {
 		pending_ticket_context: pendingTicketContext,
 	};
 
-	const response = await fetch(`${CHAT_API_BASE}/chatbot`, {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-			...getChatAuthHeaders(),
-		},
-		body: JSON.stringify(payload),
-	});
+	try {
+		const response = await fetch(`${CHAT_API_BASE}/chatbot`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				...getChatAuthHeaders(),
+			},
+			body: JSON.stringify(payload),
+		});
 
-	const data = await response.json();
-	if (!response.ok) {
-		throw new Error(data.error || "Chat request failed.");
+		const data = await response.json().catch(() => ({}));
+		const responseText = String(data?.response || "").toLowerCase();
+		const serviceUnavailable = responseText.includes("unable to reach the ai service");
+
+		if (response.ok && !serviceUnavailable) {
+			return data;
+		}
+	} catch {
+		// Network errors should fall through to local offline support.
 	}
-	return data;
+
+	if (awaitingConfirmation && pendingTicketContext) {
+		if (isAffirmative(message)) {
+			try {
+				return await createTicketFromPendingContext(pendingTicketContext);
+			} catch (error) {
+				return {
+					response: `I could not create the ticket right now. ${error.message}`,
+					ask_ticket_confirmation: true,
+					escalate_to_human: false,
+					escalation_ticket_id: null,
+					pending_ticket_context: pendingTicketContext,
+				};
+			}
+		}
+
+		if (isNegative(message)) {
+			return {
+				response: "No problem. I will continue assisting you here.",
+				ask_ticket_confirmation: false,
+				escalate_to_human: false,
+				escalation_ticket_id: null,
+				pending_ticket_context: null,
+			};
+		}
+
+		return {
+			response: "Please reply with yes if you want me to create a support ticket, or no to continue chat.",
+			ask_ticket_confirmation: true,
+			escalate_to_human: false,
+			escalation_ticket_id: null,
+			pending_ticket_context: pendingTicketContext,
+		};
+	}
+
+	return buildOfflineGuidance(message);
 }
 
 
