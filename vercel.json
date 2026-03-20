@@ -1,4 +1,44 @@
 {
-  "buildCommand": "",
-  "outputDirectory": "frontend"
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/frontend/login.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/frontend/login.html"
+    },
+    {
+      "source": "/register",
+      "destination": "/frontend/register.html"
+    },
+    {
+      "source": "/forgot-password",
+      "destination": "/frontend/forgot_password.html"
+    },
+    {
+      "source": "/forgot_password",
+      "destination": "/frontend/forgot_password.html"
+    },
+    {
+      "source": "/customer",
+      "destination": "/frontend/index.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/frontend/admin.html"
+    },
+    {
+      "source": "/style.css",
+      "destination": "/frontend/style.css"
+    },
+    {
+      "source": "/script.js",
+      "destination": "/frontend/script.js"
+    },
+    {
+      "source": "/chatbot.js",
+      "destination": "/frontend/chatbot.js"
+    }
+  ]
 }
