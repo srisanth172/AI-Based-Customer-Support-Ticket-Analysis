@@ -276,6 +276,7 @@ def generate_chat_intelligence(user_message: str, conversation: list[dict] | Non
             "suggested_category": suggested_category,
         }
     except Exception as error:
+        print(f"[OpenRouter] fallback triggered: {error}")
         fallback = _local_chat_fallback(user_message)
         fallback["error"] = str(error)
         return fallback
@@ -340,4 +341,5 @@ def classify_ticket_confirmation(message: str) -> str:
             return _local_confirmation_decision(message)
         return decision
     except Exception:
+        print("[OpenRouter] confirmation classifier unavailable, using local parser")
         return _local_confirmation_decision(message)

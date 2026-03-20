@@ -9,6 +9,10 @@ _ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(_ENV_FILE)
 
 
+def _clean_env_text(name: str, default: str = "") -> str:
+	return str(os.getenv(name, default) or "").strip().strip('"').strip("'")
+
+
 @dataclass(frozen=True)
 class Settings:
 	base_dir: Path
@@ -46,20 +50,20 @@ def _build_settings() -> Settings:
 		base_dir=base_dir,
 		database_dir=database_dir,
 		database_url=database_url,
-		secret_key=os.getenv("APP_SECRET_KEY", "change-this-in-production"),
+		secret_key=_clean_env_text("APP_SECRET_KEY", "change-this-in-production"),
 		token_expiry_seconds=int(os.getenv("TOKEN_EXPIRY_SECONDS", "86400")),
-		openrouter_api_key=os.getenv("OPENROUTER_API_KEY", ""),
-		openrouter_model=os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini"),
-		openrouter_app_name=os.getenv("OPENROUTER_APP_NAME", "AI Customer Support"),
-		openrouter_site_url=os.getenv("OPENROUTER_SITE_URL", "http://localhost:5000"),
+		openrouter_api_key=_clean_env_text("OPENROUTER_API_KEY", ""),
+		openrouter_model=_clean_env_text("OPENROUTER_MODEL", "openai/gpt-4o-mini"),
+		openrouter_app_name=_clean_env_text("OPENROUTER_APP_NAME", "AI Customer Support"),
+		openrouter_site_url=_clean_env_text("OPENROUTER_SITE_URL", "http://localhost:5000"),
 		puzzle_expiry_seconds=int(os.getenv("PUZZLE_EXPIRY_SECONDS", "300")),
 		reset_code_expiry_seconds=int(os.getenv("RESET_CODE_EXPIRY_SECONDS", "600")),
-		smtp_host=os.getenv("SMTP_HOST", ""),
+		smtp_host=_clean_env_text("SMTP_HOST", ""),
 		smtp_port=int(os.getenv("SMTP_PORT", "587")),
-		smtp_user=os.getenv("SMTP_USER", ""),
-		smtp_password=os.getenv("SMTP_PASSWORD", ""),
-		smtp_sender=os.getenv("SMTP_SENDER", ""),
-		smtp_sender_name=os.getenv("SMTP_SENDER_NAME", "AI Customer Support"),
+		smtp_user=_clean_env_text("SMTP_USER", ""),
+		smtp_password=_clean_env_text("SMTP_PASSWORD", ""),
+		smtp_sender=_clean_env_text("SMTP_SENDER", ""),
+		smtp_sender_name=_clean_env_text("SMTP_SENDER_NAME", "AI Customer Support"),
 		smtp_use_tls=os.getenv("SMTP_USE_TLS", "true").strip().lower() in {"1", "true", "yes"},
 		smtp_use_ssl=os.getenv("SMTP_USE_SSL", "false").strip().lower() in {"1", "true", "yes"},
 		smtp_timeout_seconds=int(os.getenv("SMTP_TIMEOUT_SECONDS", "20")),
