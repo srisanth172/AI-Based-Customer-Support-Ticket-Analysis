@@ -1,8 +1,5 @@
 // Detect if running on Vercel frontend and route to Render backend
-const isVercelDeployment = window.location.hostname.includes('vercel.app') || window.location.hostname.includes('onvercel.com');
-const CHAT_API_BASE = isVercelDeployment 
-	? "https://ai-based-customer-support-ticket-x3ou.onrender.com"
-	: window.location.origin;
+const CHAT_API_BASE = "https://ai-based-customer-support-ticket-5ooe.onrender.com/customer";
 
 const chatForm = document.getElementById("chatForm");
 const chatInput = document.getElementById("chatInput");
