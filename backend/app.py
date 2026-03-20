@@ -1,6 +1,7 @@
 import re
 
 from flask import Flask, g, jsonify, render_template, request
+from flask_cors import CORS
 
 from ai_module import analyze_sentiment, classify_ticket_confirmation, generate_chat_intelligence, train_category_model
 from auth import (
@@ -33,6 +34,13 @@ app = Flask(
 	static_url_path="",
 )
 
+CORS(
+	app,
+	resources={r"/*": {"origins": "*"}},
+	allow_headers=["Content-Type", "Authorization"],
+	methods=["GET", "POST", "PUT", "OPTIONS"],
+)
+
 TICKET_ID_PATTERN = re.compile(r"\bTKT-[A-Z0-9]{6}\b", re.IGNORECASE)
 
 init_db()
@@ -57,14 +65,6 @@ def close_db_session(_error):
 	db = getattr(g, "db", None)
 	if db:
 		db.close()
-
-
-@app.after_request
-def add_cors_headers(response):
-	response.headers["Access-Control-Allow-Origin"] = "*"
-	response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-	response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, OPTIONS"
-	return response
 
 
 @app.get("/")
