@@ -3,7 +3,7 @@ services:
     name: ai-customer-support-ticket-analysis
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --chdir backend app:app --workers 2 --threads 4 --timeout 120
+    startCommand: python -m gunicorn --chdir backend app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
     autoDeploy: true
     disk:
       name: data
