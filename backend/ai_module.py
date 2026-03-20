@@ -113,6 +113,69 @@ def generate_chat_response(user_message: str) -> tuple[str, float]:
     return result["reply"], float(result["confidence"])
 
 
+def _local_chat_fallback(user_message: str) -> dict:
+    message = (user_message or "").strip()
+    normalized = preprocess_text(message)
+    sentiment = analyze_sentiment(message)
+    predicted_category, model_confidence = predict_category(message)
+
+    lower_message = message.lower()
+    complaint_markers = (
+        "not working",
+        "problem",
+        "issue",
+        "error",
+        "failed",
+        "frustrated",
+        "angry",
+        "bug",
+        "broken",
+    )
+    human_markers = (
+        "human",
+        "agent",
+        "representative",
+        "real person",
+        "support team",
+        "talk to someone",
+    )
+
+    complaint_detected = sentiment == "negative" or any(marker in lower_message for marker in complaint_markers)
+    wants_human_agent = any(marker in lower_message for marker in human_markers)
+
+    if not normalized:
+        reply = "I can help with billing, technical, or general support questions. Please share a quick summary of your issue."
+    elif any(word in lower_message for word in ("hello", "hi", "hey", "good morning", "good evening")):
+        reply = "Hello. Tell me what went wrong, and I will guide you or create a support ticket if needed."
+    elif predicted_category == "Billing":
+        reply = (
+            "It looks like a billing request. Please include your account email, invoice date, and what appears incorrect. "
+            "I can also open a support ticket for faster follow-up."
+        )
+    elif predicted_category == "Technical":
+        reply = (
+            "It looks like a technical issue. Please share the exact steps to reproduce it and any error text you see. "
+            "I can create a support ticket right away if you want."
+        )
+    else:
+        reply = (
+            "Thanks for the details. I can help you here, or I can create a support ticket so the support team can follow up."
+        )
+
+    if complaint_detected or wants_human_agent:
+        reply = f"{reply}\n\nWould you like me to create a support ticket for this issue?"
+
+    return {
+        "reply": reply,
+        "complaint_detected": complaint_detected,
+        "wants_human_agent": wants_human_agent,
+        "confidence": max(0.55, min(0.9, float(model_confidence) or 0.65)),
+        "suggested_title": f"{predicted_category} support request: {message[:64]}".strip(),
+        "suggested_category": predicted_category,
+        "fallback_mode": True,
+    }
+
+
 def _call_openrouter(messages: list[dict[str, str]], temperature: float = 0.35) -> str:
     if not settings.openrouter_api_key:
         raise RuntimeError("OPENROUTER_API_KEY is not configured.")
@@ -213,16 +276,46 @@ def generate_chat_intelligence(user_message: str, conversation: list[dict] | Non
             "suggested_category": suggested_category,
         }
     except Exception as error:
-        fallback_sentiment = analyze_sentiment(user_message)
-        return {
-            "reply": "I am unable to reach the AI service right now. Please try again shortly.",
-            "complaint_detected": fallback_sentiment == "negative",
-            "wants_human_agent": False,
-            "confidence": 0.0,
-            "suggested_title": "Support request",
-            "suggested_category": "General",
-            "error": str(error),
-        }
+        fallback = _local_chat_fallback(user_message)
+        fallback["error"] = str(error)
+        return fallback
+
+
+def _local_confirmation_decision(message: str) -> str:
+    lower = (message or "").strip().lower()
+    if not lower:
+        return "unclear"
+
+    yes_phrases = (
+        "yes",
+        "y",
+        "yeah",
+        "yep",
+        "sure",
+        "ok",
+        "okay",
+        "please do",
+        "go ahead",
+        "create ticket",
+        "do it",
+    )
+    no_phrases = (
+        "no",
+        "n",
+        "nope",
+        "nah",
+        "not now",
+        "dont",
+        "don't",
+        "do not",
+        "cancel",
+    )
+
+    if any(phrase in lower for phrase in yes_phrases):
+        return "yes"
+    if any(phrase in lower for phrase in no_phrases):
+        return "no"
+    return "unclear"
 
 
 def classify_ticket_confirmation(message: str) -> str:
@@ -244,7 +337,7 @@ def classify_ticket_confirmation(message: str) -> str:
         payload = _extract_json(response_content)
         decision = str(payload.get("decision", "unclear")).strip().lower()
         if decision not in {"yes", "no", "unclear"}:
-            return "unclear"
+            return _local_confirmation_decision(message)
         return decision
     except Exception:
-        return "unclear"
+        return _local_confirmation_decision(message)
