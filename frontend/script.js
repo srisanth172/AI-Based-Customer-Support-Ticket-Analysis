@@ -1,4 +1,8 @@
-const API_BASE = window.location.origin;
+// Detect if running on Vercel frontend and route to Render backend
+const isVercelDeployment = window.location.hostname.includes('vercel.app') || window.location.hostname.includes('onvercel.com');
+const API_BASE = isVercelDeployment 
+	? "https://ai-based-customer-support-ticket-x3ou.onrender.com"
+	: window.location.origin;
 const AUTH_STORAGE_KEY = "support_auth_state";
 
 

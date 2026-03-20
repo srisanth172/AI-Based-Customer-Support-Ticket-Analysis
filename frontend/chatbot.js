@@ -1,3 +1,9 @@
+// Detect if running on Vercel frontend and route to Render backend
+const isVercelDeployment = window.location.hostname.includes('vercel.app') || window.location.hostname.includes('onvercel.com');
+const CHAT_API_BASE = isVercelDeployment 
+	? "https://ai-based-customer-support-ticket-x3ou.onrender.com"
+	: window.location.origin;
+
 const chatForm = document.getElementById("chatForm");
 const chatInput = document.getElementById("chatInput");
 const chatWindow = document.getElementById("chatWindow");
@@ -56,7 +62,7 @@ async function sendChatMessage(message) {
 		pending_ticket_context: pendingTicketContext,
 	};
 
-	const response = await fetch(`${window.location.origin}/chatbot`, {
+	const response = await fetch(`${CHAT_API_BASE}/chatbot`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
