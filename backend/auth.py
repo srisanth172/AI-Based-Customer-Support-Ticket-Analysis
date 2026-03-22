@@ -1,6 +1,5 @@
 from functools import wraps
 from random import randint
-from uuid import uuid4
 import smtplib
 from email.message import EmailMessage
 
@@ -17,7 +16,6 @@ from utils import utcnow
 ALLOWED_ROLES = {"customer", "admin"}
 _serializer = URLSafeTimedSerializer(settings.secret_key)
 
-_puzzle_store: dict[str, dict] = {}
 _password_reset_store: dict[str, dict] = {}
 
 
@@ -65,11 +63,8 @@ def create_login_puzzle() -> dict:
 		question = f"{left + right} - {left}"
 		answer = str(right)
 
-	puzzle_id = uuid4().hex
-	_puzzle_store[puzzle_id] = {
-		"answer": answer,
-		"expires_at": utcnow().timestamp() + settings.puzzle_expiry_seconds,
-	}
+	# Sign the expected answer into the token so verification works across workers.
+	puzzle_id = _generate_token({"answer": answer}, salt="login-puzzle")
 
 	return {
 		"puzzle_id": puzzle_id,
@@ -78,18 +73,20 @@ def create_login_puzzle() -> dict:
 
 
 def verify_login_puzzle(puzzle_id: str, puzzle_answer: str) -> bool:
-	stored = _puzzle_store.get((puzzle_id or "").strip())
-	if not stored:
+	puzzle_token = (puzzle_id or "").strip()
+	if not puzzle_token:
 		return False
 
-	if utcnow().timestamp() > stored["expires_at"]:
-		_puzzle_store.pop(puzzle_id, None)
+	payload = _decode_token(
+		puzzle_token,
+		salt="login-puzzle",
+		max_age=settings.puzzle_expiry_seconds,
+	)
+	if not payload:
 		return False
 
 	answer = str(puzzle_answer or "").strip()
-	is_valid = answer == stored["answer"]
-	_puzzle_store.pop(puzzle_id, None)
-	return is_valid
+	return answer == str(payload.get("answer", "")).strip()
 
 
 def register_user(
