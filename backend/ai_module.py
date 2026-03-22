@@ -178,11 +178,12 @@ def _local_chat_fallback(user_message: str) -> dict:
 
 def _call_openrouter(messages: list[dict[str, str]], temperature: float = 0.35) -> str:
     if not settings.openrouter_api_key:
-        raise RuntimeError("OPENROUTER_API_KEY is not configured.")
+        raise RuntimeError("OPENROUTER_API_KEY is not configured. Chatbot will use fallback mode.")
     
     # Debug: Log that we're calling OpenRouter (mask the key for safety)
     key_preview = settings.openrouter_api_key[:10] + "..." if len(settings.openrouter_api_key) > 10 else settings.openrouter_api_key
     print(f"[OpenRouter] Calling API with key: {key_preview}, model: {settings.openrouter_model}")
+    print(f"[OpenRouter] Site URL: {settings.openrouter_site_url}")
 
     headers = {
         "Authorization": f"Bearer {settings.openrouter_api_key}",
@@ -207,17 +208,19 @@ def _call_openrouter(messages: list[dict[str, str]], temperature: float = 0.35) 
     try:
         with urlopen(request, timeout=45) as response:
             body = json.loads(response.read().decode("utf-8"))
-            print(f"[OpenRouter] Success: Got response with {len(body.get('choices', []))} choices")
+            print(f"[OpenRouter] ✓ Success: Got response with {len(body.get('choices', []))} choices")
             return str(body["choices"][0]["message"]["content"])
     except HTTPError as error:
         error_text = error.read().decode("utf-8", errors="ignore")
-        print(f"[OpenRouter] HTTP Error {error.code}: {error_text[:500]}")
-        raise RuntimeError(f"OpenRouter HTTP error: {error.code} {error_text}") from error
+        print(f"[OpenRouter] ✗ HTTP Error {error.code}: {error_text[:200]}")
+        print(f"[OpenRouter] Full error: {error_text[:500]}")
+        raise RuntimeError(f"OpenRouter HTTP error: {error.code} {error_text[:200]}") from error
     except URLError as error:
-        print(f"[OpenRouter] Network Error: {error}")
+        print(f"[OpenRouter] ✗ Network Error: {error}")
+        print(f"[OpenRouter] Reason: {error.reason if hasattr(error, 'reason') else 'Unknown'}")
         raise RuntimeError(f"OpenRouter network error: {error}") from error
     except Exception as error:
-        print(f"[OpenRouter] Unexpected Error: {error}")
+        print(f"[OpenRouter] ✗ Unexpected Error: {type(error).__name__}: {error}")
         raise
 
 

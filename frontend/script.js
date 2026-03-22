@@ -1,7 +1,8 @@
 // Detect if running on Vercel frontend and route to Render backend
 const isVercelDeployment = window.location.hostname.includes('vercel.app') || window.location.hostname.includes('onvercel.com');
+const runtimeApiBase = String(window.NEXT_PUBLIC_API_URL || "").trim();
 const API_BASE = isVercelDeployment 
-	? "https://ai-based-customer-support-ticket-x3ou.onrender.com"
+	? (runtimeApiBase || "https://ai-based-customer-support-ticket-x3ou.onrender.com")
 	: window.location.origin;
 const AUTH_STORAGE_KEY = "support_auth_state";
 
@@ -59,18 +60,25 @@ async function apiRequest(path, options = {}) {
 			...authHeaders(),
 			...(options.headers || {}),
 		},
+		credentials: "include",  // Include cookies in cross-origin requests
 	};
 
 	if (options.body !== undefined) {
 		config.body = JSON.stringify(options.body);
 	}
 
-	const response = await fetch(`${API_BASE}${path}`, config);
-	const data = await response.json().catch(() => ({}));
-	if (!response.ok) {
-		throw new Error(data.error || data.message || `Request failed: ${response.status}`);
+	try {
+		const response = await fetch(`${API_BASE}${path}`, config);
+		const data = await response.json().catch(() => ({}));
+		if (!response.ok) {
+			console.error(`[API Error] ${path}: ${response.status}`, data);
+			throw new Error(data.error || data.message || `Request failed: ${response.status}`);
+		}
+		return data;
+	} catch (error) {
+		console.error(`[API Exception] ${path}: ${error.message}`);
+		throw error;
 	}
-	return data;
 }
 
 

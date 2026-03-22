@@ -1,5 +1,6 @@
 // Detect if running on Vercel frontend and route to Render backend
-const CHAT_API_BASE = "https://ai-based-customer-support-ticket-x3ou.onrender.com";
+const runtimeApiBase = String(window.NEXT_PUBLIC_API_URL || "").trim();
+const CHAT_API_BASE = runtimeApiBase || "https://ai-based-customer-support-ticket-x3ou.onrender.com";
 
 const chatForm = document.getElementById("chatForm");
 const chatInput = document.getElementById("chatInput");
@@ -76,6 +77,7 @@ async function createTicketFromPendingContext(context) {
 	};
 
 	const response = await fetch(`${CHAT_API_BASE}/create_ticket`, {
+		credentials: "include",  // Include cookies
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
@@ -148,6 +150,7 @@ async function sendChatMessage(message) {
 
 	try {
 		const response = await fetch(`${CHAT_API_BASE}/chatbot`, {
+			credentials: "include",  // Include cookies
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",

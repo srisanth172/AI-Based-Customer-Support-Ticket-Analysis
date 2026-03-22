@@ -4,6 +4,7 @@ from flask import Flask, g, jsonify, render_template, request
 from flask_cors import CORS
 
 from ai_module import analyze_sentiment, classify_ticket_confirmation, generate_chat_intelligence, train_category_model
+from config import settings
 from auth import (
 	authenticate_request,
 	create_login_puzzle,
@@ -34,22 +35,49 @@ app = Flask(
 	static_url_path="",
 )
 
+# Single CORS policy for both local dev and deployed frontend.
+allowed_origins = [
+	"http://localhost:3000",
+	"http://localhost:5000",
+	"http://127.0.0.1:3000",
+	"http://127.0.0.1:5000",
+	"https://ai-based-customer-support-ticket-an-pi.vercel.app",
+	r"https://.*\.vercel\.app",
+]
+
 CORS(
 	app,
-	resources={r"/*": {"origins": "*"}},
-	allow_headers=["Content-Type", "Authorization"],
-	methods=["GET", "POST", "PUT", "OPTIONS"],
+	resources={r"/*": {"origins": allowed_origins}},
+	allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+	methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+	supports_credentials=True,
+	max_age=3600,
 )
+
+# Configure session cookies for cross-origin
+app.config["SESSION_COOKIE_SECURE"] = True  # HTTPS only
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "None"  # Allow cross-origin
 
 # Debug: Log CORS and request details
 @app.before_request
 def log_request():
 	origin = request.headers.get("Origin", "no-origin")
-	print(f"[Request] {request.method} {request.path} from origin: {origin}")
-	if request.method == "OPTIONS":
-		print(f"[CORS] Preflight request to {request.path}")
-	if request.path in ["/auth/puzzle", "/login", "/register", "/chatbot"]:
-		print(f"[Auth] Endpoint {request.path}, Content-Type: {request.headers.get('Content-Type', 'none')}")
+	method = request.method
+	path = request.path
+	print(f"[{method}] {path} from origin: {origin}")
+	if method == "OPTIONS":
+		print(f"  [CORS] Preflight request")
+	if path in ["/auth/puzzle", "/login", "/register", "/chatbot"]:
+		print(f"  [Auth] Content-Type: {request.headers.get('Content-Type', 'none')}")
+
+print(f"[Startup] OpenRouter API Key configured: {bool(settings.openrouter_api_key)}")
+if not settings.openrouter_api_key:
+	print(f"[WARNING] OPENROUTER_API_KEY is not set! Chatbot will use fallback mode.")
+else:
+	key_preview = settings.openrouter_api_key[:10] + "..." if len(settings.openrouter_api_key) > 10 else "***"
+	print(f"[Startup] OpenRouter model: {settings.openrouter_model}")
+	print(f"[Startup] OpenRouter key (preview): {key_preview}")
 
 
 TICKET_ID_PATTERN = re.compile(r"\bTKT-[A-Z0-9]{6}\b", re.IGNORECASE)
@@ -321,6 +349,7 @@ def analytics_overview():
 
 @app.post("/chatbot/ask")
 @app.post("/chatbot")
+@app.post("/chat")
 def chatbot_ask():
 	payload = request.get_json(silent=True) or {}
 	message = str(payload.get("message", "")).strip()
