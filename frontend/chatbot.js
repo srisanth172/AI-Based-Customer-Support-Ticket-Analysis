@@ -1,5 +1,5 @@
 // Detect if running on Vercel frontend and route to Render backend
-const CHAT_API_BASE = "https://ai-based-customer-support-ticket-5ooe.onrender.com/customer";
+const CHAT_API_BASE = "https://ai-based-customer-support-ticket-x3ou.onrender.com";
 
 const chatForm = document.getElementById("chatForm");
 const chatInput = document.getElementById("chatInput");

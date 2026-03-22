@@ -179,6 +179,10 @@ def _local_chat_fallback(user_message: str) -> dict:
 def _call_openrouter(messages: list[dict[str, str]], temperature: float = 0.35) -> str:
     if not settings.openrouter_api_key:
         raise RuntimeError("OPENROUTER_API_KEY is not configured.")
+    
+    # Debug: Log that we're calling OpenRouter (mask the key for safety)
+    key_preview = settings.openrouter_api_key[:10] + "..." if len(settings.openrouter_api_key) > 10 else settings.openrouter_api_key
+    print(f"[OpenRouter] Calling API with key: {key_preview}, model: {settings.openrouter_model}")
 
     headers = {
         "Authorization": f"Bearer {settings.openrouter_api_key}",
@@ -203,12 +207,18 @@ def _call_openrouter(messages: list[dict[str, str]], temperature: float = 0.35) 
     try:
         with urlopen(request, timeout=45) as response:
             body = json.loads(response.read().decode("utf-8"))
+            print(f"[OpenRouter] Success: Got response with {len(body.get('choices', []))} choices")
             return str(body["choices"][0]["message"]["content"])
     except HTTPError as error:
         error_text = error.read().decode("utf-8", errors="ignore")
+        print(f"[OpenRouter] HTTP Error {error.code}: {error_text[:500]}")
         raise RuntimeError(f"OpenRouter HTTP error: {error.code} {error_text}") from error
     except URLError as error:
+        print(f"[OpenRouter] Network Error: {error}")
         raise RuntimeError(f"OpenRouter network error: {error}") from error
+    except Exception as error:
+        print(f"[OpenRouter] Unexpected Error: {error}")
+        raise
 
 
 def _extract_json(content: str) -> dict[str, Any]:

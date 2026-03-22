@@ -41,6 +41,17 @@ CORS(
 	methods=["GET", "POST", "PUT", "OPTIONS"],
 )
 
+# Debug: Log CORS and request details
+@app.before_request
+def log_request():
+	origin = request.headers.get("Origin", "no-origin")
+	print(f"[Request] {request.method} {request.path} from origin: {origin}")
+	if request.method == "OPTIONS":
+		print(f"[CORS] Preflight request to {request.path}")
+	if request.path in ["/auth/puzzle", "/login", "/register", "/chatbot"]:
+		print(f"[Auth] Endpoint {request.path}, Content-Type: {request.headers.get('Content-Type', 'none')}")
+
+
 TICKET_ID_PATTERN = re.compile(r"\bTKT-[A-Z0-9]{6}\b", re.IGNORECASE)
 
 init_db()
