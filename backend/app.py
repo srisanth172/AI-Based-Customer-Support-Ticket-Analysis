@@ -36,22 +36,19 @@ app = Flask(
 )
 
 # Single CORS policy for both local dev and deployed frontend.
-allowed_origins = [
-	"http://localhost:3000",
-	"http://localhost:5000",
-	"http://127.0.0.1:3000",
-	"http://127.0.0.1:5000",
-	"https://ai-based-customer-support-ticket-an-pi.vercel.app",
-	r"https://.*\.vercel\.app",
-]
 
 CORS(
 	app,
-	resources={r"/*": {"origins": allowed_origins}},
-	allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
-	methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+	resources={r"/*": {
+		"origins": [
+			"http://localhost:3000",
+			"http://127.0.0.1:3000",
+			r"https://.*\.vercel\.app"
+		]
+	}},
 	supports_credentials=True,
-	max_age=3600,
+	allow_headers=["Content-Type", "Authorization"],
+	methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 )
 
 # Configure session cookies for cross-origin
