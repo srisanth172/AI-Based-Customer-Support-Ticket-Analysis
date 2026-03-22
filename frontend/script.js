@@ -2,11 +2,9 @@
 const isVercelDeployment = window.location.hostname.includes('vercel.app') || window.location.hostname.includes('onvercel.com');
 const runtimeApiBase = String(window.NEXT_PUBLIC_API_URL || "").trim();
 const API_BASE = isVercelDeployment 
-	? (runtimeApiBase || "https://ai-based-customer-support-ticket-x3ou.onrender.com")
+	? (runtimeApiBase || "https://ai-based-customer-support-ticket-ppo7.onrender.com")
 	: window.location.origin;
 const AUTH_STORAGE_KEY = "support_auth_state";
-
-
 function getAuthState() {
 	try {
 		const raw = localStorage.getItem(AUTH_STORAGE_KEY);
