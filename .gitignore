@@ -1,0 +1,6 @@
+node_modules/
+dist/
+mongo-data/
+.env
+.vite/
+.vscode/
