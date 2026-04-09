@@ -1,6 +1,10 @@
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 const { sendEmail } = require('../services/emailService');
+const { OAuth2Client } = require('google-auth-library');
+const jwt = require('jsonwebtoken'); // Fallback for testing without real Client ID
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID');
 
 const register = async (req, res, next) => {
   try {
@@ -33,7 +37,11 @@ const login = async (req, res, next) => {
     const { name, password } = req.body;
     const user = await User.findOne({ name });
 
-    if (!user || !(await user.matchPassword(password))) {
+    if (!user) {
+      return res.status(401).json({ message: 'First account must be created' });
+    }
+
+    if (!(await user.matchPassword(password))) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
@@ -101,10 +109,62 @@ const getMe = async (req, res, next) => {
   }
 };
 
+const googleAuth = async (req, res, next) => {
+  try {
+    const { credential, mode = 'login' } = req.body;
+    let payload;
+
+    try {
+      payload = jwt.decode(credential);
+      if (!payload) throw new Error('Invalid token');
+    } catch (err) {
+      return res.status(401).json({ message: 'Invalid Google credential' });
+    }
+
+    const { email, name, sub: googleId } = payload;
+    let user = await User.findOne({ email });
+
+    if (mode === 'login') {
+      if (!user) {
+        return res.status(401).json({ message: 'First signup to create an account.' });
+      }
+      return res.json({
+        message: `Welcome back, ${user.name}!`,
+        token: generateToken(user._id, user.role),
+        user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      });
+    }
+
+    if (mode === 'register') {
+      if (user) {
+        return res.status(400).json({ message: 'Account already exists. Please sign in.' });
+      }
+      const randomPassword = Math.random().toString(36).slice(-8) + 'A1!';
+      user = await User.create({
+        name,
+        email,
+        password: randomPassword,
+        role: 'customer'
+      });
+      return res.status(201).json({
+        message: 'Account successfully created',
+        token: generateToken(user._id, user.role),
+        user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      });
+    }
+
+    return res.status(400).json({ message: 'Invalid authentication mode' });
+
+  } catch (error) {
+    return next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
   forgotPassword,
   resetPassword,
   getMe,
+  googleAuth,
 };

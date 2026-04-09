@@ -43,23 +43,23 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl"
+        className="max-w-md w-full space-y-8 bg-white p-10 rounded-[32px] shadow-2xl border border-indigo-50/50"
       >
         {/* Header */}
         <div className="text-center">
           <div className="flex justify-center">
-            <div className="w-16 h-16 bg-gradient-to-r from-primary-600 to-secondary-600 rounded-2xl flex items-center justify-center mb-4">
+            <div className="w-16 h-16 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-indigo-600/30">
               <EnvelopeIcon className="w-8 h-8 text-white" />
             </div>
           </div>
-          <h2 className="mt-2 text-3xl font-bold text-gray-900">Reset password</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Enter your email address and we'll send you a link to reset your password.
+          <h2 className="mt-2 text-[28px] font-black tracking-tight text-slate-900">Reset Password</h2>
+          <p className="mt-2 text-sm font-medium text-slate-500">
+            Enter your email and we'll send a reset link
           </p>
         </div>
 
@@ -74,7 +74,7 @@ const ForgotPassword = () => {
               onSubmit={handleSubmit}
             >
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="email" className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2">
                   Email address
                 </label>
                 <div className="relative">
@@ -83,41 +83,40 @@ const ForgotPassword = () => {
                     name="email"
                     type="email"
                     autoComplete="email"
-                    required
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
                       setError('');
                     }}
-                    className={`w-full pl-11 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all ${
-                      error ? 'border-red-500' : 'border-gray-300'
+                    className={`w-full pl-11 pr-5 py-3.5 border-0 ring-1 ring-inset rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-medium text-[15px] bg-slate-50/50 placeholder:text-slate-400 ${
+                      error ? 'ring-rose-500' : 'ring-slate-200/80'
                     }`}
                     placeholder="you@example.com"
                   />
-                  <EnvelopeIcon className="absolute left-3.5 top-2.5 h-5 w-5 text-gray-400 pointer-events-none" />
+                  <EnvelopeIcon className="absolute left-4 top-3.5 h-5 w-5 text-slate-400 pointer-events-none" />
                 </div>
                 {error && (
-                  <p className="mt-1 text-sm text-red-600">{error}</p>
+                  <p className="mt-2 text-xs font-bold text-rose-500">{error}</p>
                 )}
               </div>
 
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                className="w-full"
-                disabled={loading}
-              >
-                {loading ? <Loader size="sm" text="" /> : 'Send reset link'}
-              </Button>
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-14 bg-indigo-600 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center"
+                >
+                  {loading ? <Loader size="sm" text="" /> : 'Send Reset Link'}
+                </button>
+              </div>
 
-              <div className="text-center">
+              <div className="text-center pt-2">
                 <Link
                   to="/login"
-                  className="inline-flex items-center text-sm text-gray-600 hover:text-primary-600 transition-colors"
+                  className="inline-flex items-center text-[13px] font-bold text-slate-500 hover:text-indigo-600 transition-colors"
                 >
-                  <ArrowLeftIcon className="w-4 h-4 mr-1" />
-                  Back to sign in
+                  <ArrowLeftIcon className="w-4 h-4 mr-2" />
+                  Back to Sign In
                 </Link>
               </div>
             </motion.form>
@@ -129,15 +128,15 @@ const ForgotPassword = () => {
               exit={{ opacity: 0 }}
               className="mt-8 text-center"
             >
-              <div className="flex justify-center mb-4">
-                <CheckCircleIcon className="w-16 h-16 text-green-500" />
+              <div className="flex justify-center mb-6">
+                <CheckCircleIcon className="w-20 h-20 text-emerald-500" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Check your email</h3>
-              <p className="text-gray-600 mb-6">
-                We've sent a password reset link to <strong>{email}</strong>.
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Check your inbox</h3>
+              <p className="text-slate-500 mb-6 font-medium text-[15px] leading-relaxed">
+                We've sent a password reset link to <strong className="text-slate-800">{email}</strong>.
                 The link will expire in 15 minutes.
               </p>
-              <p className="text-sm text-gray-500 mb-6">
+              <p className="text-sm text-slate-400 mb-8 font-medium">
                 Didn't receive the email? Check your spam folder or{' '}
                 <button
                   onClick={() => {
@@ -145,16 +144,16 @@ const ForgotPassword = () => {
                     setEmail('');
                     setError('');
                   }}
-                  className="text-primary-600 hover:text-primary-500 font-medium"
+                  className="text-indigo-600 hover:text-indigo-700 font-bold transition-colors"
                 >
                   try again
                 </button>
               </p>
               <Link
                 to="/login"
-                className="inline-flex items-center text-primary-600 hover:text-primary-700 font-medium"
+                className="inline-flex h-12 bg-slate-50 text-slate-600 items-center justify-center w-full rounded-xl font-black text-xs uppercase tracking-[0.2em] hover:bg-slate-100 transition-all border border-slate-200/50"
               >
-                Return to sign in
+                Return to Sign In
               </Link>
             </motion.div>
           )}

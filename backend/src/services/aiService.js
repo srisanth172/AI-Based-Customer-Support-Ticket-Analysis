@@ -11,13 +11,14 @@ class AIService {
       '{',
       '  "sentiment": "positive|neutral|negative",',
       '  "sentimentScore": number,',
-      '  "priority": "low|medium|high",',
+      '  "priority": "standard|medium|high",',
       '  "priorityScore": number,',
       '  "category": "billing|technical|delivery|account|product|general",',
       '  "suggestedReply": string,',
       '  "reasoning": string,',
       '  "keywords": string[]',
       '}',
+      'Note: Do NOT use the word "low" for priority. Use "standard" instead.',
       '',
       `Message: ${text}`,
     ].join('\n');
@@ -194,6 +195,9 @@ class AIService {
 Be concise, helpful, and polite. 
 You can help the user troubleshoot issues, or give them the status of their active tickets.
 If the user's issue requires human intervention or they ask to raise a ticket, gracefully let them know and set the action to "raise_ticket".
+IMPORTANT: NEVER use the word "low" to describe priority to a customer as it may frustrate them. Instead, use terms like "Standard" or "Regular".
+ALWAYS respond in a PROFESSIONAL, WARM, AND CONCISE manner.
+When confirming a ticket, use the phrase "Your ticket has been issued" if appropriate.
 
 Current active tickets for this user:
 ${contextTickets || 'None'}
@@ -212,6 +216,7 @@ Return ONLY valid JSON in this exact format:
       }))
     ];
 
+    const startTime = Date.now();
     try {
       const response = await fetch(openRouterUrl, {
         method: 'POST',
@@ -231,6 +236,9 @@ Return ONLY valid JSON in this exact format:
 
       if (!response.ok) throw new Error(`OpenRouter error: ${response.status}`);
       const data = await response.json();
+      const endTime = Date.now();
+      console.log(`OpenRouter Response Time: ${endTime - startTime}ms`);
+      
       const content = data?.choices?.[0]?.message?.content;
       
       try {

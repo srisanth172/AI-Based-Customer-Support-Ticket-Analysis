@@ -1,9 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 @import 'tailwindcss/base';
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 
+/* ─── Base Reset & Typography ─── */
 html {
   scroll-behavior: smooth;
 }
@@ -16,25 +17,259 @@ body,
 
 body {
   margin: 0;
-  font-family: 'Inter', sans-serif;
-  background: #f8fafc;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: #f8f9fb;
   color: #0f172a;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.011em;
 }
 
+/* ─── Scrollbar Styling ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 100px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ─── Design System Utilities ─── */
 @layer utilities {
   .glass {
-    @apply bg-white/70 backdrop-blur-xl border border-white/30;
+    @apply bg-white/80 backdrop-blur-xl border border-white/40;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  .glass-strong {
+    @apply bg-white/90 backdrop-blur-2xl border border-white/50;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  }
+
+  .elevation-1 {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+  }
+
+  .elevation-2 {
+    box-shadow: 0 4px 8px -2px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  }
+
+  .elevation-3 {
+    box-shadow: 0 12px 24px -4px rgba(0, 0, 0, 0.08), 0 4px 8px -2px rgba(0, 0, 0, 0.03);
   }
 
   .mesh-gradient-bg {
-    @apply bg-slate-50;
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.08) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.04) 0px, transparent 50%),
-      radial-gradient(at 0% 100%, rgba(139, 92, 246, 0.08) 0px, transparent 50%);
+    background: #f8f9fb;
+    background-image:
+      radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.06) 0px, transparent 50%),
+      radial-gradient(at 98% 2%, rgba(139, 92, 246, 0.05) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.03) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, rgba(139, 92, 246, 0.04) 0px, transparent 50%);
     background-attachment: fixed;
   }
+
+  /* Gradient text utility */
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #4f46e5, #7c3aed);
+  }
+
+  /* Subtle border utility */
+  .border-subtle {
+    border-color: rgba(0, 0, 0, 0.06);
+  }
+}
+
+/* ─── SaaS Card Component ─── */
+.saas-card {
+  @apply bg-white rounded-2xl transition-all duration-300;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.saas-card:hover {
+  border-color: rgba(99, 102, 241, 0.15);
+  box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.08), 0 4px 10px -4px rgba(0, 0, 0, 0.03);
+  transform: translateY(-2px);
+}
+
+/* ─── Stat Card with colored left accent ─── */
+.stat-card {
+  @apply bg-white rounded-2xl transition-all duration-300 relative overflow-hidden;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  border-radius: 0 4px 4px 0;
+  transition: width 0.3s ease;
+}
+
+.stat-card:hover {
+  box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-3px);
+}
+
+.stat-card:hover::before {
+  width: 5px;
+}
+
+.stat-card--indigo::before {
+  background: linear-gradient(180deg, #6366f1, #4f46e5);
+}
+
+.stat-card--amber::before {
+  background: linear-gradient(180deg, #f59e0b, #d97706);
+}
+
+.stat-card--emerald::before {
+  background: linear-gradient(180deg, #10b981, #059669);
+}
+
+/* ─── Focus Ring ─── */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+}
+
+/* ─── Sidebar transitions ─── */
+.sidebar-item {
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 60%;
+  border-radius: 0 6px 6px 0;
+  background: #818cf8;
+  transition: width 0.2s ease;
+}
+
+.sidebar-item.active::before {
+  width: 3px;
+}
+
+/* ─── Button base ─── */
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 font-semibold text-white text-sm rounded-xl transition-all duration-200;
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  box-shadow: 0 2px 8px -2px rgba(79, 70, 229, 0.4);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #4338ca, #4f46e5);
+  box-shadow: 0 4px 16px -2px rgba(79, 70, 229, 0.45);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* ─── Chat Bubble Styles ─── */
+.chat-bubble-user {
+  @apply text-white text-sm;
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  border-radius: 20px 20px 6px 20px;
+}
+
+.chat-bubble-bot {
+  @apply text-slate-700 text-sm bg-white border;
+  border-color: rgba(0, 0, 0, 0.06);
+  border-radius: 20px 20px 20px 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* ─── Floating chat button glow ─── */
+.chat-button-glow {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  box-shadow:
+    0 4px 15px -3px rgba(79, 70, 229, 0.5),
+    0 0 30px rgba(99, 102, 241, 0.15);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-button-glow:hover {
+  box-shadow:
+    0 6px 20px -3px rgba(79, 70, 229, 0.6),
+    0 0 50px rgba(99, 102, 241, 0.2);
+  transform: scale(1.08);
+}
+
+/* ─── Mobile responsive sidebar ─── */
+@media (max-width: 768px) {
+  .sidebar-mobile-hidden {
+    transform: translateX(-100%);
+    position: fixed;
+    z-index: 50;
+  }
+
+  .sidebar-mobile-visible {
+    transform: translateX(0);
+    position: fixed;
+    z-index: 50;
+  }
+}
+
+/* ─── Hover card lift ─── */
+.hover-lift {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-3px);
+}
+
+/* ─── Table row hover ─── */
+.table-row-hover {
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.table-row-hover:hover {
+  background-color: rgba(99, 102, 241, 0.02);
+}
+
+/* ─── Page fade in animation ─── */
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-fade-in {
+  animation: pageFadeIn 0.35s ease-out;
+}
+
+/* ─── Empty state illustration ─── */
+.empty-state-bg {
+  background: linear-gradient(135deg, #f1f5f9, #eef2ff);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
 }

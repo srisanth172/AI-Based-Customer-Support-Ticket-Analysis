@@ -54,7 +54,28 @@ export const AuthProvider = ({ children }) => {
       }
       return userData;
     } catch (error) {
-      const message = error.response?.data?.error || 'Login failed';
+      const message = error.response?.data?.message || 'Login failed';
+      toast.error(message);
+      throw error;
+    }
+  };
+
+  const googleLogin = async (credential, mode = 'login') => {
+    try {
+      const response = await apiClient.post('/auth/google', { credential, mode });
+      const { token: newToken, user: userData, message } = response.data;
+      localStorage.setItem('token', newToken);
+      setToken(newToken);
+      setUser(userData);
+      toast.success(message || `Welcome, ${userData.name}!`);
+      if (userData.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/customer');
+      }
+      return userData;
+    } catch (error) {
+      const message = error.response?.data?.message || 'Google Auth failed';
       toast.error(message);
       throw error;
     }
@@ -80,7 +101,7 @@ export const AuthProvider = ({ children }) => {
       }
       return userData;
     } catch (error) {
-      const message = error.response?.data?.error || 'Registration failed';
+      const message = error.response?.data?.message || 'Registration failed';
       toast.error(message);
       throw error;
     }
@@ -115,7 +136,7 @@ export const AuthProvider = ({ children }) => {
       navigate('/login');
       return true;
     } catch (error) {
-      const message = error.response?.data?.error || 'Password reset failed';
+      const message = error.response?.data?.message || 'Password reset failed';
       toast.error(message);
       throw error;
     }
@@ -125,6 +146,7 @@ export const AuthProvider = ({ children }) => {
     user,
     login,
     register,
+    googleLogin,
     logout,
     forgotPassword,
     resetPassword,

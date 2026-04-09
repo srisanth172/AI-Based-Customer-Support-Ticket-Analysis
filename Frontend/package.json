@@ -10,11 +10,13 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.1.5",
+    "@react-oauth/google": "^0.13.5",
     "ai-ticket-analysis-backend": "file:../backend",
     "axios": "^1.7.9",
     "canvas-confetti": "^1.9.4",
     "chart.js": "^4.4.7",
     "framer-motion": "^11.11.11",
+    "jwt-decode": "^4.0.0",
     "lodash": "^4.18.1",
     "react": "^18.3.1",
     "react-chartjs-2": "^5.2.0",

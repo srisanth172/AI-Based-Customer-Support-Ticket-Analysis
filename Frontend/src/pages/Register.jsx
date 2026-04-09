@@ -1,4 +1,3 @@
-// src/pages/Login.jsx
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
@@ -8,11 +7,12 @@ import { GoogleLogin } from '@react-oauth/google';
 import Button from '../components/UI/Button';
 import Loader from '../components/UI/Loader';
 
-const Login = () => {
+const Register = () => {
   const navigate = useNavigate();
-  const { login, googleLogin } = useAuth();
+  const { register, googleLogin } = useAuth();
   const [formData, setFormData] = useState({
-    username: '',
+    name: '',
+    email: '',
     password: '',
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -21,11 +21,18 @@ const Login = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.username) {
-      newErrors.username = 'Customer Name is required';
+    if (!formData.name) {
+      newErrors.name = 'Full Name is required';
+    }
+    if (!formData.email) {
+      newErrors.email = 'Email Address is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email Address is invalid';
     }
     if (!formData.password) {
       newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -45,7 +52,7 @@ const Login = () => {
 
     setLoading(true);
     try {
-      await login(formData.username, formData.password);
+      await register(formData.name, formData.email, formData.password, 'customer');
       // Navigation handled inside AuthContext
     } catch (error) {
       // Error already handled by AuthContext
@@ -69,34 +76,56 @@ const Login = () => {
               <span className="text-white text-2xl font-black">C</span>
             </div>
           </div>
-          <h2 className="mt-2 text-[28px] font-black tracking-tight text-slate-900">Welcome Back</h2>
+          <h2 className="mt-2 text-[28px] font-black tracking-tight text-slate-900">Create Account</h2>
           <p className="mt-2 text-sm font-medium text-slate-500">
-            Sign in to access your customer dashboard
+            Join ClarityHelp to experience smarter support
           </p>
         </div>
 
         {/* Form */}
         <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
           <div className="space-y-4">
-            {/* Username */}
+            {/* Full Name */}
             <div>
-              <label htmlFor="username" className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2">
-                Username
+              <label htmlFor="name" className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                Full Name
               </label>
               <input
-                id="username"
-                name="username"
+                id="name"
+                name="name"
                 type="text"
-                autoComplete="username"
-                value={formData.username}
+                autoComplete="name"
+                value={formData.name}
                 onChange={handleChange}
                 className={`w-full px-5 py-3.5 border-0 ring-1 ring-inset rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-medium text-[15px] bg-slate-50/50 placeholder:text-slate-400 ${
-                  errors.username ? 'ring-rose-500' : 'ring-slate-200/80'
+                  errors.name ? 'ring-rose-500' : 'ring-slate-200/80'
                 }`}
-                placeholder="Enter your name"
+                placeholder="Sarah Jenkins"
               />
-              {errors.username && (
-                <p className="mt-2 text-xs font-bold text-rose-500">{errors.username}</p>
+              {errors.name && (
+                <p className="mt-2 text-xs font-bold text-rose-500">{errors.name}</p>
+              )}
+            </div>
+
+            {/* Email */}
+            <div>
+              <label htmlFor="email" className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                Email Address
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                value={formData.email}
+                onChange={handleChange}
+                className={`w-full px-5 py-3.5 border-0 ring-1 ring-inset rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-medium text-[15px] bg-slate-50/50 placeholder:text-slate-400 ${
+                  errors.email ? 'ring-rose-500' : 'ring-slate-200/80'
+                }`}
+                placeholder="sarah@example.com"
+              />
+              {errors.email && (
+                <p className="mt-2 text-xs font-bold text-rose-500">{errors.email}</p>
               )}
             </div>
 
@@ -110,7 +139,7 @@ const Login = () => {
                   id="password"
                   name="password"
                   type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                   value={formData.password}
                   onChange={handleChange}
                   className={`w-full px-5 py-3.5 border-0 ring-1 ring-inset rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-medium text-[15px] bg-slate-50/50 placeholder:text-slate-400 ${
@@ -136,52 +165,41 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Forgot password link */}
-          <div className="flex items-center justify-end">
-            <Link
-              to="/forgot-password"
-              className="text-[13px] text-indigo-600 hover:text-indigo-700 font-bold transition-colors"
-            >
-              Forgot password?
-            </Link>
-          </div>
-
           <div className="pt-2">
             <button
               type="submit"
               disabled={loading}
               className="w-full h-14 bg-indigo-600 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center"
             >
-              {loading ? <Loader size="sm" text="" /> : 'Sign In'}
+              {loading ? <Loader size="sm" text="" /> : 'Create Account'}
             </button>
           </div>
 
-          {/* Social Login */}
+          {/* Social Register */}
           <div className="relative mt-6 pt-4">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-200/80" />
             </div>
             <div className="relative flex justify-center text-[11px] font-black uppercase tracking-widest text-slate-400">
-              <span className="px-4 bg-white">Or continue with</span>
+              <span className="px-4 bg-white">Or sign up with</span>
             </div>
           </div>
           <div className="flex justify-center mt-6">
             <GoogleLogin
               onSuccess={credentialResponse => {
-                googleLogin(credentialResponse.credential, 'login');
+                googleLogin(credentialResponse.credential, 'register');
               }}
               onError={() => {
-                console.error('Google Sign In failed');
+                console.error('Google Sign Up failed');
               }}
               shape="pill"
             />
           </div>
 
-          {/* Sign up link */}
           <p className="text-center text-sm font-medium text-slate-500 mt-6">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-indigo-600 hover:text-indigo-700 font-bold transition-colors">
-              Sign up
+            Already have an account?{' '}
+            <Link to="/login" className="text-indigo-600 hover:text-indigo-700 font-bold transition-colors">
+              Sign In
             </Link>
           </p>
         </form>
@@ -190,4 +208,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Register;

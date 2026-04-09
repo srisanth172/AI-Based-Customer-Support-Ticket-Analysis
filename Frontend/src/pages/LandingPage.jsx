@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import {
   GlobeAltIcon,
   XMarkIcon,
@@ -34,6 +35,7 @@ const fadeIn = (delay = 0) => ({
 
 const LandingPage = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [showBanner, setShowBanner] = useState(true);
 
   const features = [
@@ -71,10 +73,9 @@ const LandingPage = () => {
   ];
 
   return (
-    <div className="min-h-screen font-sans selection:bg-indigo-500 selection:text-white">
-
+    <div className="min-h-screen font-sans selection:bg-indigo-500 selection:text-white mesh-gradient-bg">
       {/* ═══════════════ DARK HERO ZONE ═══════════════ */}
-      <div className="relative bg-[#0a0a1a] text-white overflow-hidden">
+      <div className="relative bg-[#0a0a1a]/95 text-white overflow-hidden shadow-2xl backdrop-blur-3xl">
         {/* Aurora gradient background */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-[-200px] left-1/2 -translate-x-1/2 w-[1200px] h-[800px] bg-gradient-to-b from-indigo-600/20 via-violet-600/10 to-transparent blur-[120px] rounded-full" />
@@ -89,7 +90,7 @@ const LandingPage = () => {
 
 
         {/* Main Nav */}
-        <header className="sticky top-0 z-50 bg-[#0a0a1a]/70 backdrop-blur-xl border-b border-white/[0.06]">
+        <header className="sticky top-0 z-50 glass border-b border-white/[0.05] !bg-[#0a0a1a]/60">
           <div className="mx-auto max-w-[1300px] px-6 h-[68px] flex items-center justify-between">
             <div className="flex items-center gap-14">
               {/* Logo */}
@@ -118,14 +119,11 @@ const LandingPage = () => {
             </div>
 
             <div className="hidden lg:flex items-center gap-3">
-              <button onClick={() => navigate('/login')} className="text-[14px] font-medium text-white/50 hover:text-white px-4 py-2 transition-colors duration-200">
-                Sign in
-              </button>
-              <button onClick={() => navigate('/admin')} className="text-[14px] font-medium text-white/60 hover:text-white px-4 py-2 rounded-lg hover:bg-white/[0.06] transition-all duration-200">
-                Book Demo
-              </button>
-              <button onClick={() => navigate('/customer')} className="rounded-lg bg-indigo-600 px-5 py-2 text-[14px] font-semibold text-white hover:bg-indigo-500 shadow-lg shadow-indigo-600/25 hover:shadow-indigo-500/30 transition-all duration-200">
-                Start Free Trial
+              <button 
+                onClick={() => navigate(isAuthenticated ? '/customer' : '/login')} 
+                className="rounded-lg bg-indigo-600 px-5 py-2 text-[14px] font-semibold text-white hover:bg-indigo-500 shadow-lg shadow-indigo-600/25 hover:shadow-indigo-500/30 transition-all duration-200"
+              >
+                {isAuthenticated ? 'Go to Dashboard' : 'Get Started'}
               </button>
             </div>
           </div>
@@ -156,29 +154,7 @@ const LandingPage = () => {
               Empower your team with deep analysis, sentiment tracking, and automated responses that feel entirely human.
             </motion.p>
 
-            {/* CTA Row */}
-            <motion.div {...fadeUp(0.24)} className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <button 
-                onClick={() => navigate('/customer')}
-                className="group relative px-8 py-3.5 rounded-xl bg-indigo-600 text-[15px] font-bold text-white hover:bg-indigo-500 shadow-2xl shadow-indigo-600/30 hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
-              >
-                Get Started Free
-                <ArrowRightIcon className="inline-block h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-              </button>
-              <button
-                onClick={() => navigate('/admin')}
-                className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-[15px] font-medium text-white/70 hover:text-white border border-white/10 hover:border-white/20 hover:bg-white/[0.04] transition-all duration-200"
-              >
-                <PlayCircleIcon className="h-5 w-5 text-indigo-400" />
-                Watch Demo
-              </button>
-            </motion.div>
 
-            {/* Microcopy */}
-            <motion.p {...fadeUp(0.3)} className="mt-4 text-sm text-white/30 flex items-center justify-center gap-1.5">
-              <ShieldCheckIcon className="h-4 w-4 text-emerald-500/70" />
-              No credit card required · Free 14-day trial
-            </motion.p>
           </div>
         </section>
 
@@ -283,9 +259,9 @@ const LandingPage = () => {
       {/* ═══════════════ LIGHT SECTIONS ═══════════════ */}
 
       {/* Trust Bar */}
-      <section className="bg-white border-b border-slate-100 py-10">
+      <section className="bg-transparent border-b border-slate-200/50 py-10">
         <div className="mx-auto max-w-5xl px-4 text-center">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-6">Trusted by 10,000+ support teams worldwide</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-6 font-mono">Trusted by 10,000+ support teams worldwide</p>
           <div className="flex flex-wrap items-center justify-center gap-x-14 gap-y-4">
             {['Acme Corp', 'Globex', 'Soylent', 'Initech', 'Umbrella', 'Hooli'].map((name) => (
               <span key={name} className="text-[16px] font-bold text-slate-200 tracking-wide select-none">{name}</span>
@@ -298,7 +274,7 @@ const LandingPage = () => {
       <section className="bg-gradient-to-b from-slate-50 to-white py-24">
         <div className="mx-auto max-w-6xl px-4">
           <motion.div {...fadeIn(0)} className="text-center mb-16">
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-600 font-semibold text-xs uppercase tracking-[0.15em] mb-4 border border-indigo-100">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass bg-indigo-50/50 text-indigo-600 font-bold text-[10px] uppercase tracking-[0.2em] mb-4 border-indigo-200/50">
               Why ClarityHelp
             </span>
             <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl lg:text-[2.75rem]">
@@ -318,7 +294,7 @@ const LandingPage = () => {
                 transition={{ delay: idx * 0.1, duration: 0.5 }}
                 viewport={{ once: true, amount: 0.2 }}
                 whileHover={{ y: -6 }}
-                className="group rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-300"
+                className="group rounded-2xl border border-slate-200 shadow-sm glass p-6 hover:shadow-xl hover:shadow-indigo-200/20 transition-all duration-300"
               >
                 <div className={`inline-flex rounded-xl bg-gradient-to-br ${feature.gradient} p-3 text-white shadow-lg shadow-indigo-500/10`}>
                   <feature.icon className="h-5 w-5" />
@@ -370,33 +346,11 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="bg-white py-24">
-        <div className="mx-auto max-w-3xl px-4 text-center">
-          <motion.div {...fadeIn(0)}>
-            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-              Ready to transform your support?
-            </h2>
-            <p className="mt-4 text-lg text-slate-500 max-w-xl mx-auto">
-              Join thousands of teams that use ClarityHelp to deliver faster, smarter customer service.
-            </p>
-            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <button 
-                onClick={() => navigate('/customer')}
-                className="group px-8 py-4 rounded-xl bg-indigo-600 text-[15px] font-bold text-white hover:bg-indigo-500 shadow-xl shadow-indigo-600/25 hover:shadow-indigo-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
-              >
-                Start your free trial
-                <ArrowRightIcon className="inline-block h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
-              </button>
-              <button
-                onClick={() => navigate('/admin')}
-                className="flex items-center gap-2 px-6 py-4 rounded-xl text-[15px] font-medium text-slate-600 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all duration-200"
-              >
-                <PlayCircleIcon className="h-5 w-5 text-indigo-500" />
-                Watch Demo
-              </button>
-            </div>
-            <p className="mt-4 text-sm text-slate-400">No credit card required · Cancel anytime</p>
+      {/* Image Block */}
+      <section className="bg-transparent py-24">
+        <div className="mx-auto max-w-5xl px-4">
+          <motion.div {...fadeIn(0)} className="rounded-2xl border border-slate-200/50 shadow-xl overflow-hidden glass">
+            <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=2000" alt="Dashboard Preview" className="w-full h-auto max-h-[500px] object-cover opacity-90" />
           </motion.div>
         </div>
       </section>
@@ -421,13 +375,7 @@ const LandingPage = () => {
         </div>
       </footer>
 
-      {/* Floating Action Button */}
-      <button 
-        className="fixed bottom-8 right-8 z-[60] flex items-center gap-2.5 rounded-full bg-indigo-600 px-6 py-3.5 shadow-2xl shadow-indigo-600/30 hover:bg-indigo-500 hover:-translate-y-1 hover:shadow-indigo-500/40 active:scale-95 transition-all duration-300 font-semibold text-white tracking-wide group"
-      >
-        <ChatBubbleLeftRightIcon className="h-5 w-5 group-hover:rotate-6 transition-transform duration-300" />
-        Chat with Expert
-      </button>
+
 
     </div>
   );
