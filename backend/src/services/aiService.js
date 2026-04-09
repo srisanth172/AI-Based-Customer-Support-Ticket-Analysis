@@ -181,6 +181,69 @@ class AIService {
 
     return this.analyzeTicket(text);
   }
+
+  async handleCustomerChatInteraction(messages, contextTickets) {
+    if (!process.env.OPENROUTER_API_KEY) {
+      return { text: "I'm currently unable to process requests as the AI is offline.", action: "none" };
+    }
+
+    const openRouterUrl = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1/chat/completions';
+    const model = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
+
+    const systemPrompt = `You are the AI Assistant for ClarityHelp.
+Be concise, helpful, and polite. 
+You can help the user troubleshoot issues, or give them the status of their active tickets.
+If the user's issue requires human intervention or they ask to raise a ticket, gracefully let them know and set the action to "raise_ticket".
+
+Current active tickets for this user:
+${contextTickets || 'None'}
+
+Return ONLY valid JSON in this exact format:
+{
+  "text": "Your conversational response to the user here",
+  "action": "none" | "raise_ticket"
+}`;
+
+    const formattedMessages = [
+      { role: 'system', content: systemPrompt },
+      ...messages.map(m => ({
+        role: m.sender === 'user' ? 'user' : 'assistant',
+        content: m.text
+      }))
+    ];
+
+    try {
+      const response = await fetch(openRouterUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:3000',
+          'X-Title': process.env.OPENROUTER_APP_NAME || 'Support System Backend',
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0.3,
+          response_format: { type: "json_object" },
+          messages: formattedMessages,
+        }),
+      });
+
+      if (!response.ok) throw new Error(`OpenRouter error: ${response.status}`);
+      const data = await response.json();
+      const content = data?.choices?.[0]?.message?.content;
+      
+      try {
+        const parsed = JSON.parse(content);
+        return { text: parsed.text || "I found something, but couldn't format it right.", action: parsed.action || "none" };
+      } catch (e) {
+        return { text: content, action: "none" }; // fallback if it didn't return json
+      }
+    } catch (error) {
+      console.error("AI Chat Error:", error.message);
+      return { text: "Sorry, I encountered an issue connecting to the AI service.", action: "none" };
+    }
+  }
 }
 
 module.exports = new AIService();

@@ -87,14 +87,28 @@ exports.addMessage = async (req, res) => {
 exports.updateTicketStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    const ticket = await Ticket.findOne({ ticketId: req.params.id });
+    const ticket = await Ticket.findOne({ ticketId: req.params.id }).populate('userId', 'name email');
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
-    ticket.status = status;
-    if (status === 'resolved') {
-      ticket.resolvedAt = new Date();
-      ticket.resolutionTime = Math.round((ticket.resolvedAt - ticket.createdAt) / (1000 * 60));
+    
+    // Only process changes if status is actually changing
+    if (ticket.status !== status) {
+      ticket.status = status;
+      if (status === 'resolved') {
+        ticket.resolvedAt = new Date();
+        ticket.resolutionTime = Math.round((ticket.resolvedAt - ticket.createdAt) / (1000 * 60));
+        
+        // Send resolution email
+        if (ticket.userId && ticket.userId.email) {
+          await emailService.sendTicketNotification(
+            ticket.userId.email,
+            ticket.ticketId,
+            'Your ticket has been resolved!'
+          );
+        }
+      }
+      await ticket.save();
     }
-    await ticket.save();
+    
     res.json(ticket);
   } catch (error) {
     res.status(500).json({ error: error.message });

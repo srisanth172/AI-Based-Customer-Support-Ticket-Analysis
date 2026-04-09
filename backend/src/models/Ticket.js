@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const messageSchema = new mongoose.Schema({
   sender: { type: String, enum: ['user', 'bot', 'admin'], required: true },
   text: { type: String, required: true },
+  attachmentUrl: { type: String },
   timestamp: { type: Date, default: Date.now },
 });
 
