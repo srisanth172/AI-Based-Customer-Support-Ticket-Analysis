@@ -41,11 +41,11 @@ export const AuthProvider = ({ children }) => {
         name: username,
         password
       });
-      const { token: newToken, user: userData } = response.data;
+      const { token: newToken, user: userData, message } = response.data;
       localStorage.setItem('token', newToken);
       setToken(newToken);
       setUser(userData);
-      toast.success(`Welcome back, ${userData.name}!`);
+      toast.success(message || `Welcome back, ${userData.name}!`);
       // Redirect based on role
       if (userData.role === 'admin') {
         navigate('/admin');
@@ -89,11 +89,11 @@ export const AuthProvider = ({ children }) => {
         password,
         role
       });
-      const { token: newToken, user: userData } = response.data;
+      const { token: newToken, user: userData, message } = response.data;
       localStorage.setItem('token', newToken);
       setToken(newToken);
       setUser(userData);
-      toast.success('Registration successful!');
+      toast.success(message || 'Account created successfully!');
       if (userData.role === 'admin') {
         navigate('/admin');
       } else {

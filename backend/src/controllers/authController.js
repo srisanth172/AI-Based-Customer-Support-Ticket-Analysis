@@ -18,7 +18,7 @@ const register = async (req, res, next) => {
     const user = await User.create({ name, email, password, role });
 
     return res.status(201).json({
-      message: 'User created',
+      message: 'Account created successfully',
       token: generateToken(user._id, user.role),
       user: {
         id: user._id,
@@ -35,10 +35,15 @@ const register = async (req, res, next) => {
 const login = async (req, res, next) => {
   try {
     const { name, password } = req.body;
-    const user = await User.findOne({ name });
+    const user = await User.findOne({ 
+      $or: [
+        { name: name },
+        { email: name }
+      ]
+    });
 
     if (!user) {
-      return res.status(401).json({ message: 'First account must be created' });
+      return res.status(401).json({ message: 'Please signup first as you do not have an account' });
     }
 
     if (!(await user.matchPassword(password))) {
