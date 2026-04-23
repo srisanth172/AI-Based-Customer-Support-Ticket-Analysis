@@ -9,16 +9,16 @@ const Layout = ({ children }) => {
   const isAdmin = location.pathname.startsWith('/admin');
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-50 transition-colors duration-200 flex flex-col font-sans">
       <Navbar />
-      <div className="flex">
+      <div className="flex flex-1 pt-16">
         {isAdmin && <Sidebar />}
         <motion.main
           key={location.pathname}
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25 }}
-          className={`flex-1 p-6 ${isAdmin ? 'ml-64' : ''}`}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+          className={`flex-1 p-8 ${isAdmin ? 'ml-64' : ''} max-w-7xl mx-auto w-full`}
         >
           {children}
         </motion.main>

@@ -1,139 +1,134 @@
 // src/pages/CustomerChat.jsx
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import { SparklesIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { ChatBubbleLeftRightIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import ChatBox from '../components/UI/ChatBox';
-import Button from '../components/UI/Button';
-import aiService from '../services/aiService';
-import ticketService from '../services/ticketService';
+import api from '../services/api';
 
 const CustomerChat = () => {
+  const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { sender: 'bot', text: 'Hello! I am your ClarityHelp AI assistant. How can I help you today?', timestamp: new Date().toISOString() }
+    { sender: 'bot', text: 'Hello! How can I help you today?', timestamp: new Date().toISOString() }
   ]);
   const [ticketStatus, setTicketStatus] = useState(null);
   const [isTicketRaised, setIsTicketRaised] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isIssuing, setIsIssuing] = useState(false);
   
   const handleSendMessage = async (text) => {
-    // Add user message
+    // Add user message immediately for real-time UI
     const userMessage = { sender: 'user', text, timestamp: new Date().toISOString() };
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
+    setMessages(prev => [...prev, userMessage]);
     
-    setIsLoading(true);
     try {
-      // Get AI response
-      const botText = await aiService.getChatbotResponse(updatedMessages);
+      // Connect to the backend
+      const response = await api.post('/tickets/chatbot', {
+        message: text,
+        conversationHistory: messages
+      });
       
       const botResponse = { 
         sender: 'bot', 
-        text: botText, 
+        text: response.data.reply, 
         timestamp: new Date().toISOString() 
       };
-      setMessages(prev => [...prev, botResponse]);
-    } catch (error) {
-      console.error('Chat error:', error);
-      toast.error('The AI assistant is temporarily unavailable. You can still raise a manual ticket.');
       
-      // Add fallback bot message
-      setMessages(prev => [...prev, { 
+      setMessages(prev => [...prev, botResponse]);
+      
+      // If the AI specifically tags [RAISE_TICKET] or asks a very direct question, show the ticket button
+      if (response.data.reply.includes('raise a support ticket') || response.data.reply.includes('[RAISE_TICKET]')) {
+        // Do nothing special, the UI already handles "showRaiseButton" via messages length or we can trigger it
+      }
+    } catch (error) {
+      console.error(error);
+      const errorResponse = { 
         sender: 'bot', 
-        text: 'I am having trouble connecting to my brain right now. Please feel free to raise a ticket if you need urgent assistance.', 
+        text: 'I am experiencing connection issues. Please try again or open a ticket directly.', 
         timestamp: new Date().toISOString() 
-      }]);
-    } finally {
-      setIsLoading(false);
+      };
+      setMessages(prev => [...prev, errorResponse]);
     }
   };
   
   const handleRaiseTicket = async () => {
-    setIsLoading(true);
-    try {
-      // Find the first user message for the subject
-      const firstUserMessage = messages.find(m => m.sender === 'user')?.text || 'Support Request';
-      const subject = firstUserMessage.length > 50 
-        ? firstUserMessage.substring(0, 47) + '...' 
-        : firstUserMessage;
+    if (isIssuing || isTicketRaised) return;
 
-      const ticketData = {
-        subject,
-        messages: messages.map(m => ({
-          sender: m.sender,
-          text: m.text,
-          timestamp: m.timestamp
-        }))
-      };
-      
-      const response = await ticketService.createTicket(ticketData);
-      const ticketId = response.ticketId || response.ticket?.ticketId || response._id || response.id;
-      
+    setIsIssuing(true);
+    try {
+      const issueMessage = [...messages].reverse().find((entry) => entry.sender === 'user')?.text || messages[messages.length - 1]?.text || 'Customer requested support assistance.';
+      const response = await api.post('/tickets', {
+        messages: [{ sender: 'user', text: issueMessage, timestamp: new Date().toISOString() }],
+      });
+
+      const createdTicket = response.data.ticket || response.data;
+      const ticketId = createdTicket.ticketId;
+
       setIsTicketRaised(true);
-      setTicketStatus({ id: ticketId, status: 'open' });
+      setTicketStatus({ id: ticketId, status: createdTicket.status || 'open' });
       toast.success(`Ticket #${ticketId} created successfully! Our team will review it shortly.`);
-      
-      // Add confirmation message
-      setMessages(prev => [...prev, { 
-        sender: 'bot', 
-        text: `Great! I've created ticket #${ticketId} for you. Our support team has been notified and will get back to you soon.`, 
-        timestamp: new Date().toISOString() 
+
+      setMessages((prev) => [...prev, {
+        sender: 'bot',
+        text: `Great! I've created ticket #${ticketId} for you. You can track its status in your dashboard.`,
+        timestamp: new Date().toISOString(),
       }]);
     } catch (error) {
-      console.error('Ticket creation error:', error);
-      toast.error('Failed to create ticket. Please try again or contact support directly.');
+      console.error('Failed to create ticket from chat:', error);
+      toast.error(error.response?.data?.error || error.response?.data?.message || 'Failed to create ticket');
     } finally {
-      setIsLoading(false);
+      setIsIssuing(false);
     }
   };
   
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-      className="max-w-4xl mx-auto space-y-5"
-    >
-      {/* Header Card */}
-      <div 
-        className="bg-white rounded-2xl border border-black/[0.06] p-6"
-        style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}
+    <>
+      {/* Floating Button Button */}
+      <button
+        onClick={() => setIsOpen(true)}
+        className={`fixed bottom-6 right-6 h-14 w-14 bg-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 hover:bg-indigo-700 transition-all z-50 ${isOpen ? 'hidden' : 'block'}`}
       >
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex items-center gap-4">
-            <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-500/20">
-              <SparklesIcon className="h-5 w-5 text-white" />
+        <ChatBubbleLeftRightIcon className="h-7 w-7" />
+      </button>
+
+      {/* Floating Chat Window */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className="fixed bottom-6 right-6 w-80 sm:w-[400px] bg-[#0d111c] rounded-[24px] shadow-2xl z-50 flex flex-col border border-white/5 overflow-hidden h-[600px] max-h-[85vh] backdrop-blur-2xl"
+          >
+            <div className="bg-[#161b26]/80 p-5 flex justify-between items-center text-white shrink-0 border-b border-white/5 backdrop-blur-md">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg shadow-indigo-500/10 ring-1 ring-white/10">
+                  <ChatBubbleLeftRightIcon className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-[15px] tracking-tight text-white/90">AI Support IQ</h3>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <p className="text-[11px] font-bold text-emerald-500/80 uppercase tracking-widest">Online Now</p>
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => setIsOpen(false)} className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-all">
+                <XMarkIcon className="h-6 w-6" />
+              </button>
             </div>
-            <div>
-              <h1 className="text-[20px] font-bold text-slate-900 tracking-tight">AI Support Assistant</h1>
-              <p className="text-slate-400 text-[13px] mt-0.5">Chat with our AI to get instant help or raise a ticket</p>
+            
+            <div className="flex-1 overflow-hidden">
+              <ChatBox
+                messages={messages}
+                onSendMessage={handleSendMessage}
+                showRaiseButton={!isTicketRaised && !isIssuing && (messages.some(m => m.text?.includes('[RAISE_TICKET]') || m.text?.toLowerCase().includes('raise a support ticket')))}
+                onRaiseTicket={handleRaiseTicket}
+              />
             </div>
-          </div>
-          {ticketStatus && (
-            <div className="flex items-center gap-2 px-3.5 py-2 bg-indigo-50 rounded-xl ring-1 ring-inset ring-indigo-200">
-              <InformationCircleIcon className="h-4 w-4 text-indigo-500" />
-              <p className="text-[12px] font-semibold text-indigo-700">
-                Ticket #{ticketStatus.id}: <span className="uppercase">{ticketStatus.status}</span>
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-      
-      {/* Chat Container */}
-      <div 
-        className="bg-white rounded-2xl border border-black/[0.06] overflow-hidden h-[70vh] min-h-[500px]"
-        style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}
-      >
-        <ChatBox
-          messages={messages}
-          onSendMessage={handleSendMessage}
-          showRaiseButton={!isTicketRaised && messages.length >= 2}
-          onRaiseTicket={handleRaiseTicket}
-          disabled={isLoading}
-        />
-      </div>
-    </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 };
 

@@ -23,7 +23,8 @@ const AIPanel = ({ ticket, onUseSuggestion }) => {
     category = 'general',
     reasoning,
     keywords = [],
-    suggestedReply
+    suggestedReply,
+    suggestedTeam = 'unassigned'
   } = analysis;
 
   const getSentimentColor = (value) => {
@@ -80,7 +81,11 @@ const AIPanel = ({ ticket, onUseSuggestion }) => {
             className={`p-3 rounded-lg border ${getSentimentColor(sentiment)}`}
           >
             <p className="text-xs font-medium">Sentiment</p>
-            <p className="text-lg font-bold capitalize">{sentiment}</p>
+            <p className="text-lg font-bold">
+              {sentiment.toLowerCase() === 'positive' ? 'Happy 🙂' :
+                sentiment.toLowerCase() === 'negative' ? 'Angry 😡' :
+                  'Neutral 😐'}
+            </p>
           </div>
 
           <div
@@ -91,16 +96,22 @@ const AIPanel = ({ ticket, onUseSuggestion }) => {
           </div>
         </div>
 
-        {/* Category */}
-        <div className="mb-4">
-          <div className="flex items-center space-x-1 mb-2">
-            <ChartBarIcon className="w-4 h-4 text-gray-500" aria-hidden="true" />
-            <p className="text-xs font-medium text-gray-500">Category</p>
+        {/* Category & Suggested Team */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+            <div className="flex items-center space-x-1 mb-1">
+              <ChartBarIcon className="w-4 h-4 text-gray-500" aria-hidden="true" />
+              <p className="text-xs font-medium text-gray-500">Category</p>
+            </div>
+            <p className="text-sm font-bold text-gray-800 capitalize truncate">{category}</p>
           </div>
-
-          <p className="text-sm font-medium capitalize bg-gray-100 inline-block px-3 py-1 rounded-full">
-            {category}
-          </p>
+          <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+            <div className="flex items-center space-x-1 mb-1">
+              <SparklesIcon className="w-4 h-4 text-indigo-500" aria-hidden="true" />
+              <p className="text-xs font-medium text-indigo-700">Suggested Team</p>
+            </div>
+            <p className="text-sm font-bold text-indigo-900 capitalize truncate">{suggestedTeam.replace('_', ' ')}</p>
+          </div>
         </div>
 
         {/* Reasoning */}

@@ -6,7 +6,7 @@ const Ticket = require('../models/Ticket');
 
 router.post('/interact', authMiddleware, async (req, res) => {
   try {
-    const { messages } = req.body;
+    const { messages = [] } = req.body;
     const userId = req.user.userId;
 
     // Fetch user's active tickets for context
@@ -20,12 +20,30 @@ router.post('/interact', authMiddleware, async (req, res) => {
       return `TicketID: ${t.ticketId}, Status: ${t.status}, Category: ${t.category}, Latest: ${latestMsg}`;
     }).join('\n');
 
-    const aiResponse = await aiService.handleCustomerChatInteraction(messages, context);
-    
-    res.json(aiResponse || { text: "I'm having trouble connecting right now. Please try again or create a ticket directly.", action: "none" });
+    const normalizedMessages = messages.map((message) => ({
+      role: message?.sender === 'assistant' || message?.sender === 'bot' ? 'assistant' : 'user',
+      content: message?.text || '',
+    })).filter((message) => message.content);
+
+    const contextPrefix = context ? [{ role: 'system', content: `Customer open tickets context:\n${context}` }] : [];
+    const aiText = await aiService.chatWithCustomer([...contextPrefix, ...normalizedMessages]);
+
+    const lowered = (aiText || '').toLowerCase();
+    const action = lowered.includes('raise a support ticket') || lowered.includes('[raise_ticket]')
+      ? 'raise_ticket'
+      : 'none';
+
+    res.json({
+      text: aiText || "I'm having trouble connecting right now. Please try again or create a ticket directly.",
+      action,
+    });
   } catch (error) {
     console.error('Chat interaction error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      text: "I'm having trouble connecting right now. Please try again or create a ticket directly.",
+      action: 'none',
+      error: error.message,
+    });
   }
 });
 

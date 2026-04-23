@@ -1,5 +1,16 @@
-// This is integrated directly in server.js, but we can keep a separate file for clarity
-const socketService = (io) => {
+const { Server } = require('socket.io');
+
+let io;
+
+const initSocket = (server) => {
+  io = new Server(server, {
+    cors: {
+      origin: '*',
+      methods: ['GET', 'POST'],
+      credentials: true,
+    },
+  });
+
   io.on('connection', (socket) => {
     console.log('New client connected');
     socket.on('join-ticket', (ticketId) => socket.join(`ticket-${ticketId}`));
@@ -9,5 +20,23 @@ const socketService = (io) => {
     });
     socket.on('disconnect', () => console.log('Client disconnected'));
   });
+
+  return io;
 };
-module.exports = socketService;
+
+const emitTicketCreated = (ticket) => {
+  if (io) {
+    io.emit('ticket-created', ticket);
+  }
+};
+
+const emitTicketUpdated = (ticket) => {
+  if (io) {
+    io.emit('ticket-updated', ticket);
+    io.to(`ticket-${ticket.ticketId}`).emit('ticket-updated', ticket);
+  }
+};
+
+const getIO = () => io;
+
+module.exports = { initSocket, emitTicketCreated, emitTicketUpdated, getIO };

@@ -5,21 +5,30 @@ dotenv.config();
 const User = require('./src/models/User');
 const Ticket = require('./src/models/Ticket');
 
+const { MongoMemoryServer } = require('mongodb-memory-server');
+
 const seed = async () => {
-  await mongoose.connect(process.env.MONGODB_URI);
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('Connected to Primary MongoDB');
+  } catch (err) {
+    console.warn('Primary MongoDB failed, using MemoryServer for seed');
+    const ms = await MongoMemoryServer.create();
+    await mongoose.connect(ms.getUri());
+  }
   await User.deleteMany();
   await Ticket.deleteMany();
 
   const admin = await User.create({
     name: 'Admin User',
-    email: 'admin@example.com',
-    password: 'admin123',
+    email: 'bagilishivaprasad9@gmail.com',
+    password: 'shiva@05',
     role: 'admin'
   });
   const customer = await User.create({
     name: 'John Doe',
-    email: 'customer@example.com',
-    password: 'customer123',
+    email: 'customer@gmail.com',
+    password: 'customer@123',
     role: 'customer'
   });
 

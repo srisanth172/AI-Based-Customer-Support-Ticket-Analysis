@@ -1,384 +1,410 @@
-import React, { useState } from 'react';
+// src/pages/LandingPage.jsx
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import {
-  GlobeAltIcon,
-  XMarkIcon,
-  ChevronDownIcon,
-  PhoneIcon,
-  CheckCircleIcon,
-  ChatBubbleLeftRightIcon,
-  EnvelopeIcon,
-  SparklesIcon,
-  ChartBarIcon,
-  PlayCircleIcon,
-  ShieldCheckIcon,
-  BoltIcon,
-  CpuChipIcon,
-  ArrowRightIcon,
-} from '@heroicons/react/24/outline';
-import { UserIcon } from '@heroicons/react/24/solid';
+import { useNavigate } from 'react-router-dom';
 
-const fadeUp = (delay = 0) => ({
-  initial: { opacity: 0, y: 24 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6, delay, ease: [0.25, 0.46, 0.45, 0.94] },
-});
+const FEATURES = [
+  {
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 4c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 12c-2.5 0-4.7-1.3-6-3.2.03-2 4-3.1 6-3.1s5.97 1.1 6 3.1c-1.3 1.9-3.5 3.2-6 3.2z" fill="currentColor" />
+      </svg>
+    ),
+    title: 'AI Sentiment Analysis',
+    desc: 'Real-time emotion detection on every customer message for smarter triage.'
+  },
+  {
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M11 15h2v2h-2zm0-8h2v6h-2zm1-5C6.47 2 2 6.5 2 12a10 10 0 0010 10 10 10 0 0010-10A10 10 0 0012 2zm0 18a8 8 0 010-16 8 8 0 010 16z" fill="currentColor" />
+      </svg>
+    ),
+    title: 'Priority Scoring',
+    desc: 'ML-powered algorithms rank tickets by urgency so critical issues are never missed.'
+  },
+  {
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z" fill="currentColor" />
+      </svg>
+    ),
+    title: 'Spam Detection',
+    desc: 'Vision AI cross-validates uploaded images against descriptions to filter bad-faith reports.'
+  },
+  {
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <path d="M3.5 18.5l6-6 4 4L22 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M17 6h5v5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+    title: 'Live Dashboard',
+    desc: 'WebSocket-driven admin panel refreshes in real time as tickets are created.'
+  },
+];
 
-const fadeIn = (delay = 0) => ({
-  initial: { opacity: 0 },
-  whileInView: { opacity: 1 },
-  transition: { duration: 0.5, delay },
-  viewport: { once: true, amount: 0.3 },
-});
+const STATS = [
+  { value: '10×', label: 'Faster Resolution' },
+  { value: '98%', label: 'Accuracy Rate' },
+  { value: '60%', label: 'Less Manual Triage' },
+];
 
 const LandingPage = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  const [showBanner, setShowBanner] = useState(true);
+  const [scrolled, setScrolled] = useState(false);
 
-  const features = [
-    {
-      icon: BoltIcon,
-      title: 'Instant Triage',
-      desc: 'AI sorts tickets by urgency, tone, and category in milliseconds — before your team even sees them.',
-      gradient: 'from-amber-500 to-orange-600',
-    },
-    {
-      icon: ChatBubbleLeftRightIcon,
-      title: 'Human-Like Chat',
-      desc: 'Customers interact through a guided chat flow that feels natural while keeping support organized.',
-      gradient: 'from-indigo-500 to-violet-600',
-    },
-    {
-      icon: ChartBarIcon,
-      title: 'Sentiment Radar',
-      desc: 'Real-time sentiment analysis highlights frustrated customers so your team can prioritize empathy.',
-      gradient: 'from-emerald-500 to-teal-600',
-    },
-    {
-      icon: CpuChipIcon,
-      title: 'Smart Routing',
-      desc: 'Tickets are automatically assigned to the right agent based on skill, load, and context.',
-      gradient: 'from-rose-500 to-pink-600',
-    },
-  ];
-
-  const stats = [
-    { value: '3x', label: 'Faster Response' },
-    { value: '92%', label: 'AI Accuracy' },
-    { value: '10K+', label: 'Teams Trust Us' },
-    { value: '24/7', label: 'Always On' },
-  ];
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 30);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   return (
-    <div className="min-h-screen font-sans selection:bg-indigo-500 selection:text-white mesh-gradient-bg">
-      {/* ═══════════════ DARK HERO ZONE ═══════════════ */}
-      <div className="relative bg-[#0a0a1a]/95 text-white overflow-hidden shadow-2xl backdrop-blur-3xl">
-        {/* Aurora gradient background */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-[-200px] left-1/2 -translate-x-1/2 w-[1200px] h-[800px] bg-gradient-to-b from-indigo-600/20 via-violet-600/10 to-transparent blur-[120px] rounded-full" />
-          <div className="absolute top-[100px] right-[-100px] w-[600px] h-[600px] bg-gradient-to-bl from-purple-600/15 via-fuchsia-500/10 to-transparent blur-[100px] rounded-full" />
-          <div className="absolute top-[200px] left-[-80px] w-[500px] h-[500px] bg-gradient-to-tr from-indigo-700/15 via-blue-500/10 to-transparent blur-[100px] rounded-full" />
-          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500/40 to-transparent" />
+    <div style={s.page}>
+      {/* ── HERO BG ── */}
+      <div style={s.heroBg} />
+      <div style={s.heroOverlay} />
+
+      {/* Ambient orbs */}
+      <div style={{ ...s.orb, top: '10%', left: '8%', width: 500, height: 500, background: 'radial-gradient(circle, rgba(99,102,241,0.14) 0%, transparent 70%)' }} />
+      <div style={{ ...s.orb, bottom: '15%', right: '5%', width: 400, height: 400, background: 'radial-gradient(circle, rgba(168,85,247,0.10) 0%, transparent 70%)' }} />
+
+      {/* ── NAVBAR ── */}
+      <nav style={{ ...s.nav, ...(scrolled ? s.navScrolled : {}) }}>
+        <div style={s.brand}>
+          <div style={s.logoBox}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#fff" />
+            </svg>
+          </div>
+          <span style={s.brandName}>SupportIQ</span>
         </div>
-        {/* Subtle grid */}
-        <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)', backgroundSize: '64px 64px' }} />
-
-
-
-
-        {/* Main Nav */}
-        <header className="sticky top-0 z-50 glass border-b border-white/[0.05] !bg-[#0a0a1a]/60">
-          <div className="mx-auto max-w-[1300px] px-6 h-[68px] flex items-center justify-between">
-            <div className="flex items-center gap-14">
-              {/* Logo */}
-              <Link to="/" className="flex items-center gap-2.5 group">
-                <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/20 group-hover:shadow-indigo-500/40 group-hover:scale-105 transition-all duration-300">
-                  <svg viewBox="0 0 24 24" className="h-5 w-5 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                  </svg>
-                </div>
-                <span className="text-xl font-black tracking-tight text-white">ClarityHelp</span>
-              </Link>
-
-              {/* Nav Links */}
-              <nav className="hidden lg:flex items-center gap-8 text-[14px] font-medium text-white/50">
-                <button className="flex items-center gap-1 hover:text-white transition-colors duration-200">
-                  Features <ChevronDownIcon className="h-3 w-3 stroke-[3]" />
-                </button>
-                <button className="flex items-center gap-1 hover:text-white transition-colors duration-200">
-                  Use Cases <ChevronDownIcon className="h-3 w-3 stroke-[3]" />
-                </button>
-                <button className="flex items-center gap-1 hover:text-white transition-colors duration-200">
-                  Company <ChevronDownIcon className="h-3 w-3 stroke-[3]" />
-                </button>
-                <Link to="/pricing" className="hover:text-white transition-colors duration-200">Pricing</Link>
-              </nav>
-            </div>
-
-            <div className="hidden lg:flex items-center gap-3">
-              <button 
-                onClick={() => navigate(isAuthenticated ? '/customer' : '/login')} 
-                className="rounded-lg bg-indigo-600 px-5 py-2 text-[14px] font-semibold text-white hover:bg-indigo-500 shadow-lg shadow-indigo-600/25 hover:shadow-indigo-500/30 transition-all duration-200"
-              >
-                {isAuthenticated ? 'Go to Dashboard' : 'Get Started'}
-              </button>
-            </div>
-          </div>
-        </header>
-
-        {/* Hero Content */}
-        <section className="relative z-10 pt-20 pb-8 text-center lg:pt-28 lg:pb-12">
-          <div className="mx-auto max-w-[820px] px-4">
-
-
-
-            {/* Headline */}
-            <motion.h1 
-              {...fadeUp(0.08)}
-              className="text-[2.75rem] leading-[1.06] font-extrabold tracking-[-0.03em] text-white sm:text-[3.75rem] lg:text-[4.5rem]"
-            >
-              Resolve tickets faster{' '}
-              <br className="hidden sm:block" />
-              with{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400">Autonomous AI.</span>
-            </motion.h1>
-
-            {/* Subheading */}
-            <motion.p 
-              {...fadeUp(0.16)}
-              className="mt-6 text-lg font-medium text-white/50 sm:text-xl max-w-2xl mx-auto leading-relaxed"
-            >
-              Empower your team with deep analysis, sentiment tracking, and automated responses that feel entirely human.
-            </motion.p>
-
-
-          </div>
-        </section>
-
-        {/* Stats Bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="relative z-10 mx-auto max-w-3xl px-4 pb-16"
+        <motion.button
+          whileHover={{ scale: 1.04, boxShadow: '0 0 30px rgba(99,102,241,0.5)' }}
+          whileTap={{ scale: 0.97 }}
+          style={s.navCta}
+          onClick={() => navigate('/login')}
         >
-          <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-16">
-            {stats.map((stat) => (
-              <div key={stat.label} className="text-center">
-                <div className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60">{stat.value}</div>
-                <div className="mt-1 text-xs font-semibold uppercase tracking-[0.15em] text-white/30">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
+          Get Started
+        </motion.button>
+      </nav>
 
-        {/* Hero Mockup */}
-        <div className="relative z-10 mx-auto max-w-5xl px-4 pb-20">
-          <motion.div 
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="relative rounded-2xl border border-white/[0.08] bg-white/[0.03] shadow-2xl shadow-black/30 overflow-hidden h-[380px] backdrop-blur-sm"
+      {/* ── HERO ── */}
+      <header style={s.hero}>
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.9, ease: 'easeOut' }}
+          style={s.heroInner}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1, duration: 0.6 }}
+            style={s.badge}
           >
-            {/* Glow behind mockup */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600/20 via-violet-600/10 to-purple-600/20 blur-xl rounded-2xl pointer-events-none opacity-60" />
-            
-            <div className="relative flex h-full w-full">
-              {/* Sidebar mock */}
-              <div className="w-[68px] bg-[#111127] h-full flex flex-col items-center py-6 space-y-7 border-r border-white/[0.06]">
-                 <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
-                    <span className="text-white font-bold text-xs">C</span>
-                 </div>
-                <div className="flex flex-col space-y-5 text-white/20">
-                   <div className="rounded-lg bg-indigo-600/80 p-2 text-white shadow-md shadow-indigo-600/30"><ChatBubbleLeftRightIcon className="h-4 w-4" /></div>
-                   <CheckCircleIcon className="h-5 w-5 hover:text-white/60 cursor-pointer transition-colors" />
-                   <ChartBarIcon className="h-5 w-5 hover:text-white/60 cursor-pointer transition-colors" />
-                   <UserIcon className="h-5 w-5 hover:text-white/60 cursor-pointer transition-colors" />
-                </div>
-              </div>
-
-              {/* Main mock area */}
-              <div className="flex-1 bg-[#0d0d20] flex flex-col">
-                <div className="px-7 py-4 flex items-center justify-between border-b border-white/[0.06]">
-                   <div className="flex items-center gap-3">
-                      <span className="text-base font-bold text-white/90 tracking-tight">Active Workflows</span>
-                      <span className="px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 text-[10px] font-bold uppercase tracking-wider border border-indigo-500/20">3 Open</span>
-                   </div>
-                   <button className="px-3.5 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold shadow-sm">Assign</button>
-                </div>
-
-                 <div className="p-6 flex gap-5 h-full overflow-hidden">
-                    {/* Primary card */}
-                    <div className="rounded-xl bg-white/[0.04] border border-white/[0.08] p-5 w-[300px] flex flex-col gap-4">
-                      <div className="flex items-start justify-between">
-                         <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 bg-amber-500/20 rounded-full flex items-center justify-center shrink-0 ring-2 ring-amber-500/20">
-                               <span className="text-lg">👩🏼‍💻</span>
-                            </div>
-                            <div>
-                               <div className="font-bold text-sm text-white/90">Sarah Jenkins</div>
-                               <div className="text-[11px] font-medium text-white/30 mt-0.5">Enterprise</div>
-                            </div>
-                         </div>
-                         <span className="bg-rose-500/20 text-rose-400 text-[9px] px-2 py-1 rounded-md font-bold uppercase tracking-wider border border-rose-500/20">Urgent</span>
-                      </div>
-                      <div className="rounded-lg bg-white/[0.03] p-3 text-[13px] text-white/50 border border-white/[0.06] leading-relaxed italic">
-                         "Dashboard failing to load Q3 reports. Board meeting in 2 hours."
-                      </div>
-                      <div className="flex items-center gap-2 text-[11px] font-bold text-indigo-400">
-                         <SparklesIcon className="h-3.5 w-3.5 animate-pulse" />
-                         AI: Escalate → Reboot Node
-                      </div>
-                    </div>
-
-                    {/* Secondary card (faded) */}
-                    <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] p-5 w-[300px] flex flex-col gap-4 opacity-30">
-                       <div className="flex items-start justify-between">
-                         <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 bg-blue-500/20 rounded-full flex items-center justify-center shrink-0 ring-2 ring-blue-500/20">
-                               <span className="text-lg">👨🏽‍💼</span>
-                            </div>
-                            <div>
-                               <div className="font-bold text-sm text-white/90">Michael Chang</div>
-                               <div className="text-[11px] font-medium text-white/30 mt-0.5">Starter</div>
-                            </div>
-                         </div>
-                         <span className="bg-emerald-500/20 text-emerald-400 text-[9px] px-2 py-1 rounded-md font-bold uppercase tracking-wider border border-emerald-500/20">Low</span>
-                      </div>
-                    </div>
-                 </div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* ═══════════════ LIGHT SECTIONS ═══════════════ */}
-
-      {/* Trust Bar */}
-      <section className="bg-transparent border-b border-slate-200/50 py-10">
-        <div className="mx-auto max-w-5xl px-4 text-center">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-6 font-mono">Trusted by 10,000+ support teams worldwide</p>
-          <div className="flex flex-wrap items-center justify-center gap-x-14 gap-y-4">
-            {['Acme Corp', 'Globex', 'Soylent', 'Initech', 'Umbrella', 'Hooli'].map((name) => (
-              <span key={name} className="text-[16px] font-bold text-slate-200 tracking-wide select-none">{name}</span>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="bg-gradient-to-b from-slate-50 to-white py-24">
-        <div className="mx-auto max-w-6xl px-4">
-          <motion.div {...fadeIn(0)} className="text-center mb-16">
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass bg-indigo-50/50 text-indigo-600 font-bold text-[10px] uppercase tracking-[0.2em] mb-4 border-indigo-200/50">
-              Why ClarityHelp
-            </span>
-            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl lg:text-[2.75rem]">
-              Built for teams that want clarity,<br className="hidden sm:block" /> not noise.
-            </h2>
-            <p className="mt-4 text-lg text-slate-500 max-w-2xl mx-auto">
-              Four powerful capabilities that transform how your support team works.
-            </p>
+            <span style={s.badgeDot} />
+            AI-POWERED TICKET INTELLIGENCE
           </motion.div>
 
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {features.map((feature, idx) => (
-              <motion.article
-                key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1, duration: 0.5 }}
-                viewport={{ once: true, amount: 0.2 }}
-                whileHover={{ y: -6 }}
-                className="group rounded-2xl border border-slate-200 shadow-sm glass p-6 hover:shadow-xl hover:shadow-indigo-200/20 transition-all duration-300"
-              >
-                <div className={`inline-flex rounded-xl bg-gradient-to-br ${feature.gradient} p-3 text-white shadow-lg shadow-indigo-500/10`}>
-                  <feature.icon className="h-5 w-5" />
-                </div>
-                <h3 className="mt-5 text-lg font-bold text-slate-900">{feature.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-500">{feature.desc}</p>
-              </motion.article>
-            ))}
-          </div>
-        </div>
-      </section>
+          <h1 style={s.headline}>
+            Resolve Support Tickets{' '}
+            <span style={s.accent}>10× Faster</span>
+            {' '}with AI
+          </h1>
 
-      {/* How It Works */}
-      <section className="bg-[#0a0a1a] py-24 text-white relative overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none" />
-        <div className="relative mx-auto max-w-5xl px-4">
-          <motion.div {...fadeIn(0)} className="text-center mb-16">
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.06] text-indigo-400 font-semibold text-xs uppercase tracking-[0.15em] mb-4 border border-white/[0.08]">
-              How it works
-            </span>
-            <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-              From customer message to resolved ticket.
-            </h2>
-          </motion.div>
+          <p style={s.subhead}>
+            Sentiment analysis, priority scoring, and real-time admin insights —
+            all in one beautifully crafted platform.
+          </p>
 
-          <div className="grid gap-6 md:grid-cols-3">
-            {[
-              { step: '01', title: 'Customer describes the issue', desc: 'The user opens the chat and explains their problem in natural language.', icon: UserIcon },
-              { step: '02', title: 'AI reads the context', desc: 'The system classifies sentiment, priority, and support category instantly.', icon: CpuChipIcon },
-              { step: '03', title: 'Team resolves quickly', desc: 'Support replies, resolves, and tracks the ticket from one unified screen.', icon: CheckCircleIcon },
-            ].map((item, idx) => (
+          {/* Stats row */}
+          <div style={s.statsRow}>
+            {STATS.map((st, i) => (
               <motion.div
-                key={item.step}
+                key={st.label}
                 initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.12, duration: 0.5 }}
-                viewport={{ once: true, amount: 0.2 }}
-                className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-8 backdrop-blur-sm hover:border-indigo-500/30 transition-colors duration-300"
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 + i * 0.1 }}
+                style={s.statItem}
               >
-                <div className="text-4xl font-black text-indigo-500/20 mb-4">{item.step}</div>
-                <div className="inline-flex rounded-xl bg-indigo-500/10 p-2.5 text-indigo-400 mb-4 border border-indigo-500/10">
-                  <item.icon className="h-5 w-5" />
-                </div>
-                <h3 className="text-lg font-bold text-white/90">{item.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-white/40">{item.desc}</p>
+                <div style={s.statVal}>{st.value}</div>
+                <div style={s.statLabel}>{st.label}</div>
               </motion.div>
             ))}
           </div>
+
+          <motion.button
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.65 }}
+            whileHover={{ scale: 1.05, boxShadow: '0 20px 60px rgba(99,102,241,0.55)' }}
+            whileTap={{ scale: 0.97 }}
+            style={s.heroCta}
+            onClick={() => navigate('/login')}
+          >
+            Get Started
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ marginLeft: 8 }}>
+              <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </motion.button>
+        </motion.div>
+      </header>
+
+      {/* ── FEATURES ── */}
+      <section style={s.features}>
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          style={s.sectionLabel}
+        >
+          WHAT WE OFFER
+        </motion.div>
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.1 }}
+          style={s.sectionTitle}
+        >
+          Built for high-velocity support teams
+        </motion.h2>
+        <div style={s.grid}>
+          {FEATURES.map((f, i) => (
+            <motion.div
+              key={f.title}
+              initial={{ opacity: 0, y: 28 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1 }}
+              whileHover={{ y: -6, boxShadow: '0 24px 60px rgba(99,102,241,0.15)' }}
+              style={s.card}
+            >
+              <div style={s.cardIcon}>{f.icon}</div>
+              <h3 style={s.cardTitle}>{f.title}</h3>
+              <p style={s.cardDesc}>{f.desc}</p>
+            </motion.div>
+          ))}
         </div>
       </section>
 
-      {/* Image Block */}
-      <section className="bg-transparent py-24">
-        <div className="mx-auto max-w-5xl px-4">
-          <motion.div {...fadeIn(0)} className="rounded-2xl border border-slate-200/50 shadow-xl overflow-hidden glass">
-            <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=2000" alt="Dashboard Preview" className="w-full h-auto max-h-[500px] object-cover opacity-90" />
-          </motion.div>
-        </div>
+      {/* ── CTA BANNER ── */}
+      <section style={s.ctaBanner}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          style={s.ctaInner}
+        >
+          <h2 style={s.ctaTitle}>The future of support is <span style={s.accent}>autonomous.</span></h2>
+          <p style={s.ctaDesc}>
+            Join support teams who let AI handle triage while they focus on what matters — customers.
+          </p>
+          <motion.button
+            whileHover={{ scale: 1.04, boxShadow: '0 20px 50px rgba(99,102,241,0.5)' }}
+            whileTap={{ scale: 0.97 }}
+            style={s.heroCta}
+            onClick={() => navigate('/login')}
+          >
+            Get Started Free
+          </motion.button>
+        </motion.div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-slate-950 text-white/40 py-12 border-t border-white/[0.05]">
-        <div className="mx-auto max-w-6xl px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-md bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
-              <svg viewBox="0 0 24 24" className="h-4 w-4 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-              </svg>
-            </div>
-            <span className="font-bold text-white/60 text-sm">ClarityHelp</span>
-          </div>
-          <p className="text-sm">© 2026 ClarityHelp. All rights reserved.</p>
-          <div className="flex items-center gap-6 text-sm">
-            <Link to="#" className="hover:text-white transition-colors">Privacy</Link>
-            <Link to="#" className="hover:text-white transition-colors">Terms</Link>
-            <Link to="#" className="hover:text-white transition-colors">Contact</Link>
-          </div>
+      {/* ── FOOTER ── */}
+      <footer style={s.footer}>
+        <div style={s.footerBrand}>
+          <div style={s.logoBox}><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#fff" /></svg></div>
+          <span style={{ color: '#94a3b8', fontSize: 14, fontWeight: 600 }}>SupportIQ © 2025</span>
+        </div>
+        <div style={{ display: 'flex', gap: 24 }}>
+          {['Privacy', 'Terms', 'Contact'].map(l => (
+            <span key={l} style={s.footerLink}>{l}</span>
+          ))}
         </div>
       </footer>
-
-
-
     </div>
   );
+};
+
+const s = {
+  page: {
+    minHeight: '100vh',
+    backgroundColor: '#060912',
+    fontFamily: "'Inter', 'Segoe UI', sans-serif",
+    color: '#f1f5f9',
+    position: 'relative',
+    overflowX: 'hidden',
+  },
+  heroBg: {
+    position: 'fixed',
+    inset: 0,
+    backgroundImage: 'url(/hero_bg.png)',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center top',
+    opacity: 0.28,
+    zIndex: 0,
+  },
+  heroOverlay: {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 1,
+    background: 'linear-gradient(180deg, rgba(6,9,18,0.5) 0%, rgba(6,9,18,0.75) 60%, rgba(6,9,18,0.98) 100%)',
+  },
+  orb: { position: 'absolute', borderRadius: '50%', pointerEvents: 'none', zIndex: 1 },
+  nav: {
+    position: 'fixed',
+    top: 0, left: 0, right: 0,
+    zIndex: 100,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '20px 8%',
+    transition: 'all 0.3s',
+  },
+  navScrolled: {
+    background: 'rgba(6,9,18,0.85)',
+    backdropFilter: 'blur(20px)',
+    borderBottom: '1px solid rgba(255,255,255,0.05)',
+  },
+  brand: { display: 'flex', alignItems: 'center', gap: 12, position: 'relative', zIndex: 2 },
+  logoBox: {
+    width: 34, height: 34,
+    background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+    borderRadius: 10,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    boxShadow: '0 4px 16px rgba(79,70,229,0.4)',
+  },
+  brandName: { fontSize: 19, fontWeight: 800, letterSpacing: '-0.4px' },
+  navCta: {
+    position: 'relative', zIndex: 2,
+    background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+    border: 'none', color: '#fff',
+    padding: '10px 26px', borderRadius: 12,
+    fontWeight: 800, fontSize: 14, cursor: 'pointer',
+    letterSpacing: '0.2px',
+    boxShadow: '0 8px 24px rgba(79,70,229,0.35)',
+    transition: 'all 0.2s',
+  },
+  hero: {
+    position: 'relative', zIndex: 10,
+    minHeight: '100vh',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    padding: '120px 8% 80px',
+    textAlign: 'center',
+  },
+  heroInner: { maxWidth: 820 },
+  badge: {
+    display: 'inline-flex', alignItems: 'center', gap: 8,
+    padding: '7px 18px',
+    background: 'rgba(79,70,229,0.12)',
+    border: '1px solid rgba(79,70,229,0.28)',
+    borderRadius: 100,
+    fontSize: 11, fontWeight: 800, letterSpacing: '2px', color: '#a5b4fc',
+    marginBottom: 36,
+  },
+  badgeDot: {
+    width: 6, height: 6, borderRadius: '50%',
+    background: '#6366f1',
+    boxShadow: '0 0 8px #6366f1',
+    display: 'inline-block',
+  },
+  headline: {
+    fontSize: 'clamp(42px, 6vw, 78px)',
+    fontWeight: 900,
+    lineHeight: 1.06,
+    letterSpacing: '-3px',
+    marginBottom: 24,
+  },
+  accent: {
+    background: 'linear-gradient(90deg, #6366f1, #a855f7, #ec4899)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+  },
+  subhead: {
+    fontSize: 19, color: '#94a3b8', lineHeight: 1.7,
+    marginBottom: 52, maxWidth: 640, margin: '0 auto 52px',
+    fontWeight: 500,
+  },
+  statsRow: { display: 'flex', justifyContent: 'center', gap: 32, marginBottom: 52, flexWrap: 'wrap' },
+  statItem: {
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.07)',
+    borderRadius: 20, padding: '20px 32px', textAlign: 'center', minWidth: 120,
+  },
+  statVal: { fontSize: 32, fontWeight: 900, color: '#f1f5f9' },
+  statLabel: { fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginTop: 4 },
+  heroCta: {
+    display: 'inline-flex', alignItems: 'center',
+    background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+    border: 'none', color: '#fff',
+    padding: '18px 48px', borderRadius: 16,
+    fontSize: 16, fontWeight: 800, cursor: 'pointer',
+    boxShadow: '0 14px 40px rgba(79,70,229,0.4)',
+    letterSpacing: '0.3px', transition: 'all 0.25s',
+  },
+  features: {
+    position: 'relative', zIndex: 10,
+    padding: '100px 8%',
+    textAlign: 'center',
+  },
+  sectionLabel: {
+    fontSize: 11, fontWeight: 800, letterSpacing: '3px',
+    color: '#6366f1', marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 'clamp(28px, 4vw, 46px)', fontWeight: 900,
+    letterSpacing: '-1.5px', marginBottom: 60,
+  },
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gap: 28, maxWidth: 1200, margin: '0 auto',
+  },
+  card: {
+    background: 'rgba(255,255,255,0.03)',
+    border: '1px solid rgba(255,255,255,0.07)',
+    borderRadius: 28, padding: '40px 32px',
+    backdropFilter: 'blur(12px)',
+    textAlign: 'left',
+    transition: 'all 0.3s',
+    cursor: 'default',
+  },
+  cardIcon: {
+    width: 48, height: 48,
+    background: 'rgba(99,102,241,0.12)',
+    border: '1px solid rgba(99,102,241,0.2)',
+    borderRadius: 14,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    color: '#818cf8', marginBottom: 24,
+    fontSize: 22,
+  },
+  cardTitle: { fontSize: 18, fontWeight: 800, marginBottom: 10, color: '#f1f5f9', letterSpacing: '-0.3px' },
+  cardDesc: { fontSize: 14, color: '#64748b', lineHeight: 1.7 },
+  ctaBanner: {
+    position: 'relative', zIndex: 10,
+    padding: '80px 8%',
+  },
+  ctaInner: {
+    maxWidth: 760, margin: '0 auto', textAlign: 'center',
+    background: 'radial-gradient(ellipse at 50% 0%, rgba(79,70,229,0.15) 0%, transparent 70%)',
+    border: '1px solid rgba(79,70,229,0.15)',
+    borderRadius: 40, padding: '72px 56px',
+  },
+  ctaTitle: { fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 900, letterSpacing: '-1.5px', marginBottom: 20 },
+  ctaDesc: { fontSize: 17, color: '#94a3b8', lineHeight: 1.7, marginBottom: 44, maxWidth: 540, margin: '0 auto 44px' },
+  footer: {
+    position: 'relative', zIndex: 10,
+    padding: '40px 8%',
+    borderTop: '1px solid rgba(255,255,255,0.05)',
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    flexWrap: 'wrap', gap: 16,
+  },
+  footerBrand: { display: 'flex', alignItems: 'center', gap: 10 },
+  footerLink: { color: '#475569', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
 };
 
 export default LandingPage;

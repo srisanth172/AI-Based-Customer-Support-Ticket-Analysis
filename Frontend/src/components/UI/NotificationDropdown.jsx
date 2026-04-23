@@ -40,53 +40,50 @@ const NotificationDropdown = () => {
           setIsOpen(!isOpen);
           setHasUnread(false);
         }}
-        className="relative p-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all duration-200 focus:outline-none"
+        className="relative p-2.5 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-all focus:outline-none"
       >
         <BellIcon className="h-5 w-5" aria-hidden="true" />
         {hasUnread && (
-          <span className="absolute top-2 right-2 block h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" />
+          <span className="absolute top-2.5 right-2.5 block h-2 w-2 rounded-full bg-rose-500 ring-2 ring-[#0d111c]" />
         )}
       </button>
 
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.96 }}
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.96 }}
-            transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
-            className="absolute right-0 mt-2 w-[340px] origin-top-right rounded-2xl bg-white z-50 p-1.5 border border-black/[0.06]"
-            style={{ boxShadow: '0 20px 60px -12px rgba(0, 0, 0, 0.12)' }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            className="absolute right-0 mt-3 w-[360px] origin-top-right rounded-3xl bg-[#161b26] z-50 p-2 border border-white/5 shadow-2xl overflow-hidden"
           >
             {/* Header */}
-            <div className="flex justify-between items-center px-4 py-3 border-b border-slate-100/80 mb-1">
+            <div className="flex justify-between items-center px-5 py-4 border-b border-white/5 mb-1 bg-white/[0.02]">
               <div>
-                <h3 className="text-[14px] font-semibold text-slate-800">Notifications</h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">{notifications.filter(n => !n.read).length} unread</p>
+                <h3 className="text-[15px] font-bold text-white tracking-tight">Notifications</h3>
+                <p className="text-[12px] text-slate-500 mt-0.5">{notifications.filter(n => !n.read).length} new alerts</p>
               </div>
-              <button className="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold px-2.5 py-1 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-1">
-                <CheckCircleIcon className="h-3.5 w-3.5" />
-                Mark all read
+              <button className="text-[11px] text-indigo-400 hover:text-indigo-300 font-bold px-3 py-1.5 rounded-xl hover:bg-white/5 transition-all flex items-center gap-2 uppercase tracking-widest">
+                Clear all
               </button>
             </div>
             
             {/* Notifications list */}
-            <div className="max-h-80 overflow-y-auto">
+            <div className="max-h-80 overflow-y-auto divide-y divide-white/[0.03]">
               {notifications.map((notif) => (
                 <div 
                   key={notif.id} 
-                  className={`px-4 py-3 cursor-pointer rounded-xl transition-all duration-200 hover:bg-slate-50 ${
-                    !notif.read ? 'bg-indigo-50/30' : ''
+                  className={`px-5 py-4 cursor-pointer transition-all duration-200 hover:bg-white/[0.02] ${
+                    !notif.read ? 'bg-indigo-500/[0.03]' : ''
                   }`}
                 >
-                  <div className="flex gap-3">
-                    <div className={`h-2 w-2 rounded-full mt-1.5 shrink-0 ${!notif.read ? getNotificationDot(notif.type) : 'bg-transparent'}`} />
+                  <div className="flex gap-4">
+                    <div className={`h-2.5 w-2.5 rounded-full mt-1.5 shrink-0 shadow-[0_0_8px_rgba(0,0,0,0.5)] ${!notif.read ? getNotificationDot(notif.type) : 'bg-slate-700'}`} />
                     <div className="flex-1 min-w-0">
-                      <p className={`text-[13px] leading-tight ${notif.read ? 'text-slate-600 font-medium' : 'text-slate-800 font-semibold'}`}>
+                      <p className={`text-[14px] leading-snug tracking-tight ${notif.read ? 'text-slate-400 font-medium' : 'text-slate-100 font-bold'}`}>
                         {notif.title}
                       </p>
-                      <p className="text-[11px] text-slate-400 mt-0.5 truncate">{notif.description}</p>
-                      <p className="text-[10px] text-slate-300 mt-1.5 font-medium">{notif.time}</p>
+                      <p className="text-[12px] text-slate-500 mt-1 font-medium">{notif.description}</p>
+                      <p className="text-[10px] text-slate-600 mt-2 font-bold uppercase tracking-wider">{notif.time}</p>
                     </div>
                   </div>
                 </div>
@@ -94,13 +91,10 @@ const NotificationDropdown = () => {
             </div>
             
             {/* Footer */}
-            <div className="pt-1.5 text-center border-t border-slate-100/80 mt-1">
-              <a 
-                href="#" 
-                className="text-[12px] text-indigo-600 hover:text-indigo-800 font-semibold py-2.5 inline-block transition-colors"
-              >
-                View all notifications →
-              </a>
+            <div className="p-2 border-t border-white/5 mt-1">
+              <button className="w-full text-center py-2.5 text-[13px] font-bold text-slate-400 hover:text-white transition-all bg-white/[0.02] rounded-2xl">
+                View All Activity
+              </button>
             </div>
           </motion.div>
         )}

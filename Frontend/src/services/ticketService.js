@@ -43,13 +43,23 @@ const ticketService = {
     return response.data;
   },
 
-  /**
-   * Update ticket status (admin only)
-   * @param {string} ticketId
-   * @param {string} status - 'open', 'in_progress', 'pending', 'resolved'
-   */
+  updateTicketAdmin: async (ticketId, payload) => {
+    const response = await apiClient.patch(`/tickets/${ticketId}/admin`, payload);
+    return response.data;
+  },
+
   updateTicketStatus: async (ticketId, status) => {
     const response = await apiClient.patch(`/tickets/${ticketId}/status`, { status });
+    return response.data;
+  },
+
+  bulkUpdateTickets: async (payload) => {
+    const response = await apiClient.post(`/tickets/bulk`, payload);
+    return response.data;
+  },
+
+  exportTicketsCSV: async () => {
+    const response = await apiClient.get('/tickets/export', { responseType: 'blob' });
     return response.data;
   },
 

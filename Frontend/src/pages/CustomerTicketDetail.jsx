@@ -33,10 +33,12 @@ const CustomerTicketDetail = () => {
       fetchTicket();
       
       const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
-      socket.emit('joinTicket', id);
-      socket.on('ticketUpdate', (updatedTicket) => {
-        setTicket(updatedTicket);
-        scrollToBottom();
+      socket.emit('join-ticket', id);
+      socket.on('ticket-updated', (updatedTicket) => {
+        if (updatedTicket?.ticketId === id) {
+          setTicket(updatedTicket);
+          scrollToBottom();
+        }
       });
       return () => socket.disconnect();
     }

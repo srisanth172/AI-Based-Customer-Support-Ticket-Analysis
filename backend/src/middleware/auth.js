@@ -1,26 +1,29 @@
 const jwt = require('jsonwebtoken');
 
 const authMiddleware = (req, res, next) => {
-  const token = req.header('Authorization')?.replace('Bearer ', '');
+  const authHeader = req.header('Authorization');
+  console.log(`[Auth] Request to ${req.path} - Header present: ${!!authHeader}`);
+  const token = authHeader?.replace('Bearer ', '');
 
   if (!token) {
     return res.status(401).json({ error: 'Access denied. No token provided.' });
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const secret = process.env.JWT_SECRET || 'nexa_support_secret_key_12345';
+    const decoded = jwt.verify(token, secret);
     req.user = decoded;
     return next();
   } catch (error) {
+    console.error('JWT Verification Error:', error.message);
     return res.status(401).json({ error: 'Invalid token.' });
   }
 };
 
 const adminMiddleware = (req, res, next) => {
-  if (req.user.role !== 'admin') {
+  if (req.user.role !== 'admin' || req.user.name !== 'srisanth') {
     return res.status(403).json({ error: 'Admin access required.' });
   }
-
   return next();
 };
 

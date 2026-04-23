@@ -4,8 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { EnvelopeIcon, ArrowLeftIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
-import Button from '../components/UI/Button';
-import Loader from '../components/UI/Loader';
 
 const ForgotPassword = () => {
   const { forgotPassword } = useAuth();
@@ -14,150 +12,153 @@ const ForgotPassword = () => {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
-  const validateEmail = (email) => {
-    return /\S+@\S+\.\S+/.test(email);
+  const s = {
+    container: {
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '40px 20px',
+      position: 'relative',
+      background: '#05070a',
+      color: '#fff',
+      fontFamily: "'Inter', sans-serif",
+    },
+    bg: {
+      position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden'
+    },
+    bgImg: {
+      position: 'absolute', inset: 0, opacity: 0.18,
+      backgroundImage: 'url(/hero_bg.png)',
+      backgroundSize: 'cover', backgroundPosition: 'center',
+    },
+    bgOverlay: {
+      position: 'absolute', inset: 0,
+      background: 'radial-gradient(circle at center, rgba(5,7,10,0.5) 0%, rgba(5,7,10,0.95) 90%)',
+    },
+    card: {
+      width: '100%', maxWidth: '440px', padding: '48px', borderRadius: '32px',
+      background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(40px)',
+      border: '1px solid rgba(255, 255, 255, 0.08)',
+      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+      position: 'relative', zIndex: 10, textAlign: 'center'
+    },
+    iconWrap: {
+      width: '64px', height: '64px', margin: '0 auto 24px',
+      background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+      borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      boxShadow: '0 10px 20px -5px rgba(99, 102, 241, 0.5)',
+    },
+    title: { fontSize: '32px', fontWeight: '900', marginBottom: '12px', letterSpacing: '-1px' },
+    desc: { color: '#94a3b8', fontSize: '15px', lineHeight: '1.6', marginBottom: '32px' },
+    inputGroup: { marginBottom: '24px', textAlign: 'left' },
+    label: { display: 'block', fontSize: '13px', fontWeight: '700', color: '#64748b', marginBottom: '8px', marginLeft: '4px', textTransform: 'uppercase', letterSpacing: '1px' },
+    inputWrap: { position: 'relative' },
+    input: {
+      width: '100%', padding: '14px 16px 14px 48px', borderRadius: '14px',
+      background: 'rgba(0, 0, 0, 0.2)', border: '1px solid rgba(255, 255, 255, 0.1)',
+      color: '#fff', transition: 'all 0.3s', fontSize: '15px', boxSizing: 'border-box'
+    },
+    fieldIcon: { position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', width: '20px', height: '20px', color: '#4b5563' },
+    button: {
+      width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
+      background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+      color: '#fff', fontSize: '15px', fontWeight: '800', cursor: 'pointer',
+      transition: 'all 0.3s', boxShadow: '0 10px 25px -5px rgba(99, 102, 241, 0.4)',
+      marginTop: '8px'
+    },
+    backLink: {
+      display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#94a3b8',
+      fontSize: '14px', fontWeight: '600', marginTop: '32px', textDecoration: 'none',
+      transition: 'color 0.2s',
+    },
+    error: { color: '#fb7185', fontSize: '13px', marginTop: '8px', fontWeight: '600' }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email) {
-      setError('Email is required');
-      return;
-    }
-    if (!validateEmail(email)) {
-      setError('Please enter a valid email address');
-      return;
-    }
-
+    if (!email) { setError('Email is required'); return; }
+    
     setLoading(true);
     setError('');
     try {
       await forgotPassword(email);
       setSubmitted(true);
     } catch (err) {
-      // Error already handled in AuthContext, but we can set local if needed
-      setError('Unable to send reset link. Please try again.');
+      setError(err.response?.data?.message || 'Unable to send reset link. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="max-w-md w-full space-y-8 bg-white p-10 rounded-[32px] shadow-2xl border border-indigo-50/50"
-      >
-        {/* Header */}
-        <div className="text-center">
-          <div className="flex justify-center">
-            <div className="w-16 h-16 bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-indigo-600/30">
-              <EnvelopeIcon className="w-8 h-8 text-white" />
-            </div>
-          </div>
-          <h2 className="mt-2 text-[28px] font-black tracking-tight text-slate-900">Reset Password</h2>
-          <p className="mt-2 text-sm font-medium text-slate-500">
-            Enter your email and we'll send a reset link
-          </p>
-        </div>
+    <div style={s.container}>
+      <div style={s.bg}>
+        <div style={s.bgImg} />
+        <div style={s.bgOverlay} />
+      </div>
 
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        style={s.card}
+      >
         <AnimatePresence mode="wait">
           {!submitted ? (
-            <motion.form
-              key="form"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="mt-8 space-y-6"
-              onSubmit={handleSubmit}
-            >
-              <div>
-                <label htmlFor="email" className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2">
-                  Email address
-                </label>
-                <div className="relative">
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      setError('');
-                    }}
-                    className={`w-full pl-11 pr-5 py-3.5 border-0 ring-1 ring-inset rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all font-medium text-[15px] bg-slate-50/50 placeholder:text-slate-400 ${
-                      error ? 'ring-rose-500' : 'ring-slate-200/80'
-                    }`}
-                    placeholder="you@example.com"
-                  />
-                  <EnvelopeIcon className="absolute left-4 top-3.5 h-5 w-5 text-slate-400 pointer-events-none" />
+            <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <div style={s.iconWrap}>
+                <EnvelopeIcon className="w-8 h-8 text-white" />
+              </div>
+              <h2 style={s.title}>Reset Password</h2>
+              <p style={s.desc}>Enter your email address and we'll send you a secure link to reset your account credentials.</p>
+
+              <form onSubmit={handleSubmit}>
+                <div style={s.inputGroup}>
+                  <label style={s.label}>Email Address</label>
+                  <div style={s.inputWrap}>
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => { setEmail(e.target.value); setError(''); }}
+                      style={s.input}
+                      placeholder="name@company.com"
+                    />
+                    <EnvelopeIcon style={s.fieldIcon} />
+                  </div>
+                  {error && <p style={s.error}>{error}</p>}
                 </div>
-                {error && (
-                  <p className="mt-2 text-xs font-bold text-rose-500">{error}</p>
-                )}
-              </div>
 
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full h-14 bg-indigo-600 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center"
-                >
-                  {loading ? <Loader size="sm" text="" /> : 'Send Reset Link'}
+                <button type="submit" style={s.button} disabled={loading}>
+                  {loading ? 'SENDING LINK...' : 'SEND RESET LINK'}
                 </button>
-              </div>
-
-              <div className="text-center pt-2">
-                <Link
-                  to="/login"
-                  className="inline-flex items-center text-[13px] font-bold text-slate-500 hover:text-indigo-600 transition-colors"
-                >
-                  <ArrowLeftIcon className="w-4 h-4 mr-2" />
-                  Back to Sign In
-                </Link>
-              </div>
-            </motion.form>
+              </form>
+            </motion.div>
           ) : (
-            <motion.div
-              key="success"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              className="mt-8 text-center"
-            >
-              <div className="flex justify-center mb-6">
-                <CheckCircleIcon className="w-20 h-20 text-emerald-500" />
+            <motion.div key="success" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+              <div style={s.iconWrap} className="!bg-emerald-500 !shadow-emerald-500/30">
+                <CheckCircleIcon className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Check your inbox</h3>
-              <p className="text-slate-500 mb-6 font-medium text-[15px] leading-relaxed">
-                We've sent a password reset link to <strong className="text-slate-800">{email}</strong>.
-                The link will expire in 15 minutes.
+              <h2 style={s.title}>Check Email</h2>
+              <p style={s.desc}>
+                Success! We've sent a password reset link to <span className="text-white font-bold">{email}</span>. 
+                Please check your inbox (and spam folder).
               </p>
-              <p className="text-sm text-slate-400 mb-8 font-medium">
-                Didn't receive the email? Check your spam folder or{' '}
-                <button
-                  onClick={() => {
-                    setSubmitted(false);
-                    setEmail('');
-                    setError('');
-                  }}
-                  className="text-indigo-600 hover:text-indigo-700 font-bold transition-colors"
-                >
-                  try again
-                </button>
-              </p>
-              <Link
-                to="/login"
-                className="inline-flex h-12 bg-slate-50 text-slate-600 items-center justify-center w-full rounded-xl font-black text-xs uppercase tracking-[0.2em] hover:bg-slate-100 transition-all border border-slate-200/50"
+              
+              <button 
+                onClick={() => setSubmitted(false)}
+                style={{ ...s.button, background: 'rgba(255,255,255,0.05)', boxShadow: 'none', border: '1px solid rgba(255,255,255,0.1)' }}
               >
-                Return to Sign In
-              </Link>
+                RESEND EMAIL
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
+
+        <Link to="/login" style={s.backLink} onMouseEnter={(e) => e.target.style.color = '#fff'} onMouseLeave={(e) => e.target.style.color = '#94a3b8'}>
+          <ArrowLeftIcon className="w-4 h-4" />
+          Return to Sign In
+        </Link>
       </motion.div>
     </div>
   );

@@ -1,3 +1,5 @@
+const fs = require('fs');
+
 class AIService {
   async callOpenRouter(text) {
     if (!process.env.OPENROUTER_API_KEY) return null;
@@ -11,14 +13,14 @@ class AIService {
       '{',
       '  "sentiment": "positive|neutral|negative",',
       '  "sentimentScore": number,',
-      '  "priority": "standard|medium|high",',
+      '  "priority": "low|medium|high",',
       '  "priorityScore": number,',
       '  "category": "billing|technical|delivery|account|product|general",',
       '  "suggestedReply": string,',
       '  "reasoning": string,',
-      '  "keywords": string[]',
+      '  "keywords": string[],',
+      '  "suggestedTeam": "unassigned|billing_team|tech_support|customer_success|shipping_dept"',
       '}',
-      'Note: Do NOT use the word "low" for priority. Use "standard" instead.',
       '',
       `Message: ${text}`,
     ].join('\n');
@@ -63,6 +65,7 @@ class AIService {
       priority: parsed.priority || 'medium',
       category: parsed.category || 'general',
       suggestedReply: parsed.suggestedReply || 'Thanks for your message. We are reviewing it now.',
+      suggestedTeam: parsed.suggestedTeam || 'unassigned',
       reasoning: parsed.reasoning || 'Classified by model output.',
       keywords: Array.isArray(parsed.keywords) ? parsed.keywords : [],
       sentimentScore: Number(parsed.sentimentScore || 0),
@@ -89,20 +92,35 @@ class AIService {
     return { sentiment, score, keywords: [...new Set(detectedKeywords)] };
   }
 
-  predictPriority(text, sentiment) {
-    const urgentKeywords = ['urgent', 'asap', 'immediately', 'critical', 'emergency', 'blocked', 'down', 'deadline'];
-    const mediumKeywords = ['issue', 'problem', 'help', 'broken', 'error', 'fix', 'bug'];
-    let priorityScore = 0;
+  predictPriority(text, sentiment, category) {
+    let priority = 'low';
+    
+    // Use Category-based rules per User Request:
+    if (category === 'billing') {
+      priority = 'high';
+    } else if (category === 'technical') {
+      priority = 'medium';
+    } else if (category === 'general') {
+      priority = 'low';
+    }
+
+    // Still scan for urgent keywords as a fallback escalation
+    const urgentKeywords = ['urgent', 'asap', 'immediately', 'critical', 'emergency', 'money', 'refund'];
     const keywords = [];
     const lowerText = text.toLowerCase();
-    urgentKeywords.forEach(k => { if (lowerText.includes(k)) { priorityScore += 0.4; keywords.push(k); } });
-    mediumKeywords.forEach(k => { if (lowerText.includes(k)) { priorityScore += 0.2; keywords.push(k); } });
-    if (sentiment === 'negative') priorityScore += 0.2;
-    if (text.length > 200) priorityScore += 0.1;
-    let priority = 'low';
-    if (priorityScore >= 0.4) priority = 'high';
-    else if (priorityScore >= 0.2) priority = 'medium';
-    return { priority, score: priorityScore, keywords };
+    
+    urgentKeywords.forEach(k => { 
+      if (lowerText.includes(k)) { 
+        keywords.push(k);
+        if (priority !== 'high') priority = 'high';
+      } 
+    });
+
+    if (sentiment === 'negative' && priority === 'low') {
+      priority = 'medium';
+    }
+
+    return { priority, score: priority === 'high' ? 0.9 : priority === 'medium' ? 0.5 : 0.1, keywords };
   }
 
   classifyCategory(text) {
@@ -153,18 +171,29 @@ class AIService {
 
   analyzeTicket(text) {
     const sentimentAnalysis = this.analyzeSentiment(text);
-    const priorityAnalysis = this.predictPriority(text, sentimentAnalysis.sentiment);
     const category = this.classifyCategory(text);
+    const priorityAnalysis = this.predictPriority(text, sentimentAnalysis.sentiment, category);
     const suggestedReply = this.generateSuggestedReply(text, category, sentimentAnalysis.sentiment);
     const reasoning = [];
-    if (sentimentAnalysis.sentiment === 'negative') reasoning.push(`Negative sentiment detected (score ${sentimentAnalysis.score.toFixed(2)})`);
-    if (priorityAnalysis.priority === 'high') reasoning.push(`High priority assigned due to urgency keywords and negative sentiment`);
+    if (sentimentAnalysis.sentiment === 'negative') reasoning.push(`Negative sentiment detected`);
+    if (priorityAnalysis.priority === 'high') reasoning.push(`Assigned High Priority (Billing issue or Critical Keywords)`);
     if (priorityAnalysis.keywords.length) reasoning.push(`Key indicators: ${priorityAnalysis.keywords.join(', ')}`);
+    const teamMap = {
+      billing: 'billing_team',
+      technical: 'tech_support',
+      delivery: 'shipping_dept',
+      account: 'customer_success',
+      product: 'tech_support',
+      general: 'customer_success'
+    };
+    const suggestedTeam = teamMap[category] || 'customer_success';
+
     return {
       sentiment: sentimentAnalysis.sentiment,
       priority: priorityAnalysis.priority,
       category,
       suggestedReply,
+      suggestedTeam,
       reasoning: reasoning.join('. ') || 'No specific indicators.',
       keywords: [...new Set([...sentimentAnalysis.keywords, ...priorityAnalysis.keywords])],
       sentimentScore: sentimentAnalysis.score,
@@ -183,41 +212,137 @@ class AIService {
     return this.analyzeTicket(text);
   }
 
-  async handleCustomerChatInteraction(messages, contextTickets) {
+  async analyzeTicketWithImage(text, imagePath) {
     if (!process.env.OPENROUTER_API_KEY) {
-      return { text: "I'm currently unable to process requests as the AI is offline.", action: "none" };
+      // Fallback
+      return { ...this.analyzeTicket(text), isSpam: false };
+    }
+
+    try {
+      let base64Image = '';
+      if (imagePath && fs.existsSync(imagePath)) {
+        const imageBuffer = fs.readFileSync(imagePath);
+        base64Image = imageBuffer.toString('base64');
+      }
+
+      const openRouterUrl = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1/chat/completions';
+      const model = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
+
+      const promptText = `
+      Analyze the customer support message and the attached image.
+      If the image is completely unrelated to the description or issue category (e.g. random internet meme, spam, unrelated picture), you MUST classify it as isSpam: true.
+      Return strictly valid JSON only.
+      JSON schema:
+      {
+        "isSpam": boolean,
+        "sentiment": "positive|neutral|negative",
+        "sentimentScore": number,
+        "priority": "low|medium|high",
+        "priorityScore": number,
+        "category": "billing|technical|delivery|account|product|general",
+        "reasoning": string,
+        "suggestedReply": string,
+        "keywords": string[],
+        "suggestedTeam": "unassigned|billing_team|tech_support|customer_success|shipping_dept"
+      }
+      
+      Message description: ${text}`;
+
+      let messagesContent = [{ type: 'text', text: promptText }];
+      
+      if (base64Image) {
+        // Detect mime type
+        const extension = imagePath.split('.').pop().toLowerCase();
+        let mimeType = 'image/jpeg';
+        if (extension === 'png') mimeType = 'image/png';
+        if (extension === 'webp') mimeType = 'image/webp';
+
+        messagesContent.push({
+          type: "image_url",
+          image_url: {
+            url: `data:${mimeType};base64,${base64Image}`
+          }
+        });
+      }
+
+      const response = await fetch(openRouterUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:3000',
+          'X-Title': process.env.OPENROUTER_APP_NAME || 'Support System Backend',
+        },
+        body: JSON.stringify({
+          model,
+          temperature: 0.2,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a support-ticket classification engine that analyzes both text and images. Output strict JSON only.'
+            },
+            {
+              role: 'user',
+              content: messagesContent
+            }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenRouter request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const content = data?.choices?.[0]?.message?.content;
+      if (!content) return { ...this.analyzeTicket(text), isSpam: false };
+
+      const normalized = content.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/, '').trim();
+      const parsed = JSON.parse(normalized);
+      
+      return {
+        sentiment: parsed.sentiment || 'neutral',
+        priority: parsed.priority || 'medium',
+        category: parsed.category || 'general',
+        suggestedReply: parsed.suggestedReply || 'Thanks for your message. We are reviewing it now.',
+        suggestedTeam: parsed.suggestedTeam || 'unassigned',
+        reasoning: parsed.reasoning || 'Classified by model output.',
+        keywords: Array.isArray(parsed.keywords) ? parsed.keywords : [],
+        sentimentScore: Number(parsed.sentimentScore || 0),
+        priorityScore: Number(parsed.priorityScore || 0.5),
+        isSpam: Boolean(parsed.isSpam || false)
+      };
+
+    } catch (error) {
+      console.error('Vision AI failed, using fallback:', error.message);
+      return { ...this.analyzeTicket(text), isSpam: false };
+    }
+  }
+
+  async askCopilot(question, contextData) {
+    if (!process.env.OPENROUTER_API_KEY) {
+      return "I'm currently running in offline mode. I can only do basic local reasoning right now!";
     }
 
     const openRouterUrl = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1/chat/completions';
     const model = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
 
-    const systemPrompt = `You are the AI Assistant for ClarityHelp.
-Be concise, helpful, and polite. 
-You can help the user troubleshoot issues, or give them the status of their active tickets.
-If the user's issue requires human intervention or they ask to raise a ticket, gracefully let them know and set the action to "raise_ticket".
-IMPORTANT: NEVER use the word "low" to describe priority to a customer as it may frustrate them. Instead, use terms like "Standard" or "Regular".
-ALWAYS respond in a PROFESSIONAL, WARM, AND CONCISE manner.
-When confirming a ticket, use the phrase "Your ticket has been issued" if appropriate.
+    const systemPrompt = `You are an AI assistant for a customer support admin dashboard. 
+    Analyze the provided ticket data and provide short, actionable insights. 
+    Focus on trends, problems, and recommendations. Keep answers concise and useful.
+    
+    Current Dashboard Context:
+    - Tickets Created Today: ${contextData.trends?.[contextData.trends.length - 1]?.count || 0}
+    - Open Tickets: ${contextData.openTickets || 0}
+    - Top Issue Category: ${contextData.topCategory || 'N/A'}
+    - Unhappy Customers (Angry Sentiment): ${contextData.negativeTickets || 0}
+    - Historical Trends (Last 7 Days): ${JSON.stringify(contextData.trends || [])}`;
 
-Current active tickets for this user:
-${contextTickets || 'None'}
-
-Return ONLY valid JSON in this exact format:
-{
-  "text": "Your conversational response to the user here",
-  "action": "none" | "raise_ticket"
-}`;
-
-    const formattedMessages = [
-      { role: 'system', content: systemPrompt },
-      ...messages.map(m => ({
-        role: m.sender === 'user' ? 'user' : 'assistant',
-        content: m.text
-      }))
-    ];
-
-    const startTime = Date.now();
     try {
+      if (!process.env.OPENROUTER_API_KEY) {
+        throw new Error('No API Key');
+      }
+
       const response = await fetch(openRouterUrl, {
         method: 'POST',
         headers: {
@@ -229,27 +354,118 @@ Return ONLY valid JSON in this exact format:
         body: JSON.stringify({
           model,
           temperature: 0.3,
-          response_format: { type: "json_object" },
-          messages: formattedMessages,
-        }),
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: question }
+          ]
+        })
       });
 
-      if (!response.ok) throw new Error(`OpenRouter error: ${response.status}`);
+      if (!response.ok) throw new Error('Copilot API failed');
       const data = await response.json();
-      const endTime = Date.now();
-      console.log(`OpenRouter Response Time: ${endTime - startTime}ms`);
-      
-      const content = data?.choices?.[0]?.message?.content;
-      
-      try {
-        const parsed = JSON.parse(content);
-        return { text: parsed.text || "I found something, but couldn't format it right.", action: parsed.action || "none" };
-      } catch (e) {
-        return { text: content, action: "none" }; // fallback if it didn't return json
-      }
+      return data?.choices?.[0]?.message?.content || "Sorry, I couldn't process that request at this moment.";
     } catch (error) {
-      console.error("AI Chat Error:", error.message);
-      return { text: "Sorry, I encountered an issue connecting to the AI service.", action: "none" };
+      console.warn('Copilot using local intelligence fallback:', error.message);
+      
+      const { totalTickets, openTickets, negativeTickets, trends } = contextData;
+      const lowerQ = question.toLowerCase();
+
+      if (lowerQ.includes('problem') || lowerQ.includes('prediction') || lowerQ.includes('future')) {
+        let prediction = "Based on our current dashboard analytics: ";
+        if (negativeTickets > totalTickets * 0.15) {
+          prediction += "I predict a high risk of customer churn due to the high volume of 'Angry' tickets. We should prioritize resolving high-priority technical issues immediately.";
+        } else if (openTickets > totalTickets * 0.5) {
+          prediction += "Our resolution throughput is currently falling behind. At this rate, we will likely face a significant backlog by next week unless we increase staffing.";
+        } else {
+          prediction += "Operations are currently stable. I predict a smooth upcoming week with no major bottlenecks anticipated.";
+        }
+        return prediction;
+      }
+
+      if (lowerQ.includes('status') || lowerQ.includes('how') || lowerQ.includes('stats')) {
+        return `We currently have ${totalTickets} total tickets, with ${openTickets} still open. ${negativeTickets} customers are currently expressing negative sentiment. Our trend line shows ${trends?.length || 0} days of historical data available.`;
+      }
+
+      return "I'm Nexa Copilot. I'm currently operating in high-performance local mode. I can analyze your ticket volumes and predict bottlenecks. Ask me about our performance trends or future predictions!";
+    }
+  }
+
+  async chatWithCustomer(messages) {
+    if (!process.env.OPENROUTER_API_KEY) {
+      throw new Error('No API Key');
+    }
+
+    const openRouterUrl = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1/chat/completions';
+    const model = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
+
+    const systemPrompt = `You are a helpful and polite customer support agent for a SaaS text-based application. 
+    Analyze the user's issue. If they are just saying hello, greet them.
+    If they are describing a technical issue, billing issue, or problem, offer brief troubleshooting steps. 
+    If they are very upset or explicitly ask for human help or to create a ticket, ask them: "Would you like me to raise a support ticket for this issue?". Keep your answers concise, empathetic, and professional. Use markdown formatting.`;
+
+    // messages is already an array of { role: 'user' | 'assistant', content: string }
+    const apiMessages = [
+      { role: 'system', content: systemPrompt },
+      ...messages.map(m => ({
+        role: m.role || (m.sender === 'bot' ? 'assistant' : 'user'),
+        content: m.text || m.content
+      }))
+    ];
+
+    const response = await fetch(openRouterUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:3000',
+        'X-Title': process.env.OPENROUTER_APP_NAME || 'Support System Backend',
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0.5,
+        messages: apiMessages
+      })
+    });
+
+    if (!response.ok) throw new Error('Customer Chatbot API failed');
+    const data = await response.json();
+    return data?.choices?.[0]?.message?.content || "Sorry, I couldn't treat that request at this moment.";
+  }
+
+  async chatWithCopilot(message, context = "") {
+    if (!process.env.OPENROUTER_API_KEY) {
+      return "Nex-AI Copilot is currently offline. How can I assist you otherwise?";
+    }
+
+    const openRouterUrl = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1/chat/completions';
+    const model = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
+
+    const systemPrompt = `You are a helpful AI Copilot for a customer support administrator. 
+    You help analyze tickets, suggest replies, and provide insights.
+    ${context ? `Here is some context about the current ticket: ${context}` : ''}
+    Keep your answers concise and professional.`;
+
+    try {
+      const response = await fetch(openRouterUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: message }
+          ]
+        })
+      });
+
+      if (!response.ok) return "I'm having trouble connecting to my brain right now.";
+      const data = await response.json();
+      return data?.choices?.[0]?.message?.content || "I'm not sure how to respond to that.";
+    } catch (error) {
+      return "An error occurred while talking to Copilot.";
     }
   }
 }

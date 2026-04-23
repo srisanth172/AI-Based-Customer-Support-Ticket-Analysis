@@ -61,11 +61,19 @@ const FloatingChatWidget = () => {
     setIsLoading(true);
 
     try {
-      const payloadMessages = [...messages, { role: 'user', text: userMessage }].map(m => ({ sender: m.role, text: m.text }));
-      const response = await api.post('/chat/interact', { messages: payloadMessages });
-      
-      const botResponse = response.data.text;
-      const action = response.data.action;
+      const conversationHistory = [...messages].map((message) => ({
+        sender: message.role === 'assistant' ? 'bot' : 'user',
+        text: message.text,
+      }));
+
+      const response = await api.post('/tickets/chatbot', {
+        message: userMessage,
+        conversationHistory,
+      });
+
+      const botResponse = response.data.reply || "I'm having trouble retrieving data right now. Please try again later.";
+      const lowered = botResponse.toLowerCase();
+      const action = lowered.includes('raise a support ticket') || lowered.includes('[raise_ticket]') ? 'raise_ticket' : 'none';
 
       setMessages(prev => [...prev, { role: 'assistant', text: botResponse, action }]);
     } catch (error) {

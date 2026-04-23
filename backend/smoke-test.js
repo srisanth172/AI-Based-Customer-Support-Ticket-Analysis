@@ -47,7 +47,7 @@ const call = async (path, options = {}) => {
     const adminLogin = await call('/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: adminEmail, password }),
+      body: JSON.stringify({ name: adminEmail, password }),
     });
     const adminToken = adminLogin.body?.token;
     push('login_admin', Boolean(adminToken), `status=${adminLogin.status}`);
@@ -56,7 +56,7 @@ const call = async (path, options = {}) => {
     const customerLogin = await call('/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: customerEmail, password }),
+      body: JSON.stringify({ name: customerEmail, password }),
     });
     const customerToken = customerLogin.body?.token;
     push('login_customer', Boolean(customerToken), `status=${customerLogin.status}`);

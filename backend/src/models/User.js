@@ -6,9 +6,28 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true, minlength: 6 },
   role: { type: String, enum: ['customer', 'admin'], default: 'customer' },
+  isVerified: { type: Boolean, default: false },
+  verificationCode: String,
   resetPasswordToken: String,
   resetPasswordExpires: Date,
   createdAt: { type: Date, default: Date.now },
+  settings: {
+    notifications: {
+      email: { type: Boolean, default: true },
+      inApp: { type: Boolean, default: true },
+      urgentAlerts: { type: Boolean, default: true }
+    },
+    appearance: {
+      theme: { type: String, enum: ['light', 'dark', 'system'], default: 'light' }
+    },
+    system: {
+      defaultCategory: { type: String, default: 'general' },
+      slaHours: { type: Number, default: 24 }
+    },
+    security: {
+      twoFactorEnabled: { type: Boolean, default: false }
+    }
+  }
 });
 
 userSchema.pre('save', async function preSave(next) {
