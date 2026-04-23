@@ -1,410 +1,433 @@
-// src/pages/LandingPage.jsx
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { motion, useInView } from 'framer-motion';
+import { 
+  Bot, 
+  Zap, 
+  Copy, 
+  MessageSquare, 
+  ShieldCheck,
+  BarChart3,
+  Lock,
+  ArrowRight,
+  Sparkles,
+  CheckCircle2,
+  Cpu,
+  Star
+} from 'lucide-react';
 
-const FEATURES = [
-  {
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 4c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 12c-2.5 0-4.7-1.3-6-3.2.03-2 4-3.1 6-3.1s5.97 1.1 6 3.1c-1.3 1.9-3.5 3.2-6 3.2z" fill="currentColor" />
-      </svg>
-    ),
-    title: 'AI Sentiment Analysis',
-    desc: 'Real-time emotion detection on every customer message for smarter triage.'
-  },
-  {
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M11 15h2v2h-2zm0-8h2v6h-2zm1-5C6.47 2 2 6.5 2 12a10 10 0 0010 10 10 10 0 0010-10A10 10 0 0012 2zm0 18a8 8 0 010-16 8 8 0 010 16z" fill="currentColor" />
-      </svg>
-    ),
-    title: 'Priority Scoring',
-    desc: 'ML-powered algorithms rank tickets by urgency so critical issues are never missed.'
-  },
-  {
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z" fill="currentColor" />
-      </svg>
-    ),
-    title: 'Spam Detection',
-    desc: 'Vision AI cross-validates uploaded images against descriptions to filter bad-faith reports.'
-  },
-  {
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <path d="M3.5 18.5l6-6 4 4L22 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M17 6h5v5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    ),
-    title: 'Live Dashboard',
-    desc: 'WebSocket-driven admin panel refreshes in real time as tickets are created.'
-  },
-];
+// --- FIXED HELPER COMPONENTS ---
 
-const STATS = [
-  { value: '10×', label: 'Faster Resolution' },
-  { value: '98%', label: 'Accuracy Rate' },
-  { value: '60%', label: 'Less Manual Triage' },
-];
-
-const LandingPage = () => {
-  const navigate = useNavigate();
-  const [scrolled, setScrolled] = useState(false);
+const CountUpNumber = ({ end, suffix = "", duration = 2 }) => {
+  const [count, setCount] = useState(0);
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true });
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 30);
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+    if (isInView) {
+      let start = 0;
+      const increment = end / (duration * 60);
+      const timer = setInterval(() => {
+        start += increment;
+        if (start >= end) {
+          setCount(end);
+          clearInterval(timer);
+        } else {
+          setCount(Math.floor(start));
+        }
+      }, 1000 / 60);
+      return () => clearInterval(timer);
+    }
+  }, [isInView, end, duration]);
+
+  return <span ref={ref}>{count}{suffix}</span>;
+};
+
+const TypingEffect = ({ text }) => {
+  const [displayedText, setDisplayedText] = useState("");
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true });
+
+  useEffect(() => {
+    if (isInView) {
+      let i = 0;
+      const intervalId = setInterval(() => {
+        setDisplayedText(text.substring(0, i + 1));
+        i++;
+        if (i >= text.length) clearInterval(intervalId);
+      }, 30);
+      return () => clearInterval(intervalId);
+    }
+  }, [isInView, text]);
 
   return (
-    <div style={s.page}>
-      {/* ── HERO BG ── */}
-      <div style={s.heroBg} />
-      <div style={s.heroOverlay} />
+    <span ref={ref}>
+      {displayedText}
+      <motion.span 
+        animate={{ opacity: [0, 1, 0] }} 
+        transition={{ repeat: Infinity, duration: 0.8 }}
+        className="inline-block w-1.5 h-3.5 ml-1 bg-[#8B5CF6] align-middle"
+      />
+    </span>
+  );
+};
 
-      {/* Ambient orbs */}
-      <div style={{ ...s.orb, top: '10%', left: '8%', width: 500, height: 500, background: 'radial-gradient(circle, rgba(99,102,241,0.14) 0%, transparent 70%)' }} />
-      <div style={{ ...s.orb, bottom: '15%', right: '5%', width: 400, height: 400, background: 'radial-gradient(circle, rgba(168,85,247,0.10) 0%, transparent 70%)' }} />
+// --- MAIN LANDING PAGE ---
 
-      {/* ── NAVBAR ── */}
-      <nav style={{ ...s.nav, ...(scrolled ? s.navScrolled : {}) }}>
-        <div style={s.brand}>
-          <div style={s.logoBox}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#fff" />
-            </svg>
+const LandingPage = () => {
+  const fadeInUp = {
+    hidden: { opacity: 0, y: 30 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } }
+  };
+  
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.15 } }
+  };
+
+  return (
+    // Deep dark violet-tinted background
+    <div className="min-h-screen bg-[#06040A] text-zinc-300 font-sans selection:bg-[#8B5CF6] selection:text-white overflow-x-hidden relative z-0">
+      
+      {/* ── AMBIENT ANIMATED BACKGROUND ── */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <motion.div 
+          animate={{ opacity: [0.3, 0.5, 0.3], scale: [1, 1.1, 1] }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[120vw] h-[900px] bg-[radial-gradient(ellipse_at_top,_rgba(139,92,246,0.15)_0%,_transparent_60%)]"
+        />
+        <div className="absolute top-[20%] left-[-10%] w-[500px] h-[500px] bg-[#8B5CF6] blur-[250px] opacity-[0.07] rounded-full mix-blend-screen" />
+        <div className="absolute bottom-[-10%] right-[-5%] w-[600px] h-[600px] bg-[#6D28D9] blur-[250px] opacity-[0.05] rounded-full mix-blend-screen" />
+      </div>
+
+      {/* ── NAVIGATION ── */}
+      <nav className="relative z-10 flex items-center justify-between px-6 py-5 max-w-7xl mx-auto border-b border-white/[0.04]">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#A78BFA] to-[#6D28D9] flex items-center justify-center font-bold text-white shadow-[0_0_25px_rgba(139,92,246,0.3)]">
+            AI
           </div>
-          <span style={s.brandName}>SupportIQ</span>
+          <span className="text-xl font-bold tracking-tight text-white">SupportFlow</span>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.04, boxShadow: '0 0 30px rgba(99,102,241,0.5)' }}
-          whileTap={{ scale: 0.97 }}
-          style={s.navCta}
-          onClick={() => navigate('/login')}
-        >
-          Get Started
-        </motion.button>
+        <div className="flex items-center gap-6">
+          <Link to="/login" className="text-sm font-medium text-violet-200/60 hover:text-white transition-colors">
+            Log in
+          </Link>
+          <Link to="/register" className="px-5 py-2.5 text-sm font-semibold bg-white text-[#06040A] hover:bg-zinc-200 rounded-lg transition-all duration-300 shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:-translate-y-0.5">
+            Get Started
+          </Link>
+        </div>
       </nav>
 
-      {/* ── HERO ── */}
-      <header style={s.hero}>
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease: 'easeOut' }}
-          style={s.heroInner}
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1, duration: 0.6 }}
-            style={s.badge}
-          >
-            <span style={s.badgeDot} />
-            AI-POWERED TICKET INTELLIGENCE
+      {/* ── HERO SECTION ── */}
+      <main className="relative z-10 flex flex-col items-center justify-center px-6 pt-28 pb-20 text-center max-w-7xl mx-auto">
+        <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="flex flex-col items-center max-w-4xl">
+          
+          <motion.div variants={fadeInUp} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#8B5CF6]/10 border border-[#8B5CF6]/20 text-[#A78BFA] text-xs font-semibold uppercase tracking-widest mb-8 shadow-[0_0_20px_rgba(139,92,246,0.1)] backdrop-blur-md">
+            <Sparkles size={14} className="animate-pulse" /> AI-Powered Support System
           </motion.div>
 
-          <h1 style={s.headline}>
-            Resolve Support Tickets{' '}
-            <span style={s.accent}>10× Faster</span>
-            {' '}with AI
-          </h1>
+          <motion.h1 variants={fadeInUp} className="text-5xl md:text-7xl font-extrabold tracking-tighter mb-6 leading-[1.1]">
+            <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-zinc-400">
+              Resolve Support Tickets
+            </span>
+            <br />
+            {/* Animated Glowing Text */}
+            <motion.span 
+              animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
+              transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+              className="text-transparent bg-clip-text bg-[length:200%_auto] bg-gradient-to-r from-[#8B5CF6] via-[#A78BFA] to-[#8B5CF6] drop-shadow-[0_0_25px_rgba(139,92,246,0.4)] inline-block"
+            >
+              10× Faster
+            </motion.span> 
+            <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-zinc-400">
+              {" "}with AI.
+            </span>
+          </motion.h1>
 
-          <p style={s.subhead}>
-            Sentiment analysis, priority scoring, and real-time admin insights —
-            all in one beautifully crafted platform.
-          </p>
+          <motion.p variants={fadeInUp} className="text-lg text-violet-200/60 mb-10 max-w-2xl leading-relaxed font-medium">
+            Scale your customer service without scaling your headcount. Automatically tag, prioritize, and draft pixel-perfect resolutions for every incoming ticket.
+          </motion.p>
 
-          {/* Stats row */}
-          <div style={s.statsRow}>
-            {STATS.map((st, i) => (
-              <motion.div
-                key={st.label}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 + i * 0.1 }}
-                style={s.statItem}
+          {/* Interactive CTA */}
+          <motion.div variants={fadeInUp} className="w-full max-w-md mx-auto mb-14 relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-[#8B5CF6]/30 to-[#6D28D9]/30 rounded-full blur-md opacity-40 group-hover:opacity-80 transition duration-500"></div>
+            <form className="relative flex items-center p-1.5 bg-[#0A0710] border border-white/10 rounded-full focus-within:border-[#8B5CF6]/60 focus-within:ring-1 focus-within:ring-[#8B5CF6]/60 transition-all shadow-2xl">
+              <input 
+                type="email" 
+                placeholder="Enter your work email" 
+                required
+                className="w-full bg-transparent text-white px-5 py-2.5 outline-none text-sm placeholder:text-zinc-500"
+              />
+              <button 
+                type="submit" 
+                className="bg-[#8B5CF6] text-white hover:bg-[#9366F9] hover:scale-[1.02] active:scale-[0.98] px-6 py-2.5 rounded-full text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap shadow-[0_0_20px_rgba(139,92,246,0.3)]"
               >
-                <div style={s.statVal}>{st.value}</div>
-                <div style={s.statLabel}>{st.label}</div>
-              </motion.div>
-            ))}
-          </div>
+                Start Free <ArrowRight size={16} />
+              </button>
+            </form>
+          </motion.div>
 
-          <motion.button
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.65 }}
-            whileHover={{ scale: 1.05, boxShadow: '0 20px 60px rgba(99,102,241,0.55)' }}
-            whileTap={{ scale: 0.97 }}
-            style={s.heroCta}
-            onClick={() => navigate('/login')}
-          >
-            Get Started
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ marginLeft: 8 }}>
-              <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </motion.button>
+          <motion.div variants={fadeInUp} className="flex items-center gap-4 text-xs text-violet-300/40 font-medium tracking-wide mb-20 uppercase">
+            <div className="flex -space-x-2">
+              <div className="w-6 h-6 rounded-full bg-zinc-800 border-2 border-[#06040A]"></div>
+              <div className="w-6 h-6 rounded-full bg-zinc-700 border-2 border-[#06040A]"></div>
+              <div className="w-6 h-6 rounded-full bg-[#8B5CF6]/20 border-2 border-[#06040A] flex items-center justify-center text-[8px] text-[#A78BFA]">+1k</div>
+            </div>
+            <span>Trusted by forward-thinking teams</span>
+          </motion.div>
         </motion.div>
-      </header>
 
-      {/* ── FEATURES ── */}
-      <section style={s.features}>
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          style={s.sectionLabel}
-        >
-          WHAT WE OFFER
-        </motion.div>
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
+        {/* ── CENTRAL PRODUCT MOCKUP ── */}
+        <motion.div 
+          initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ delay: 0.1 }}
-          style={s.sectionTitle}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="w-full max-w-5xl rounded-2xl border border-white/[0.08] bg-[#0A0710]/80 backdrop-blur-3xl shadow-[0_40px_100px_-20px_rgba(0,0,0,1),_0_0_40px_rgba(139,92,246,0.05)] overflow-hidden relative group"
         >
-          Built for high-velocity support teams
-        </motion.h2>
-        <div style={s.grid}>
-          {FEATURES.map((f, i) => (
-            <motion.div
-              key={f.title}
-              initial={{ opacity: 0, y: 28 }}
+          {/* Edge Lighting */}
+          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#8B5CF6]/60 to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-700"></div>
+          
+          {/* Browser Chrome */}
+          <div className="flex items-center px-4 py-3 border-b border-white/[0.05] bg-black/40">
+            <div className="flex gap-2">
+              <div className="w-3 h-3 rounded-full bg-[#ff5f56] border border-white/10"></div>
+              <div className="w-3 h-3 rounded-full bg-[#ffbd2e] border border-white/10"></div>
+              <div className="w-3 h-3 rounded-full bg-[#27c93f] border border-white/10"></div>
+            </div>
+            <div className="mx-auto text-xs text-violet-200/40 font-mono flex items-center gap-2 bg-black/50 px-4 py-1.5 rounded-md border border-white/[0.04]">
+               <Lock size={10} className="text-[#8B5CF6]" /> app.supportflow.ai
+            </div>
+          </div>
+          
+          <div className="flex h-[500px] text-sm text-left relative overflow-hidden">
+            {/* Sidebar */}
+            <div className="w-56 border-r border-white/5 p-4 flex flex-col gap-1 hidden md:flex bg-black/20">
+              <div className="text-[10px] font-bold text-violet-300/30 tracking-wider mb-2 px-2 mt-2">WORKSPACE</div>
+              <div className="px-3 py-2 rounded-lg text-violet-200/50 hover:text-white hover:bg-white/5 flex items-center gap-3 font-medium transition-colors cursor-default">
+                <BarChart3 size={16} /> Dashboard
+              </div>
+              <div className="px-3 py-2 rounded-lg bg-[#8B5CF6]/10 text-[#A78BFA] flex items-center gap-3 font-medium cursor-default border border-[#8B5CF6]/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] animate-[shimmer_2s_infinite]"></div>
+                <MessageSquare size={16} /> Active Tickets
+                <span className="ml-auto bg-[#8B5CF6] text-white text-[10px] px-2 py-0.5 rounded-full font-bold">3</span>
+              </div>
+            </div>
+
+            {/* Main Area */}
+            <div className="flex-1 p-6 flex flex-col gap-4 relative">
+              <div className="flex justify-between items-start mb-2 pb-4 border-b border-white/5">
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-2 tracking-tight">#1042 - Billing cycle error</h3>
+                  <div className="flex items-center gap-3 text-xs font-medium">
+                    <span className="text-violet-200/50">From: <span className="text-violet-100/90">Sarah Jenkins</span></span>
+                    <span className="w-1 h-1 rounded-full bg-white/20"></span>
+                    <span className="text-red-400 bg-red-500/10 px-2.5 py-1 rounded-md border border-red-500/20 shadow-sm">Urgent</span>
+                  </div>
+                </div>
+                <div className="bg-[#8B5CF6]/10 border border-[#8B5CF6]/30 px-3 py-1.5 rounded-md flex items-center gap-2 text-xs text-[#A78BFA] font-medium backdrop-blur-md shadow-[0_0_20px_rgba(139,92,246,0.15)]">
+                  <Sparkles size={14} className="text-[#8B5CF6]" /> AI Context Analyzed
+                </div>
+              </div>
+
+              {/* Customer Chat */}
+              <div className="rounded-xl bg-black/30 border border-white/[0.06] p-5 shadow-inner">
+                 <p className="text-violet-100/80 text-sm leading-relaxed">
+                   Hello, I just received an invoice for my enterprise plan, but it looks like I was charged twice for the month of April. Can someone look into this immediately? Our accounting team is holding the expense report.
+                 </p>
+              </div>
+
+              {/* AI Suggestion Panel */}
+              <div className="mt-auto rounded-xl border border-[#8B5CF6]/30 bg-gradient-to-b from-[#8B5CF6]/[0.08] to-transparent overflow-hidden backdrop-blur-md relative shadow-[0_0_30px_rgba(139,92,246,0.05)]">
+                 <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#A78BFA] to-transparent opacity-60"></div>
+                 <div className="bg-black/20 px-4 py-2.5 border-b border-[#8B5CF6]/20 flex items-center justify-between">
+                    <div className="text-xs text-[#A78BFA] font-bold flex items-center gap-2 tracking-wide uppercase">
+                      <Bot size={14} className="text-[#8B5CF6]" /> Generated Draft
+                    </div>
+                    <div className="text-[10px] text-[#A78BFA]/90 font-mono bg-[#8B5CF6]/10 px-2 py-0.5 rounded border border-[#8B5CF6]/30">98% Match</div>
+                 </div>
+                 <div className="p-5">
+                   <p className="text-white text-sm leading-relaxed mb-6 font-medium min-h-[80px]">
+                     {/* Implemented Typing Effect */}
+                     <TypingEffect text="Hi Sarah, I sincerely apologize for the confusion. I reviewed your account and can confirm a duplicate charge was processed due to a system retry error. I have just issued a full refund for the duplicate amount ($499.00)." />
+                   </p>
+                   <div className="flex gap-3">
+                      <button className="px-5 py-2.5 bg-[#8B5CF6] text-white hover:bg-[#9366F9] hover:scale-105 rounded-lg text-sm font-bold transition-all shadow-[0_0_20px_rgba(139,92,246,0.2)] hover:shadow-[0_0_30px_rgba(139,92,246,0.5)]">
+                        Approve & Send
+                      </button>
+                      <button className="px-5 py-2.5 bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 rounded-lg text-white text-sm font-medium transition-colors hover:border-white/20">
+                        Edit Text
+                      </button>
+                   </div>
+                 </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </main>
+
+      {/* ── NEW: HOW IT WORKS SECTION ── */}
+      <section className="py-24 px-6 max-w-7xl mx-auto relative z-10 border-t border-white/5 mt-10">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl font-bold text-white mb-4">How SupportFlow Works</h2>
+          <p className="text-violet-200/60">Three simple steps to automate your support pipeline.</p>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+          {/* Connecting Line (Hidden on mobile) */}
+          <div className="hidden md:block absolute top-12 left-[15%] right-[15%] h-[1px] bg-gradient-to-r from-transparent via-[#8B5CF6]/30 to-transparent"></div>
+          
+          {[
+            { icon: <MessageSquare />, title: "1. Ingest", desc: "Tickets flow in from email, chat, and portals. We sync in real-time." },
+            { icon: <Cpu />, title: "2. Analyze", desc: "Our AI understands intent, sentiment, and past ticket history instantly." },
+            { icon: <Zap />, title: "3. Resolve", desc: "Automate responses, route to the right agent, or trigger internal workflows." }
+          ].map((step, idx) => (
+            <div key={idx} className="relative z-10 flex flex-col items-center text-center group">
+              <div className="w-24 h-24 rounded-full bg-[#0A0710] border border-white/10 flex items-center justify-center mb-6 shadow-xl group-hover:border-[#8B5CF6]/50 group-hover:shadow-[0_0_30px_rgba(139,92,246,0.2)] transition-all duration-300">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#8B5CF6]/20 to-transparent flex items-center justify-center text-[#A78BFA]">
+                  {step.icon}
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">{step.title}</h3>
+              <p className="text-violet-200/50 text-sm max-w-xs">{step.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── STATS SECTION ── */}
+      <section className="border-y border-white/[0.05] bg-black/30 backdrop-blur-xl py-16 relative z-10">
+        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8 text-center divide-y md:divide-y-0 md:divide-x divide-white/10">
+          <div className="flex flex-col items-center py-4">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#8B5CF6]/20 to-transparent flex items-center justify-center text-[#A78BFA] mb-6 border border-[#8B5CF6]/30 shadow-[0_0_20px_rgba(139,92,246,0.15)]">
+              <Zap size={24} />
+            </div>
+            <h3 className="text-5xl font-extrabold text-white mb-2 tracking-tight">
+              <CountUpNumber end={10} suffix="×" />
+            </h3>
+            <p className="text-violet-200/50 font-medium text-sm uppercase tracking-wider">Faster Resolution</p>
+          </div>
+          <div className="flex flex-col items-center py-4">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#8B5CF6]/20 to-transparent flex items-center justify-center text-[#A78BFA] mb-6 border border-[#8B5CF6]/30 shadow-[0_0_20px_rgba(139,92,246,0.15)]">
+              <ShieldCheck size={24} />
+            </div>
+            <h3 className="text-5xl font-extrabold text-white mb-2 tracking-tight">
+              <CountUpNumber end={98} suffix="%" />
+            </h3>
+            <p className="text-violet-200/50 font-medium text-sm uppercase tracking-wider">Accuracy Rate</p>
+          </div>
+          <div className="flex flex-col items-center py-4">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#8B5CF6]/20 to-transparent flex items-center justify-center text-[#A78BFA] mb-6 border border-[#8B5CF6]/30 shadow-[0_0_20px_rgba(139,92,246,0.15)]">
+              <Bot size={24} />
+            </div>
+            <h3 className="text-5xl font-extrabold text-white mb-2 tracking-tight">
+              <CountUpNumber end={60} suffix="%" />
+            </h3>
+            <p className="text-violet-200/50 font-medium text-sm uppercase tracking-wider">Auto-Handled</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FEATURES SECTION ── */}
+      <section className="py-32 px-6 max-w-7xl mx-auto relative z-10">
+        <div className="text-center mb-20 max-w-2xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6 tracking-tight">A complete toolkit for modern support.</h2>
+          <p className="text-violet-200/60 text-lg leading-relaxed">We've automated the repetitive tasks so your human agents can focus on building relationships and solving complex problems.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { icon: <Bot />, title: "AI Classification", desc: "Instantly routes and tags tickets based on sentiment and urgency." },
+            { icon: <Copy />, title: "Duplicate Detection", desc: "Merges similar issues seamlessly to prevent agent overlap." },
+            { icon: <MessageSquare />, title: "Smart Chatbot", desc: "Deflects routine queries before a ticket is even created." },
+            { icon: <Zap />, title: "Auto Resolution", desc: "Drafts hyper-accurate replies based on your knowledge base." }
+          ].map((feature, idx) => (
+            <motion.div 
+              key={idx}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              whileHover={{ y: -6, boxShadow: '0 24px 60px rgba(99,102,241,0.15)' }}
-              style={s.card}
+              transition={{ delay: idx * 0.1 }}
+              whileHover={{ y: -8 }}
+              className="group relative p-8 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:border-[#8B5CF6]/50 hover:bg-[#8B5CF6]/[0.03] hover:shadow-[0_20px_40px_rgba(139,92,246,0.1)] backdrop-blur-md transition-all duration-300 cursor-default overflow-hidden"
             >
-              <div style={s.cardIcon}>{f.icon}</div>
-              <h3 style={s.cardTitle}>{f.title}</h3>
-              <p style={s.cardDesc}>{f.desc}</p>
+              {/* Subtle hover background glow inside card */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#8B5CF6] blur-[80px] opacity-0 group-hover:opacity-20 transition-opacity duration-500"></div>
+              
+              <div className="w-14 h-14 rounded-xl bg-black/50 border border-white/10 flex items-center justify-center mb-6 text-white group-hover:text-white group-hover:bg-[#8B5CF6] group-hover:border-[#A78BFA] transition-colors shadow-lg">
+                {feature.icon}
+              </div>
+              <h3 className="text-lg font-bold text-white mb-3 group-hover:text-[#A78BFA] transition-colors">{feature.title}</h3>
+              <p className="text-violet-200/50 text-sm leading-relaxed">{feature.desc}</p>
             </motion.div>
           ))}
         </div>
       </section>
 
-      {/* ── CTA BANNER ── */}
-      <section style={s.ctaBanner}>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          style={s.ctaInner}
-        >
-          <h2 style={s.ctaTitle}>The future of support is <span style={s.accent}>autonomous.</span></h2>
-          <p style={s.ctaDesc}>
-            Join support teams who let AI handle triage while they focus on what matters — customers.
-          </p>
-          <motion.button
-            whileHover={{ scale: 1.04, boxShadow: '0 20px 50px rgba(99,102,241,0.5)' }}
-            whileTap={{ scale: 0.97 }}
-            style={s.heroCta}
-            onClick={() => navigate('/login')}
-          >
-            Get Started Free
-          </motion.button>
-        </motion.div>
+      {/* ── TESTIMONIALS SECTION ── */}
+      <section className="py-20 px-6 max-w-7xl mx-auto relative z-10 border-t border-white/5">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl font-bold text-white mb-4">Loved by Support Teams</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="p-8 rounded-2xl bg-[#0A0710] border border-white/10 relative">
+            <div className="flex gap-1 text-[#8B5CF6] mb-4"><Star size={16} fill="currentColor"/><Star size={16} fill="currentColor"/><Star size={16} fill="currentColor"/><Star size={16} fill="currentColor"/><Star size={16} fill="currentColor"/></div>
+            <p className="text-violet-100/80 italic mb-6">"SupportFlow has completely transformed how we handle our ticket backlog. The AI drafts are so accurate we rarely have to edit them."</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] p-[2px]">
+                <div className="w-full h-full bg-black rounded-full border-2 border-transparent"></div>
+              </div>
+              <div>
+                <h4 className="text-white font-bold text-sm">Alex Rivera</h4>
+                <p className="text-violet-200/40 text-xs">Head of CX, TechNova</p>
+              </div>
+            </div>
+          </div>
+          <div className="p-8 rounded-2xl bg-[#0A0710] border border-white/10 relative">
+            <div className="flex gap-1 text-[#8B5CF6] mb-4"><Star size={16} fill="currentColor"/><Star size={16} fill="currentColor"/><Star size={16} fill="currentColor"/><Star size={16} fill="currentColor"/><Star size={16} fill="currentColor"/></div>
+            <p className="text-violet-100/80 italic mb-6">"We've reduced our resolution time by over 8x since implementing the smart triage system. Absolute game changer."</p>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] p-[2px]">
+                <div className="w-full h-full bg-black rounded-full border-2 border-transparent"></div>
+              </div>
+              <div>
+                <h4 className="text-white font-bold text-sm">Samantha Lee</h4>
+                <p className="text-violet-200/40 text-xs">Support Lead, CloudSync</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* ── FOOTER ── */}
-      <footer style={s.footer}>
-        <div style={s.footerBrand}>
-          <div style={s.logoBox}><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#fff" /></svg></div>
-          <span style={{ color: '#94a3b8', fontSize: 14, fontWeight: 600 }}>SupportIQ © 2025</span>
-        </div>
-        <div style={{ display: 'flex', gap: 24 }}>
-          {['Privacy', 'Terms', 'Contact'].map(l => (
-            <span key={l} style={s.footerLink}>{l}</span>
-          ))}
+      <footer className="border-t border-white/10 bg-[#040207] py-10 text-sm relative z-10">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6 text-violet-200/40">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded bg-[#8B5CF6] flex items-center justify-center font-bold text-white text-[10px]">AI</div>
+            <span className="font-bold text-white tracking-tight text-base">SupportFlow</span>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-6">
+            <Link to="#" className="hover:text-[#A78BFA] transition-colors">Terms of Service</Link>
+            <Link to="#" className="hover:text-[#A78BFA] transition-colors">Privacy Policy</Link>
+            <Link to="#" className="hover:text-[#A78BFA] transition-colors">Contact</Link>
+          </div>
+          <div className="flex flex-col md:flex-row items-center gap-4 text-xs">
+            <span className="flex items-center gap-1.5 bg-white/[0.03] px-3 py-1.5 rounded-full border border-white/5 text-violet-200/60 font-medium">
+              <ShieldCheck size={14} className="text-[#8B5CF6]"/> All systems operational
+            </span>
+            <span>© {new Date().getFullYear()} SupportFlow Inc.</span>
+          </div>
         </div>
       </footer>
+
+      {/* CSS Keyframes injected for shimmering effect in the mockup */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes shimmer {
+          100% { transform: translateX(100%); }
+        }
+      `}} />
     </div>
   );
-};
-
-const s = {
-  page: {
-    minHeight: '100vh',
-    backgroundColor: '#060912',
-    fontFamily: "'Inter', 'Segoe UI', sans-serif",
-    color: '#f1f5f9',
-    position: 'relative',
-    overflowX: 'hidden',
-  },
-  heroBg: {
-    position: 'fixed',
-    inset: 0,
-    backgroundImage: 'url(/hero_bg.png)',
-    backgroundSize: 'cover',
-    backgroundPosition: 'center top',
-    opacity: 0.28,
-    zIndex: 0,
-  },
-  heroOverlay: {
-    position: 'fixed',
-    inset: 0,
-    zIndex: 1,
-    background: 'linear-gradient(180deg, rgba(6,9,18,0.5) 0%, rgba(6,9,18,0.75) 60%, rgba(6,9,18,0.98) 100%)',
-  },
-  orb: { position: 'absolute', borderRadius: '50%', pointerEvents: 'none', zIndex: 1 },
-  nav: {
-    position: 'fixed',
-    top: 0, left: 0, right: 0,
-    zIndex: 100,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '20px 8%',
-    transition: 'all 0.3s',
-  },
-  navScrolled: {
-    background: 'rgba(6,9,18,0.85)',
-    backdropFilter: 'blur(20px)',
-    borderBottom: '1px solid rgba(255,255,255,0.05)',
-  },
-  brand: { display: 'flex', alignItems: 'center', gap: 12, position: 'relative', zIndex: 2 },
-  logoBox: {
-    width: 34, height: 34,
-    background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-    borderRadius: 10,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    boxShadow: '0 4px 16px rgba(79,70,229,0.4)',
-  },
-  brandName: { fontSize: 19, fontWeight: 800, letterSpacing: '-0.4px' },
-  navCta: {
-    position: 'relative', zIndex: 2,
-    background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-    border: 'none', color: '#fff',
-    padding: '10px 26px', borderRadius: 12,
-    fontWeight: 800, fontSize: 14, cursor: 'pointer',
-    letterSpacing: '0.2px',
-    boxShadow: '0 8px 24px rgba(79,70,229,0.35)',
-    transition: 'all 0.2s',
-  },
-  hero: {
-    position: 'relative', zIndex: 10,
-    minHeight: '100vh',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    padding: '120px 8% 80px',
-    textAlign: 'center',
-  },
-  heroInner: { maxWidth: 820 },
-  badge: {
-    display: 'inline-flex', alignItems: 'center', gap: 8,
-    padding: '7px 18px',
-    background: 'rgba(79,70,229,0.12)',
-    border: '1px solid rgba(79,70,229,0.28)',
-    borderRadius: 100,
-    fontSize: 11, fontWeight: 800, letterSpacing: '2px', color: '#a5b4fc',
-    marginBottom: 36,
-  },
-  badgeDot: {
-    width: 6, height: 6, borderRadius: '50%',
-    background: '#6366f1',
-    boxShadow: '0 0 8px #6366f1',
-    display: 'inline-block',
-  },
-  headline: {
-    fontSize: 'clamp(42px, 6vw, 78px)',
-    fontWeight: 900,
-    lineHeight: 1.06,
-    letterSpacing: '-3px',
-    marginBottom: 24,
-  },
-  accent: {
-    background: 'linear-gradient(90deg, #6366f1, #a855f7, #ec4899)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    backgroundClip: 'text',
-  },
-  subhead: {
-    fontSize: 19, color: '#94a3b8', lineHeight: 1.7,
-    marginBottom: 52, maxWidth: 640, margin: '0 auto 52px',
-    fontWeight: 500,
-  },
-  statsRow: { display: 'flex', justifyContent: 'center', gap: 32, marginBottom: 52, flexWrap: 'wrap' },
-  statItem: {
-    background: 'rgba(255,255,255,0.04)',
-    border: '1px solid rgba(255,255,255,0.07)',
-    borderRadius: 20, padding: '20px 32px', textAlign: 'center', minWidth: 120,
-  },
-  statVal: { fontSize: 32, fontWeight: 900, color: '#f1f5f9' },
-  statLabel: { fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginTop: 4 },
-  heroCta: {
-    display: 'inline-flex', alignItems: 'center',
-    background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-    border: 'none', color: '#fff',
-    padding: '18px 48px', borderRadius: 16,
-    fontSize: 16, fontWeight: 800, cursor: 'pointer',
-    boxShadow: '0 14px 40px rgba(79,70,229,0.4)',
-    letterSpacing: '0.3px', transition: 'all 0.25s',
-  },
-  features: {
-    position: 'relative', zIndex: 10,
-    padding: '100px 8%',
-    textAlign: 'center',
-  },
-  sectionLabel: {
-    fontSize: 11, fontWeight: 800, letterSpacing: '3px',
-    color: '#6366f1', marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 'clamp(28px, 4vw, 46px)', fontWeight: 900,
-    letterSpacing: '-1.5px', marginBottom: 60,
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-    gap: 28, maxWidth: 1200, margin: '0 auto',
-  },
-  card: {
-    background: 'rgba(255,255,255,0.03)',
-    border: '1px solid rgba(255,255,255,0.07)',
-    borderRadius: 28, padding: '40px 32px',
-    backdropFilter: 'blur(12px)',
-    textAlign: 'left',
-    transition: 'all 0.3s',
-    cursor: 'default',
-  },
-  cardIcon: {
-    width: 48, height: 48,
-    background: 'rgba(99,102,241,0.12)',
-    border: '1px solid rgba(99,102,241,0.2)',
-    borderRadius: 14,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    color: '#818cf8', marginBottom: 24,
-    fontSize: 22,
-  },
-  cardTitle: { fontSize: 18, fontWeight: 800, marginBottom: 10, color: '#f1f5f9', letterSpacing: '-0.3px' },
-  cardDesc: { fontSize: 14, color: '#64748b', lineHeight: 1.7 },
-  ctaBanner: {
-    position: 'relative', zIndex: 10,
-    padding: '80px 8%',
-  },
-  ctaInner: {
-    maxWidth: 760, margin: '0 auto', textAlign: 'center',
-    background: 'radial-gradient(ellipse at 50% 0%, rgba(79,70,229,0.15) 0%, transparent 70%)',
-    border: '1px solid rgba(79,70,229,0.15)',
-    borderRadius: 40, padding: '72px 56px',
-  },
-  ctaTitle: { fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 900, letterSpacing: '-1.5px', marginBottom: 20 },
-  ctaDesc: { fontSize: 17, color: '#94a3b8', lineHeight: 1.7, marginBottom: 44, maxWidth: 540, margin: '0 auto 44px' },
-  footer: {
-    position: 'relative', zIndex: 10,
-    padding: '40px 8%',
-    borderTop: '1px solid rgba(255,255,255,0.05)',
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    flexWrap: 'wrap', gap: 16,
-  },
-  footerBrand: { display: 'flex', alignItems: 'center', gap: 10 },
-  footerLink: { color: '#475569', fontSize: 13, fontWeight: 600, cursor: 'pointer' },
 };
 
 export default LandingPage;
