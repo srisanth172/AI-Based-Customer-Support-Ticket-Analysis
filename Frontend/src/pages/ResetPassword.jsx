@@ -20,20 +20,20 @@ const ResetPassword = () => {
   const s = {
     container: {
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '40px 20px', position: 'relative', background: '#05070a', color: '#fff',
+      padding: '40px 20px', position: 'relative', background: '#020B06', color: '#fff',
       fontFamily: "'Inter', sans-serif",
     },
     bg: { position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden' },
     bgImg: { position: 'absolute', inset: 0, opacity: 0.18, backgroundImage: 'url(/hero_bg.png)', backgroundSize: 'cover', backgroundPosition: 'center' },
-    bgOverlay: { position: 'absolute', inset: 0, background: 'radial-gradient(circle at center, rgba(5,7,10,0.5) 0%, rgba(5,7,10,0.95) 90%)' },
+    bgOverlay: { position: 'absolute', inset: 0, background: 'radial-gradient(circle at center, rgba(2,11,6,0.5) 0%, rgba(2,11,6,0.95) 90%)' },
     card: {
       width: '100%', maxWidth: '440px', padding: '48px', borderRadius: '32px',
-      background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(40px)',
+      background: 'rgba(4, 18, 9, 0.82)', backdropFilter: 'blur(40px)',
       border: '1px solid rgba(255, 255, 255, 0.08)', position: 'relative', zIndex: 10, textAlign: 'center'
     },
     iconWrap: {
       width: '64px', height: '64px', margin: '0 auto 24px',
-      background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+      background: 'linear-gradient(135deg, #10b981, #059669)',
       borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
     },
     title: { fontSize: '32px', fontWeight: '900', marginBottom: '12px', letterSpacing: '-1px' },
@@ -45,9 +45,8 @@ const ResetPassword = () => {
     },
     button: {
       width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
-      background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
-      color: '#fff', fontSize: '15px', fontWeight: '800', cursor: 'pointer',
-      transition: 'all 0.3s', boxShadow: '0 10px 25px -5px rgba(99, 102, 241, 0.4)',
+      background: '#22C55E', color: '#020B06', fontSize: '15px', fontWeight: '800', cursor: 'pointer',
+      transition: 'all 0.3s', boxShadow: '0 10px 28px -8px rgba(34,197,94,0.3)',
     },
     error: { color: '#fb7185', fontSize: '13px', marginBottom: '16px', fontWeight: '600' }
   };

@@ -22,6 +22,8 @@ const CreateTicket = () => {
   const [showClassification, setShowClassification] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState(null);
   const [errors, setErrors] = useState({});
+  const [ticketSubmitted, setTicketSubmitted] = useState(false);
+  const [submittedTicketId, setSubmittedTicketId] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -160,22 +162,16 @@ const CreateTicket = () => {
       const ticketNumber = createdTicket.ticketId;
       
       toast.success(
-        `✅ Ticket Submitted Successfully!\nTicket ID: ${ticketNumber}`,
+        `Ticket submitted successfully`,
         {
           duration: 4000,
           icon: '✅',
         }
       );
 
-      // Reset form
-      setFormData({ title: '', description: '' });
-      setPhoto(null);
-      setPhotoPreview(null);
-      setClassification(null);
-      setShowClassification(false);
-
-      // Redirect to ticket detail
-      setTimeout(() => navigate(`/customer/tickets/${ticketNumber}`), 1500);
+      // Show success screen
+      setSubmittedTicketId(ticketNumber);
+      setTicketSubmitted(true);
     } catch (error) {
       console.error('=== FINAL SUBMISSION ERROR ===');
       console.error('Error:', error);
@@ -191,7 +187,7 @@ const CreateTicket = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4">
+    <div className="min-h-screen relative py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <motion.div
@@ -199,8 +195,8 @@ const CreateTicket = () => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Create New Ticket</h1>
-          <p className="text-slate-600">Describe your issue and our AI will help classify it</p>
+          <h1 className="text-3xl font-bold text-white mb-2">Create New Ticket</h1>
+          <p className="text-slate-400">Describe your issue and our AI will help classify it</p>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -210,12 +206,34 @@ const CreateTicket = () => {
             animate={{ opacity: 1, y: 0 }}
             className="lg:col-span-2"
           >
-            <div className="bg-white rounded-2xl shadow-lg p-8 border border-slate-100">
-              {!showClassification ? (
+            <div className="bg-[#041209]/60 backdrop-blur-xl rounded-[24px] shadow-2xl p-8 border border-white/5">
+              {ticketSubmitted ? (
+                <div className="text-center py-12">
+                  <div className="h-24 w-24 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-6">
+                    <CheckCircleIcon className="h-12 w-12 text-emerald-500" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-white mb-2">Ticket Submitted Successfully</h2>
+                  <p className="text-slate-400 mb-8">Your ticket #{submittedTicketId} has been created and securely logged.</p>
+                  <button
+                    onClick={() => {
+                      setTicketSubmitted(false);
+                      setSubmittedTicketId(null);
+                      setFormData({ title: '', description: '' });
+                      setPhoto(null);
+                      setPhotoPreview(null);
+                      setClassification(null);
+                      setShowClassification(false);
+                    }}
+                    className="bg-emerald-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-emerald-700 transition-colors"
+                  >
+                    Create Another Ticket
+                  </button>
+                </div>
+              ) : !showClassification ? (
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Title */}
                   <div>
-                    <label htmlFor="title" className="block text-sm font-semibold text-slate-700 mb-2">
+                    <label htmlFor="title" className="block text-sm font-semibold text-slate-300 mb-2">
                       Issue Title <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -225,79 +243,80 @@ const CreateTicket = () => {
                       value={formData.title}
                       onChange={handleChange}
                       placeholder="E.g., Payment not reflected in my account"
-                      className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-indigo-600 transition-colors ${
-                        errors.title ? 'border-red-500' : 'border-slate-200'
+                      className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-emerald-600 transition-colors ${
+                        errors.title ? 'border-red-500' : 'border-white/10 bg-white/5 text-slate-200'
                       }`}
                     />
                     {errors.title && <p className="mt-1 text-sm text-red-500 font-medium">{errors.title}</p>}
                   </div>
 
-                  {/* Description */}
-                  <div>
-                    <label htmlFor="description" className="block text-sm font-semibold text-slate-700 mb-2">
-                      Description <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      id="description"
-                      name="description"
-                      value={formData.description}
-                      onChange={handleChange}
-                      placeholder="Please provide detailed information about your issue..."
-                      rows="6"
-                      className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-indigo-600 transition-colors resize-none ${
-                        errors.description ? 'border-red-500' : 'border-slate-200'
-                      }`}
-                    />
-                    {errors.description && <p className="mt-1 text-sm text-red-500 font-medium">{errors.description}</p>}
-                  </div>
+                  {/* Description & Photo Section */}
+                  <div className="space-y-6">
+                    <div>
+                      <label htmlFor="description" className="block text-sm font-semibold text-slate-300 mb-2">
+                        Description <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        id="description"
+                        name="description"
+                        value={formData.description}
+                        onChange={handleChange}
+                        placeholder="Please provide detailed information about your issue..."
+                        rows="6"
+                        className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-emerald-600 transition-colors resize-none h-[180px] ${
+                          errors.description ? 'border-red-500' : 'border-white/10 bg-white/5 text-slate-200'
+                        }`}
+                      />
+                      {errors.description && <p className="mt-1 text-sm text-red-500 font-medium">{errors.description}</p>}
+                    </div>
 
-                  {/* Photo Upload */}
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Upload Screenshot/Photo <span className="text-red-500">*</span>
-                    </label>
-                    {!photoPreview ? (
-                      <div className="relative">
-                        <input
-                          type="file"
-                          accept="image/jpeg,image/png"
-                          onChange={handlePhotoUpload}
-                          className="hidden"
-                          id="photo-input"
-                        />
-                        <label
-                          htmlFor="photo-input"
-                          className={`cursor-pointer flex flex-col items-center justify-center w-full px-4 py-8 border-2 border-dashed rounded-lg transition-colors ${
-                            errors.photo
-                              ? 'border-red-500 bg-red-50'
-                              : 'border-indigo-300 bg-indigo-50 hover:border-indigo-500'
-                          }`}
-                        >
-                          <PhotoIcon className="h-10 w-10 text-indigo-600 mb-2" />
-                          <p className="text-sm font-semibold text-slate-700">Click to upload or drag and drop</p>
-                          <p className="text-xs text-slate-500 mt-1">PNG or JPG (max 5MB)</p>
-                        </label>
-                      </div>
-                    ) : (
-                      <div className="relative rounded-lg overflow-hidden border-2 border-indigo-300 bg-indigo-50">
-                        <img src={photoPreview} alt="Preview" className="w-full h-48 object-cover" />
-                        <button
-                          type="button"
-                          onClick={removePhoto}
-                          className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition-colors"
-                        >
-                          <XMarkIcon className="h-5 w-5" />
-                        </button>
-                      </div>
-                    )}
-                    {errors.photo && <p className="mt-2 text-sm text-red-500 font-medium">{errors.photo}</p>}
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-300 mb-2">
+                        Proof/Screenshot <span className="text-red-500">*</span>
+                      </label>
+                      {!photoPreview ? (
+                        <div className="relative h-[160px]">
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png"
+                            onChange={handlePhotoUpload}
+                            className="hidden"
+                            id="photo-input"
+                          />
+                          <label
+                            htmlFor="photo-input"
+                            className={`cursor-pointer flex flex-col items-center justify-center w-full h-full border-2 border-dashed rounded-lg transition-colors ${
+                              errors.photo
+                                ? 'border-red-500 bg-red-50/5'
+                                : 'border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500'
+                            }`}
+                          >
+                            <PhotoIcon className="h-8 w-8 text-emerald-600 mb-2" />
+                            <p className="text-[11px] font-semibold text-slate-300 text-center px-2">Click to upload mandatory screenshot</p>
+                            <p className="text-[10px] text-slate-500 mt-1">PNG/JPG &lt; 5MB</p>
+                          </label>
+                        </div>
+                      ) : (
+                        <div className="relative rounded-lg overflow-hidden border-2 border-emerald-500/50 h-[220px] max-w-md">
+                          <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={removePhoto}
+                            className="absolute top-2 right-2 bg-red-500/80 backdrop-blur-sm text-white p-1.5 rounded-lg hover:bg-red-600 transition-colors"
+                          >
+                            <XMarkIcon className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                      {errors.photo && <p className="mt-2 text-sm text-red-500 font-medium">{errors.photo}</p>}
+                    </div>
                   </div>
 
                   {/* Submit Button */}
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {loading ? <Loader size="sm" text="" /> : 'Continue'}
                   </button>
@@ -305,17 +324,17 @@ const CreateTicket = () => {
               ) : (
                 <div className="space-y-6">
                   {/* Classification Result */}
-                  <div className="bg-gradient-to-r from-indigo-50 to-violet-50 border-2 border-indigo-200 rounded-xl p-6">
+                  <div className="bg-gradient-to-r from-emerald-500/10 to-green-500/10 border-2 border-emerald-500/20 rounded-xl p-6">
                     <div className="flex items-start gap-4">
-                      <div className="h-12 w-12 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
+                      <div className="h-12 w-12 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0">
                         <CheckCircleIcon className="h-6 w-6 text-white" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="font-bold text-slate-900 mb-2">AI Classification Complete</h3>
+                        <h3 className="font-bold text-white mb-2">AI Classification Complete</h3>
                         <div className="space-y-2">
                           <div>
-                            <p className="text-xs font-semibold text-slate-600">CATEGORY</p>
-                            <p className="text-lg font-bold text-indigo-600">{classification.category}</p>
+                            <p className="text-xs font-semibold text-slate-400">CATEGORY</p>
+                            <p className="text-lg font-bold text-emerald-600">{classification.category}</p>
                           </div>
                         </div>
                       </div>
@@ -324,20 +343,20 @@ const CreateTicket = () => {
 
                   {/* Duplicate Warning */}
                   {duplicateWarning && duplicateWarning.length > 0 && (
-                    <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-6">
+                    <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-xl p-6">
                       <div className="flex items-start gap-3">
                         <ExclamationCircleIcon className="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" />
                         <div>
-                          <h4 className="font-bold text-slate-900 mb-2">Similar Ticket(s) Found</h4>
-                          <p className="text-sm text-slate-700 mb-3">We found similar issues. Please check if they solve your problem:</p>
+                          <h4 className="font-bold text-white mb-2">Similar Ticket(s) Found</h4>
+                          <p className="text-sm text-slate-300 mb-3">We found similar issues. Please check if they solve your problem:</p>
                           <div className="space-y-2">
                             {duplicateWarning.map((dup, idx) => (
                               <button
                                 key={idx}
                                 onClick={() => navigate(`/customer/tickets/${dup.ticketId || dup._id}`)}
-                                className="block w-full text-left p-3 bg-white border border-amber-200 rounded-lg hover:border-amber-400 transition-colors"
+                                className="block w-full text-left p-3 bg-white/5 border-white/10 rounded-lg hover:border-amber-400 transition-colors"
                               >
-                                <p className="text-sm font-semibold text-slate-900">{dup.subject || dup.title || 'Untitled Ticket'}</p>
+                                <p className="text-sm font-semibold text-white">{dup.subject || dup.title || 'Untitled Ticket'}</p>
                                 <p className="text-xs text-slate-500">Status: {dup.status}</p>
                               </button>
                             ))}
@@ -354,14 +373,14 @@ const CreateTicket = () => {
                         setShowClassification(false);
                         setDuplicateWarning(null);
                       }}
-                      className="flex-1 bg-slate-200 text-slate-900 font-bold py-3 rounded-lg hover:bg-slate-300 transition-colors"
+                      className="flex-1 bg-white/10 text-white font-bold py-3 rounded-lg hover:bg-white/20 transition-colors"
                     >
                       Back
                     </button>
                     <button
                       onClick={handleFinalSubmit}
                       disabled={loading}
-                      className="flex-1 bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="flex-1 bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       {loading ? <Loader size="sm" text="" /> : 'Submit Ticket'}
                     </button>
@@ -378,40 +397,29 @@ const CreateTicket = () => {
             className="space-y-6"
           >
             {/* Tips Card */}
-            <div className="bg-white rounded-2xl shadow-lg p-6 border border-slate-100">
-              <h3 className="font-bold text-slate-900 mb-4">💡 Tips for Better Results</h3>
-              <ul className="space-y-3 text-sm text-slate-700">
+            <div className="bg-[#041209]/60 backdrop-blur-xl rounded-[24px] shadow-2xl p-6 border border-white/5">
+              <h3 className="font-bold text-white mb-4">💡 Tips for Better Results</h3>
+              <ul className="space-y-3 text-sm text-slate-300">
                 <li className="flex gap-2">
-                  <span className="text-indigo-600 font-bold">✓</span>
+                  <span className="text-emerald-600 font-bold">✓</span>
                   <span>Be specific with your issue title</span>
                 </li>
                 <li className="flex gap-2">
-                  <span className="text-indigo-600 font-bold">✓</span>
+                  <span className="text-emerald-600 font-bold">✓</span>
                   <span>Include relevant details in description</span>
                 </li>
                 <li className="flex gap-2">
-                  <span className="text-indigo-600 font-bold">✓</span>
+                  <span className="text-emerald-600 font-bold">✓</span>
                   <span>Upload a screenshot showing the problem</span>
                 </li>
                 <li className="flex gap-2">
-                  <span className="text-indigo-600 font-bold">✓</span>
+                  <span className="text-emerald-600 font-bold">✓</span>
                   <span>AI will classify your issue automatically</span>
                 </li>
               </ul>
             </div>
 
-            {/* Categories Card */}
-            <div className="bg-white rounded-2xl shadow-lg p-6 border border-slate-100">
-              <h3 className="font-bold text-slate-900 mb-4">📋 Ticket Categories</h3>
-              <div className="space-y-2 text-sm">
-                {['Billing', 'Technical Issue', 'Account Issue', 'General Inquiry', 'Bug Report'].map((cat, idx) => (
-                  <div key={idx} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
-                    <span className="h-2 w-2 bg-indigo-600 rounded-full"></span>
-                    <span className="text-slate-700">{cat}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+
           </motion.div>
         </div>
       </div>

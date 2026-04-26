@@ -7,6 +7,8 @@ const connectDB = require('./config/database');
 const authRoutes = require('./routes/authRoutes');
 const ticketRoutes = require('./routes/ticketRoutes');
 const chatRoutes = require('./routes/chatRoutes');
+const liveChatRoutes = require('./routes/liveChatRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 const { initSocket } = require('./services/socketService');
 
@@ -38,6 +40,9 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
+
 app.get('/', (req, res) => {
   res.json({ message: 'AI Ticket Analysis API is running' });
 });
@@ -49,7 +54,9 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/live-chat', liveChatRoutes);
 app.use('/api/ai', require('./routes/aiRoutes'));
+app.use('/api/notifications', notificationRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
@@ -62,7 +69,7 @@ const bootstrap = async () => {
   await connectDB();
   await require('./utils/autoSeed')();
   cronService.init();
-  server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  server.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
 };
 
 bootstrap().catch((error) => {

@@ -7,7 +7,7 @@ import api from '../../services/api';
 const FloatingChatWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'assistant', text: "Hi there! I'm your ClarityHelp AI assistant. Ask me to check your ticket status or help you troubleshoot!" }
+    { role: 'assistant', text: "Hi there! I'm your Swift Support AI assistant. Ask me to check your ticket status or help you troubleshoot!" }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -126,8 +126,8 @@ const FloatingChatWidget = () => {
             <ChatBubbleLeftRightIcon className="h-6 w-6 group-hover:scale-110 transition-transform duration-300" />
             {/* Ping indicator */}
             <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-300 opacity-60"></span>
-              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-white border-2 border-indigo-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-60"></span>
+              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-white border-2 border-emerald-500"></span>
             </span>
           </motion.button>
         )}
@@ -151,15 +151,15 @@ const FloatingChatWidget = () => {
             <div className="bg-gradient-to-r from-slate-900 to-slate-800 px-5 py-4 text-white flex justify-between items-center shrink-0">
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500/30 to-violet-500/30 border border-white/10 flex items-center justify-center backdrop-blur-sm">
-                    <SparklesIcon className="h-[18px] w-[18px] text-indigo-300" />
+                  <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-emerald-500/30 to-teal-500/30 border border-white/10 flex items-center justify-center backdrop-blur-sm">
+                    <SparklesIcon className="h-[18px] w-[18px] text-emerald-300" />
                   </div>
                   <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-slate-900 ${
                     status === 'online' ? 'bg-emerald-400' : 'bg-rose-400'
                   }`} />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-[13px] tracking-tight">Clarity AI</h3>
+                  <h3 className="font-semibold text-[13px] tracking-tight">Swift AI</h3>
                   <p className="text-[10px] text-white/40 font-medium tracking-wide">
                     {status === 'online' ? 'Online · Ready to help' : 'Currently Offline'}
                   </p>
@@ -261,7 +261,7 @@ const FloatingChatWidget = () => {
                 <button
                   type="submit"
                   disabled={!input.trim() || isLoading}
-                  className="absolute right-1.5 p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-40 disabled:hover:bg-indigo-600 transition-all duration-200 hover:shadow-md hover:shadow-indigo-600/20"
+                  className="absolute right-1.5 p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-40 disabled:hover:bg-emerald-600 transition-all duration-200 hover:shadow-md hover:shadow-emerald-600/20"
                 >
                   <PaperAirplaneIcon className="h-3.5 w-3.5" />
                 </button>

@@ -52,10 +52,7 @@ const Settings = () => {
 
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'appearance', label: 'Appearance', icon: Palette },
-    { id: 'system', label: 'System', icon: SettingsIcon },
-    { id: 'security', label: 'Security', icon: Shield }
+    { id: 'notifications', label: 'Notifications', icon: Bell }
   ];
 
   return (
@@ -75,11 +72,11 @@ const Settings = () => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all ${
                   activeTab === tab.id 
-                    ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' 
+                    ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
-                <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? 'text-indigo-500' : 'text-slate-400'}`} />
+                <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? 'text-emerald-500' : 'text-slate-400'}`} />
                 {tab.label}
               </button>
             ))}
@@ -94,29 +91,30 @@ const Settings = () => {
             <div className="space-y-6">
               {activeTab === 'profile' && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-xl">
-                  {/* Profile Picture Placeholder */}
-                  <div className="flex items-center gap-4">
-                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold shadow-md">
-                      {profile.name ? profile.name.substring(0,2).toUpperCase() : 'U'}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                    <div className="relative group">
+                      <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-emerald-500/20 ring-1 ring-emerald-500/10">
+                        {profile.name ? profile.name.charAt(0).toUpperCase() : 'A'}
+                      </div>
                     </div>
-                    <button className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-300">
-                      Change Avatar
-                    </button>
+                    <div className="flex-1 min-w-0">
+                      <h2 className="text-[18px] font-semibold text-slate-900 dark:text-white">{profile.name || 'Administrator'}</h2>
+                      <p className="text-slate-500 dark:text-slate-400 text-[13px] mt-0.5">{profile.email || 'admin@swift.com'}</p>
+                      <div className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 ring-1 ring-inset ring-emerald-200 dark:ring-emerald-500/20">
+                        <Shield className="h-3.5 w-3.5" />
+                        System Administrator
+                      </div>
+                    </div>
                   </div>
                   
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Full Name</label>
-                      <input type="text" value={profile.name} onChange={(e) => setProfile({...profile, name: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none dark:text-white" />
+                      <input type="text" value={profile.name} disabled className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-500 cursor-not-allowed" />
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Email Address</label>
-                      <input type="email" value={profile.email} onChange={(e) => setProfile({...profile, email: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none dark:text-white" />
-                    </div>
-                    <hr className="border-slate-100 dark:border-slate-700/60 my-4" />
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">New Password</label>
-                      <input type="password" placeholder="Leave blank to keep current password" value={profile.password} onChange={(e) => setProfile({...profile, password: e.target.value})} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none dark:text-white" />
+                      <input type="email" value={profile.email} disabled className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-500 cursor-not-allowed" />
                     </div>
                   </div>
                 </motion.div>
@@ -131,7 +129,7 @@ const Settings = () => {
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" checked={settings.notifications.email} onChange={(e) => setSettings({...settings, notifications: {...settings.notifications, email: e.target.checked}})} className="sr-only peer" />
-                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-500"></div>
+                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
                     </label>
                   </div>
 
@@ -142,7 +140,7 @@ const Settings = () => {
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" checked={settings.notifications.inApp} onChange={(e) => setSettings({...settings, notifications: {...settings.notifications, inApp: e.target.checked}})} className="sr-only peer" />
-                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-500"></div>
+                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
                     </label>
                   </div>
                   
@@ -158,103 +156,20 @@ const Settings = () => {
                   </div>
                 </motion.div>
               )}
-
-              {activeTab === 'appearance' && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-xl">
-                  <div>
-                    <label className="block font-semibold text-slate-800 dark:text-slate-100 mb-3">Dashboard Theme</label>
-                    <div className="grid grid-cols-3 gap-4">
-                      {['light', 'dark'].map(t => (
-                        <button 
-                          key={t}
-                          onClick={() => {
-                            setSettings({...settings, appearance: { theme: t }});
-                            // Preview the theme locally
-                            const root = window.document.documentElement;
-                            if (t === 'dark') root.classList.add('dark');
-                            else root.classList.remove('dark');
-                          }}
-                          className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${settings.appearance.theme === t ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-700'}`}
-                        >
-                          <div className={`w-10 h-10 rounded-full mb-2 border ${t === 'light' ? 'bg-white' : 'bg-slate-900 border-slate-700'}`}></div>
-                          <span className="text-sm font-semibold capitalize text-slate-700 dark:text-slate-300">{t}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {activeTab === 'system' && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-xl">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Default Ticket Category</label>
-                    <select 
-                      value={settings.system.defaultCategory} 
-                      onChange={(e) => setSettings({...settings, system: {...settings.system, defaultCategory: e.target.value}})}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none dark:text-white form-select"
-                    >
-                      <option value="general">General Queries</option>
-                      <option value="billing">Billing / Payments</option>
-                      <option value="technical">Technical Support</option>
-                      <option value="account">Account Access</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Standard SLA Resolution Limit (Hours)</label>
-                    <input 
-                      type="number" 
-                      value={settings.system.slaHours} 
-                      onChange={(e) => setSettings({...settings, system: {...settings.system, slaHours: parseInt(e.target.value)}})}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none dark:text-white"
-                      min="1" max="168"
-                    />
-                    <p className="text-xs text-slate-500 mt-1">Tickets older than this limit will automatically escalate.</p>
-                  </div>
-                </motion.div>
-              )}
-
-              {activeTab === 'security' && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 max-w-xl">
-                  <div className="flex items-center justify-between p-4 border border-emerald-100 dark:border-emerald-900/30 rounded-xl bg-emerald-50/50 dark:bg-emerald-500/5">
-                    <div>
-                      <p className="font-semibold text-emerald-800 dark:text-emerald-400">Two-Factor Authentication</p>
-                      <p className="text-sm text-emerald-600/70 dark:text-emerald-500/70">Add an extra layer of security to your admin account.</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" checked={settings.security.twoFactorEnabled} onChange={(e) => setSettings({...settings, security: {...settings.security, twoFactorEnabled: e.target.checked}})} className="sr-only peer" />
-                      <div className="w-11 h-6 bg-emerald-200 peer-focus:outline-none rounded-full peer dark:bg-emerald-900/50 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
-                    </label>
-                  </div>
-                  
-                  <div className="mt-8">
-                    <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100 border-b border-slate-200 dark:border-slate-700 pb-2 mb-4">Active Sessions</h3>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                         <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">💻</div>
-                         <div>
-                           <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Windows • Chrome</p>
-                           <p className="text-xs text-slate-500">Seattle, USA • Current Session</p>
-                         </div>
-                      </div>
-                      <span className="text-xs font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded">Active</span>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
             </div>
-
-            <div className="mt-10 pt-6 border-t border-slate-100 dark:border-slate-700/60 flex justify-end">
-               <button 
-                  onClick={handleSave}
-                  disabled={loading}
-                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-semibold text-sm transition-colors shadow-sm disabled:opacity-70"
-               >
-                 {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : <Save className="w-4 h-4" />}
-                 {loading ? 'Saving...' : 'Save Changes'}
-               </button>
-            </div>
+            
+            {activeTab === 'notifications' && (
+              <div className="mt-10 pt-6 border-t border-slate-100 dark:border-slate-700/60 flex justify-end">
+                 <button 
+                    onClick={handleSave}
+                    disabled={loading}
+                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-semibold text-sm transition-colors shadow-sm disabled:opacity-70"
+                 >
+                   {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : <Save className="w-4 h-4" />}
+                   {loading ? 'Saving...' : 'Save Changes'}
+                 </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

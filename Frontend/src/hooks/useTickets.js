@@ -103,11 +103,17 @@ export const useTickets = () => {
     await loadTickets();
   };
 
-  const addMessage = async (id, message, sender) => {
-    const updated = mapTicket(await ticketService.addMessage(id, message, sender));
+  const addMessage = async (id, message, sender, photo = null) => {
+    const updated = mapTicket(await ticketService.addMessage(id, message, sender, photo));
     setTickets((prev) => prev.map((ticket) => (ticket.id === id ? updated : ticket)));
     return updated;
   };
 
-  return { tickets, stats, loading, getTicketById, updateTicketAdmin, bulkUpdate, addMessage };
+  const escalateTicket = async (id, team, reason) => {
+    const updated = mapTicket(await ticketService.escalateTicket(id, team, reason));
+    setTickets((prev) => prev.map((ticket) => (ticket.id === id ? updated : ticket)));
+    return updated;
+  };
+
+  return { tickets, stats, loading, getTicketById, updateTicketAdmin, bulkUpdate, addMessage, escalateTicket };
 };

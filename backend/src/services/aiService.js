@@ -1,37 +1,76 @@
 const fs = require('fs');
 
 class AIService {
-  async callOpenRouter(text) {
-    if (!process.env.OPENROUTER_API_KEY) return null;
-
-    const openRouterUrl = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1/chat/completions';
-    const model = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
+  async callCategorizationAPI(text) {
+    const groqApiKey = process.env.GROQ_API_KEY;
+    const groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
+    const model = 'llama3-8b-8192';
 
     const prompt = [
-      'Analyze the following customer support message and return valid JSON only.',
-      'JSON schema:',
+      'You are an AI system that classifies customer support tickets.',
+      '',
+      '---',
+      '🎯 TASK',
+      'Analyze the user’s issue description and classify into ONE of the following categories:',
+      '1. Payments',
+      '2. Orders & Delivery',
+      '3. Returns & Refunds',
+      '4. Product Issues',
+      '5. Account Issues',
+      '6. Notifications & Communication',
+      '7. Subscription & Plans',
+      '',
+      '---',
+      '🧠 CATEGORY GUIDELINES',
+      '- Payments → failed transactions, money deducted, billing issues',
+      '- Orders & Delivery → order not delivered, delayed delivery, wrong address, tracking issues',
+      '- Returns & Refunds → return requests, refund not received, replacement issues',
+      '- Product Issues → damaged product, defective item, not working properly',
+      '- Account Issues → login problems, password reset, account locked',
+      '- Notifications & Communication → OTP not received, email/SMS issues',
+      '- Subscription & Plans → membership, plan activation, renewal issues',
+      '',
+      '---',
+      '🚫 OUT OF SCOPE RULE',
+      'If the issue:',
+      '- Does NOT match any category',
+      '- Is irrelevant (e.g., "my pen is lost")',
+      '- Is meaningless or spam',
+      'Then return:',
+      '- category = "OutOfScope"',
+      '- valid = false',
+      '',
+      '---',
+      '🔥 PRIORITY RULES',
+      '- High → payment failure, missing order, refund not received, critical issue',
+      '- Medium → product issues, delays, partial problems',
+      '- Low → help requests, minor issues',
+      '',
+      '---',
+      '📦 OUTPUT FORMAT (STRICT JSON ONLY)',
+      'Return ONLY this JSON:',
       '{',
-      '  "sentiment": "positive|neutral|negative",',
-      '  "sentimentScore": number,',
-      '  "priority": "low|medium|high",',
-      '  "priorityScore": number,',
-      '  "category": "billing|technical|delivery|account|product|general",',
-      '  "suggestedReply": string,',
-      '  "reasoning": string,',
-      '  "keywords": string[],',
-      '  "suggestedTeam": "unassigned|billing_team|tech_support|customer_success|shipping_dept"',
+      '  "category": "<one of the 7 categories or OutOfScope>",',
+      '  "priority": "High | Medium | Low",',
+      '  "valid": true | false',
       '}',
       '',
-      `Message: ${text}`,
+      '---',
+      '⚠️ STRICT RULES',
+      '- Do NOT include explanations',
+      '- Do NOT include extra text',
+      '- Always return exactly one category',
+      '- If unsure → mark as OutOfScope',
+      '',
+      '---',
+      `classify the following user issue: ${text}`,
     ].join('\n');
 
-    const response = await fetch(openRouterUrl, {
+    const response = await fetch(groqUrl, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:3000',
-        'X-Title': process.env.OPENROUTER_APP_NAME || 'Support System Backend',
+        Authorization: `Bearer ${groqApiKey}`,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model,
@@ -46,12 +85,13 @@ class AIService {
             content: prompt,
           },
         ],
+        response_format: { type: "json_object" }
       }),
     });
 
     if (!response.ok) {
       const textBody = await response.text();
-      throw new Error(`OpenRouter request failed: ${response.status} ${textBody}`);
+      throw new Error(`Groq request failed: ${response.status} ${textBody}`);
     }
 
     const data = await response.json();
@@ -62,14 +102,14 @@ class AIService {
     const parsed = JSON.parse(normalized);
     return {
       sentiment: parsed.sentiment || 'neutral',
-      priority: parsed.priority || 'medium',
-      category: parsed.category || 'general',
+      priority: (parsed.priority || 'Medium').toLowerCase(),
+      category: parsed.category || 'Technical Issues',
+      isValid: parsed.valid !== undefined ? parsed.valid : true,
+      priorityScore: parsed.priorityScore || (parsed.priority === 'High' ? 0.9 : parsed.priority === 'Medium' ? 0.5 : 0.1),
       suggestedReply: parsed.suggestedReply || 'Thanks for your message. We are reviewing it now.',
-      suggestedTeam: parsed.suggestedTeam || 'unassigned',
+      suggestedSolutions: Array.isArray(parsed.suggestedSolutions) ? parsed.suggestedSolutions : ['Please provide more details.', 'Restart your device.', 'Clear your cache.', 'Contact our team.'],
       reasoning: parsed.reasoning || 'Classified by model output.',
       keywords: Array.isArray(parsed.keywords) ? parsed.keywords : [],
-      sentimentScore: Number(parsed.sentimentScore || 0),
-      priorityScore: Number(parsed.priorityScore || 0.5),
     };
   }
 
@@ -96,11 +136,11 @@ class AIService {
     let priority = 'low';
     
     // Use Category-based rules per User Request:
-    if (category === 'billing') {
+    if (category === 'Payments' || category === 'Returns & Refunds' || category === 'Orders & Delivery') {
       priority = 'high';
-    } else if (category === 'technical') {
+    } else if (category === 'Product Issues' || category === 'Account Issues') {
       priority = 'medium';
-    } else if (category === 'general') {
+    } else {
       priority = 'low';
     }
 
@@ -125,13 +165,15 @@ class AIService {
 
   classifyCategory(text) {
     const categories = {
-      billing: ['billing', 'payment', 'charge', 'invoice', 'price', 'cost', 'refund', 'subscription'],
-      technical: ['bug', 'error', 'crash', 'not working', 'fail', 'technical', 'system', 'loading'],
-      delivery: ['delivery', 'shipping', 'track', 'package', 'order', 'received', 'arrive'],
-      account: ['login', 'password', 'account', 'sign in', 'access', 'profile', 'username'],
-      product: ['feature', 'product', 'functionality', 'option', 'setting', 'interface']
+      'Payments': ['billing', 'payment', 'charge', 'invoice', 'price', 'cost', 'refund', 'transaction', 'failed', 'deducted'],
+      'Orders & Delivery': ['order', 'delivery', 'delayed', 'address', 'tracking', 'shipped', 'shipping', 'not delivered'],
+      'Returns & Refunds': ['return', 'refund', 'replacement', 'money back'],
+      'Product Issues': ['damaged', 'defective', 'not working', 'broken', 'quality'],
+      'Account Issues': ['login', 'password', 'account', 'locked', 'reset', 'sign in', 'email change'],
+      'Notifications & Communication': ['otp', 'email', 'sms', 'message', 'notification', 'alert'],
+      'Subscription & Plans': ['plan', 'upgrade', 'activation', 'subscription', 'renew', 'tier', 'membership'],
     };
-    let bestMatch = 'general';
+    let bestMatch = 'Technical Issues';
     let highestScore = 0;
     const lowerText = text.toLowerCase();
     for (const [category, keywords] of Object.entries(categories)) {
@@ -144,28 +186,23 @@ class AIService {
 
   generateSuggestedReply(text, category, sentiment) {
     const templates = {
-      billing: {
-        positive: "Thank you for your positive feedback about our billing system! We're glad it's working well for you.",
-        neutral: "I understand you have a billing question. Could you please provide more details about the transaction?",
-        negative: "I apologize for the billing issue. I'll prioritize this and have our billing team investigate immediately."
+      'Payments': {
+        positive: "Glad your payment issue is resolved! We aim for seamless transactions.",
+        neutral: "I understand you have a payment question. Could you please provide more details?",
+        negative: "I apologize for the payment trouble. Our payments team is investigating this immediately."
       },
-      technical: {
-        positive: "Great to hear the technical issue was resolved! Let me know if you need anything else.",
-        neutral: "I'll help you troubleshoot this technical issue. Can you share any error messages?",
-        negative: "I'm sorry you're experiencing technical difficulties. I'll escalate it to our engineering team."
+      'Product Issues': {
+        positive: "Great to hear your product is working correctly again!",
+        neutral: "I'll help you troubleshoot this product issue. Can you share more details?",
+        negative: "I'm sorry you're experiencing product difficulties. Our team is on it."
       },
-      delivery: {
-        positive: "Wonderful news about your delivery! Thank you for letting us know.",
-        neutral: "I'll help track your delivery. Could you please share your order number?",
-        negative: "I apologize for the delivery delay. I'll contact our logistics team right away."
-      },
-      general: {
-        positive: "Thank you for reaching out! I'm happy to help.",
-        neutral: "Thanks for your message. I'll review this and get back to you shortly.",
-        negative: "I understand your frustration and I'm here to help resolve this for you."
+      'Orders & Delivery': {
+        positive: "Glad your order arrived safely!",
+        neutral: "I'll help you check your order status. Could you please provide the order number?",
+        negative: "I apologize for the delivery trouble. We'll look into a solution for your order."
       }
     };
-    const categoryTemplate = templates[category] || templates.general;
+    const categoryTemplate = templates[category] || templates['Product Issues'];
     return categoryTemplate[sentiment] || categoryTemplate.neutral;
   }
 
@@ -179,12 +216,13 @@ class AIService {
     if (priorityAnalysis.priority === 'high') reasoning.push(`Assigned High Priority (Billing issue or Critical Keywords)`);
     if (priorityAnalysis.keywords.length) reasoning.push(`Key indicators: ${priorityAnalysis.keywords.join(', ')}`);
     const teamMap = {
-      billing: 'billing_team',
-      technical: 'tech_support',
-      delivery: 'shipping_dept',
-      account: 'customer_success',
-      product: 'tech_support',
-      general: 'customer_success'
+      'Payments': 'payments_team',
+      'Orders & Delivery': 'fulfillment_team',
+      'Returns & Refunds': 'customer_success',
+      'Product Issues': 'hardware_support',
+      'Account Issues': 'tech_support',
+      'Notifications & Communication': 'customer_success',
+      'Subscription & Plans': 'customer_success'
     };
     const suggestedTeam = teamMap[category] || 'customer_success';
 
@@ -193,6 +231,12 @@ class AIService {
       priority: priorityAnalysis.priority,
       category,
       suggestedReply,
+      suggestedSolutions: [
+        "Please provide more details about the issue.",
+        "Have you tried restarting the application?",
+        "Can you clear your browser cache and try again?",
+        "Our technical team is looking into this."
+      ],
       suggestedTeam,
       reasoning: reasoning.join('. ') || 'No specific indicators.',
       keywords: [...new Set([...sentimentAnalysis.keywords, ...priorityAnalysis.keywords])],
@@ -203,21 +247,16 @@ class AIService {
 
   async analyzeTicketWithAI(text) {
     try {
-      const modelAnalysis = await this.callOpenRouter(text);
+      const modelAnalysis = await this.callCategorizationAPI(text);
       if (modelAnalysis) return modelAnalysis;
     } catch (error) {
-      console.error('OpenRouter analysis failed, using fallback:', error.message);
+      console.error('Groq analysis failed, using fallback:', error.message);
     }
 
     return this.analyzeTicket(text);
   }
 
   async analyzeTicketWithImage(text, imagePath) {
-    if (!process.env.OPENROUTER_API_KEY) {
-      // Fallback
-      return { ...this.analyzeTicket(text), isSpam: false };
-    }
-
     try {
       let base64Image = '';
       if (imagePath && fs.existsSync(imagePath)) {
@@ -225,8 +264,9 @@ class AIService {
         base64Image = imageBuffer.toString('base64');
       }
 
-      const openRouterUrl = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1/chat/completions';
-      const model = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
+      const groqApiKey = process.env.GROQ_API_KEY;
+      const groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
+      const model = 'llama-3.2-11b-vision-preview';
 
       const promptText = `
       Analyze the customer support message and the attached image.
@@ -234,16 +274,14 @@ class AIService {
       Return strictly valid JSON only.
       JSON schema:
       {
-        "isSpam": boolean,
+        "isValid": boolean,
         "sentiment": "positive|neutral|negative",
-        "sentimentScore": number,
         "priority": "low|medium|high",
-        "priorityScore": number,
-        "category": "billing|technical|delivery|account|product|general",
+        "category": "Payments | Electronic Goods | Notifications & Communication | Integrations | Connectivity Issues | Subscription & Plans | Technical Issues | OutOfScope",
         "reasoning": string,
-        "suggestedReply": string,
-        "keywords": string[],
-        "suggestedTeam": "unassigned|billing_team|tech_support|customer_success|shipping_dept"
+        "suggestedReply": "A highly empathetic and dynamic 1-sentence quick acknowledgment tailored to the user's intent and emotion (e.g. 'I am so sorry to hear you are facing this error. We are looking into it immediately.' or 'Thank you for providing those details. Please wait a moment while we review.')",
+        "suggestedSolutions": ["A 2-3 line draft reply written directly to the customer in first person (e.g. 'Could you please provide more details about your issue?')", "Another 2-3 line drafted reply written to the customer", "..."],
+        "keywords": string[]
       }
       
       Message description: ${text}`;
@@ -265,13 +303,11 @@ class AIService {
         });
       }
 
-      const response = await fetch(openRouterUrl, {
+      const response = await fetch(groqUrl, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:3000',
-          'X-Title': process.env.OPENROUTER_APP_NAME || 'Support System Backend',
+          Authorization: `Bearer ${groqApiKey}`,
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           model,
@@ -285,12 +321,13 @@ class AIService {
               role: 'user',
               content: messagesContent
             }
-          ]
+          ],
+          response_format: { type: "json_object" }
         })
       });
 
       if (!response.ok) {
-        throw new Error(`OpenRouter request failed: ${response.status}`);
+        throw new Error(`Groq request failed: ${response.status}`);
       }
 
       const data = await response.json();
@@ -303,14 +340,13 @@ class AIService {
       return {
         sentiment: parsed.sentiment || 'neutral',
         priority: parsed.priority || 'medium',
-        category: parsed.category || 'general',
+        category: parsed.category || 'Technical Issues',
         suggestedReply: parsed.suggestedReply || 'Thanks for your message. We are reviewing it now.',
-        suggestedTeam: parsed.suggestedTeam || 'unassigned',
+        suggestedSolutions: Array.isArray(parsed.suggestedSolutions) ? parsed.suggestedSolutions : ['Please provide more details.', 'Restart your device.', 'Clear your cache.', 'Contact our team.'],
         reasoning: parsed.reasoning || 'Classified by model output.',
         keywords: Array.isArray(parsed.keywords) ? parsed.keywords : [],
-        sentimentScore: Number(parsed.sentimentScore || 0),
-        priorityScore: Number(parsed.priorityScore || 0.5),
-        isSpam: Boolean(parsed.isSpam || false)
+        isValid: parsed.isValid !== undefined ? parsed.isValid : true,
+        isSpam: parsed.category === 'OutOfScope' || parsed.isValid === false
       };
 
     } catch (error) {
@@ -324,8 +360,7 @@ class AIService {
       return "I'm currently running in offline mode. I can only do basic local reasoning right now!";
     }
 
-    const openRouterUrl = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1/chat/completions';
-    const model = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
+
 
     const systemPrompt = `You are an AI assistant for a customer support admin dashboard. 
     Analyze the provided ticket data and provide short, actionable insights. 
@@ -338,18 +373,16 @@ class AIService {
     - Unhappy Customers (Angry Sentiment): ${contextData.negativeTickets || 0}
     - Historical Trends (Last 7 Days): ${JSON.stringify(contextData.trends || [])}`;
 
-    try {
-      if (!process.env.OPENROUTER_API_KEY) {
-        throw new Error('No API Key');
-      }
+    const groqApiKey = process.env.GROQ_API_KEY;
+    const groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
+    const model = 'llama3-8b-8192';
 
-      const response = await fetch(openRouterUrl, {
+    try {
+      const response = await fetch(groqUrl, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          Authorization: `Bearer ${groqApiKey}`,
           'Content-Type': 'application/json',
-          'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:3000',
-          'X-Title': process.env.OPENROUTER_APP_NAME || 'Support System Backend',
         },
         body: JSON.stringify({
           model,
@@ -361,7 +394,7 @@ class AIService {
         })
       });
 
-      if (!response.ok) throw new Error('Copilot API failed');
+      if (!response.ok) throw new Error('Copilot Groq API failed');
       const data = await response.json();
       return data?.choices?.[0]?.message?.content || "Sorry, I couldn't process that request at this moment.";
     } catch (error) {
@@ -391,12 +424,9 @@ class AIService {
   }
 
   async chatWithCustomer(messages) {
-    if (!process.env.OPENROUTER_API_KEY) {
-      throw new Error('No API Key');
-    }
-
-    const openRouterUrl = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1/chat/completions';
-    const model = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
+    const groqApiKey = process.env.GROQ_API_KEY;
+    const groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
+    const model = 'llama3-8b-8192';
 
     const systemPrompt = `You are a helpful and polite customer support agent for a SaaS text-based application. 
     Analyze the user's issue. If they are just saying hello, greet them.
@@ -412,13 +442,11 @@ class AIService {
       }))
     ];
 
-    const response = await fetch(openRouterUrl, {
+    const response = await fetch(groqUrl, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:3000',
-        'X-Title': process.env.OPENROUTER_APP_NAME || 'Support System Backend',
+        Authorization: `Bearer ${groqApiKey}`,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model,
@@ -433,12 +461,9 @@ class AIService {
   }
 
   async chatWithCopilot(message, context = "") {
-    if (!process.env.OPENROUTER_API_KEY) {
-      return "Nex-AI Copilot is currently offline. How can I assist you otherwise?";
-    }
-
-    const openRouterUrl = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1/chat/completions';
-    const model = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
+    const groqApiKey = process.env.GROQ_API_KEY;
+    const groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
+    const model = 'llama3-8b-8192';
 
     const systemPrompt = `You are a helpful AI Copilot for a customer support administrator. 
     You help analyze tickets, suggest replies, and provide insights.
@@ -446,10 +471,10 @@ class AIService {
     Keep your answers concise and professional.`;
 
     try {
-      const response = await fetch(openRouterUrl, {
+      const response = await fetch(groqUrl, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          Authorization: `Bearer ${groqApiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -463,9 +488,10 @@ class AIService {
 
       if (!response.ok) return "I'm having trouble connecting to my brain right now.";
       const data = await response.json();
-      return data?.choices?.[0]?.message?.content || "I'm not sure how to respond to that.";
+      return data?.choices?.[0]?.message?.content || "I couldn't process that request.";
     } catch (error) {
-      return "An error occurred while talking to Copilot.";
+      console.error('Copilot Chat error:', error);
+      return "Something went wrong with the Copilot service.";
     }
   }
 }

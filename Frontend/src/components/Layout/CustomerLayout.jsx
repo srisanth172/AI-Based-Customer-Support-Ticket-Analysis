@@ -13,9 +13,9 @@ import {
   ChevronDownIcon,
   Cog6ToothIcon,
 } from '@heroicons/react/24/outline';
+import logo from '../../assets/logo.png';
 import { useAuth } from '../../context/AuthContext';
 import NotificationDropdown from '../UI/NotificationDropdown';
-import CustomerChat from '../../pages/CustomerChat';
 
 const CustomerLayout = ({ children }) => {
   const { user, logout } = useAuth();
@@ -43,7 +43,6 @@ const CustomerLayout = ({ children }) => {
   const navigation = [
     { name: 'Dashboard', href: '/customer', icon: HomeIcon },
     { name: 'My Tickets', href: '/customer/tickets', icon: TicketIcon },
-    { name: 'AI Support Chat', href: '/customer/chat', icon: SparklesIcon },
     { name: 'Profile', href: '/customer/profile', icon: UserCircleIcon },
   ];
 
@@ -55,10 +54,10 @@ const CustomerLayout = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#0d111c] text-slate-200">
+    <div className="min-h-screen flex bg-[#020B06] text-slate-200">
       <div className="fixed inset-0 z-0 pointer-events-none opacity-50">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-500/10 blur-[100px] rounded-full" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[100px] rounded-full" />
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/10 blur-[100px] rounded-full" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-green-500/10 blur-[100px] rounded-full" />
       </div>
       
       {/* Mobile Overlay */}
@@ -78,20 +77,18 @@ const CustomerLayout = ({ children }) => {
       {/* ─── Sidebar ─── */}
       <aside className={`
         fixed md:sticky top-0 left-0 z-50 md:z-30 
-        w-[280px] h-screen bg-[#0a0e17]/80 backdrop-blur-2xl flex flex-col
+        w-[280px] h-screen bg-[#041209]/80 backdrop-blur-2xl flex flex-col
         border-r border-white/5 transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         {/* Logo */}
         <div className="h-[76px] flex items-center justify-between px-7 border-b border-white/5">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M9 12h6M9 8h6M9 16h4M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-              </svg>
+            <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden border border-white/10 p-1.5 group-hover:border-emerald-500/50 transition-all">
+              <img src={logo} alt="Swift Support" className="h-full w-full object-contain" />
             </div>
             <span className="text-lg font-bold text-white tracking-tight">
-              SupportIQ
+              Swift Support
             </span>
           </div>
           <button
@@ -115,18 +112,18 @@ const CustomerLayout = ({ children }) => {
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`group flex items-center gap-3.5 px-4 py-3 rounded-xl text-[14px] font-medium transition-all duration-200 ${
+                  className={`group flex items-center gap-3.5 px-4 py-3 rounded-xl text-[14px] font-semibold transition-all duration-200 relative ${
                     isActive
-                      ? 'bg-indigo-500/10 text-indigo-400 ring-1 ring-indigo-500/20'
+                      ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
                       : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
                   }`}
                 >
-                  <item.icon className={`h-5 w-5 ${isActive ? 'text-indigo-400' : 'text-slate-500 group-hover:text-slate-300'}`} />
+                  <item.icon className={`h-5 w-5 transition-transform duration-200 ${isActive ? 'scale-110 text-white' : 'text-slate-500 group-hover:scale-110'}`} />
                   <span className="truncate">{item.name}</span>
                   {isActive && (
                     <motion.div
-                      layoutId="active-pill"
-                      className="ml-auto h-1.5 w-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.6)]"
+                      layoutId="sidebar-active"
+                      className="absolute left-0 w-1 h-6 bg-white rounded-r-full shadow-[0_0_8px_rgba(255,255,255,0.8)]"
                     />
                   )}
                 </Link>
@@ -159,7 +156,7 @@ const CustomerLayout = ({ children }) => {
       {/* ─── Main Content Wrapper ─── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
         {/* Top bar */}
-        <header className="h-[76px] flex items-center justify-between px-6 sm:px-8 shrink-0 z-20 sticky top-0 border-b border-white/5 bg-[#0d111c]/60 backdrop-blur-xl">
+        <header className="h-[76px] flex items-center justify-between px-6 sm:px-8 shrink-0 z-20 sticky top-0 border-b border-white/5 bg-[#020B06]/60 backdrop-blur-xl">
           {/* Left: hamburger + search */}
           <div className="flex-1 flex items-center gap-4">
             <button
@@ -172,11 +169,11 @@ const CustomerLayout = ({ children }) => {
             <div className="max-w-md w-full hidden sm:block">
               <div className="relative group">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-                  <MagnifyingGlassIcon className="h-5 w-5 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                  <MagnifyingGlassIcon className="h-5 w-5 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
                 </div>
                 <input
                   type="search"
-                  className="block w-full rounded-2xl border border-white/5 py-2.5 pl-11 pr-4 focus:ring-2 focus:ring-indigo-500/50 sm:text-[14px] bg-white/[0.03] transition-all placeholder:text-slate-500 text-slate-200 outline-none"
+                  className="block w-full rounded-2xl border border-white/5 py-2.5 pl-11 pr-4 focus:ring-2 focus:ring-emerald-500/50 sm:text-[14px] bg-white/[0.03] transition-all placeholder:text-slate-500 text-slate-200 outline-none"
                   placeholder="Search tickets..."
                 />
               </div>
@@ -194,7 +191,7 @@ const CustomerLayout = ({ children }) => {
                 onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                 className="flex items-center gap-3 p-1 rounded-2xl hover:bg-white/5 transition-all group"
               >
-                <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-indigo-600/10 ring-1 ring-white/10">
+                <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-emerald-600/10 ring-1 ring-white/10">
                   {user?.name?.charAt(0).toUpperCase() || 'U'}
                 </div>
                 <div className="text-left hidden lg:block pr-2">
@@ -210,7 +207,7 @@ const CustomerLayout = ({ children }) => {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="absolute right-0 mt-3 w-56 bg-[#161b26] border border-white/5 rounded-2xl shadow-2xl z-50 py-2 overflow-hidden"
+                    className="absolute right-0 mt-3 w-56 bg-[#0a1f10] border border-white/5 rounded-2xl shadow-2xl z-50 py-2 overflow-hidden"
                   >
                     <div className="px-4 py-3 border-b border-white/5 mb-1">
                       <p className="text-sm font-bold text-white">{user?.name}</p>
@@ -243,7 +240,6 @@ const CustomerLayout = ({ children }) => {
               {children}
             </motion.div>
           </AnimatePresence>
-          <CustomerChat />
         </main>
       </div>
     </div>

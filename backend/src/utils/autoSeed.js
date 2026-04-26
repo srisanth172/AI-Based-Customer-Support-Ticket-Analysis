@@ -1,28 +1,36 @@
+const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Ticket = require('../models/Ticket');
 
 const autoSeed = async () => {
   try {
     console.log('--- Ensuring Core Users Exist ---');
-    
-    // 1. Enforce ONLY 'srisanth' as admin
+
     const adminName = 'srisanth';
+    const adminEmail = 'srisanth@admin.com';
     const adminPass = 'qwerty@12';
-    let admin = await User.findOne({ name: adminName, role: 'admin' });
+
+    // Always force-set a correctly hashed password for admin using updateOne
+    // (bypasses mongoose isModified issue that can leave plain-text passwords)
+    const hashedAdminPass = await bcrypt.hash(adminPass, 12);
+    let admin = await User.findOne({ email: adminEmail });
     if (!admin) {
       admin = await User.create({
         name: adminName,
-        email: 'srisanth@admin.com',
+        email: adminEmail,
         password: adminPass,
         role: 'admin',
         isVerified: true
       });
       console.log(`Admin account created: ${adminName}`);
     } else {
-      admin.password = adminPass;
-      admin.isVerified = true;
-      await admin.save();
-      console.log(`Admin account verified/updated: ${adminName}`);
+      // Force-correct the password hash and ensure verified/role are right
+      await User.updateOne(
+        { email: adminEmail },
+        { $set: { password: hashedAdminPass, isVerified: true, role: 'admin', name: adminName } }
+      );
+      console.log(`Admin credentials ensured: ${adminName}`);
+      admin = await User.findOne({ email: adminEmail });
     }
 
     // Remove all other admin accounts except 'srisanth'
@@ -31,6 +39,7 @@ const autoSeed = async () => {
     // 2. Ensure Specific Customer exists
     const customerEmail = 'customer@gmail.com';
     const customerPass = 'customer@123';
+    const hashedCustomerPass = await bcrypt.hash(customerPass, 12);
     let customer = await User.findOne({ email: customerEmail });
     if (!customer) {
       customer = await User.create({
@@ -42,11 +51,13 @@ const autoSeed = async () => {
       });
       console.log(`Customer account created: ${customerEmail}`);
     } else {
-      customer.password = customerPass;
-      customer.isVerified = true;
-      customer.role = 'customer';
-      await customer.save();
-      console.log(`Customer account verified: ${customerEmail}`);
+      // Force-correct the password hash and ensure verified/role are right
+      await User.updateOne(
+        { email: customerEmail },
+        { $set: { password: hashedCustomerPass, isVerified: true, role: 'customer' } }
+      );
+      console.log(`Customer credentials ensured: ${customerEmail}`);
+      customer = await User.findOne({ email: customerEmail });
     }
 
     // 3. Seed other demo customers if needed

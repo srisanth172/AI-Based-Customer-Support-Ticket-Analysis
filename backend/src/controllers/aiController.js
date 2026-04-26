@@ -78,35 +78,40 @@ const path = require('path');
 exports.analyzeImage = async (req, res) => {
   try {
     const { imageUrl } = req.body;
+    console.log('[AI Vision] Analyzing Image:', imageUrl);
+
     if (!imageUrl) {
       return res.status(400).json({ error: 'Image URL is required' });
     }
 
-    // Attempt to map imageUrl to local file system
-    // imageUrl is expected to be '/uploads/filename.ext'
     const fileName = path.basename(imageUrl);
-    const filePath = path.join(__dirname, '../../../../uploads', fileName); // root/uploads
+    const filePath = path.join(__dirname, '../../../uploads', fileName);
+    console.log('[AI Vision] Looking for file at:', filePath);
 
     let base64Image = '';
     const ext = path.extname(fileName).toLowerCase().replace('.', '');
     
     if (fs.existsSync(filePath)) {
+      console.log('[AI Vision] File found locally.');
       const fileData = fs.readFileSync(filePath);
       base64Image = `data:image/${ext || 'jpeg'};base64,${fileData.toString('base64')}`;
     } else {
-      // If it's a fully qualified public URL or not found locally, just pass the URL
-      // But openrouter models usually accept base64 or public URLs.
+      console.log('[AI Vision] File NOT found locally.');
       if (imageUrl.startsWith('http') && !imageUrl.includes('localhost')) {
          base64Image = imageUrl;
       } else {
-         return res.status(404).json({ error: 'Image not found locally or invalid URL' });
+         return res.status(404).json({ 
+           error: 'Image not found locally or invalid URL',
+           checkedPath: filePath 
+         });
       }
     }
 
     const apiKey = (process.env.OPENROUTER_API_KEY || '').trim();
     const model = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
     
-    // Using simple text + image payload for GPT-4o-mini via OpenRouter
+    console.log('[AI Vision] Sending to OpenRouter model:', model);
+
     const response = await axios.post(
       "https://openrouter.ai/api/v1/chat/completions",
       {
@@ -115,7 +120,7 @@ exports.analyzeImage = async (req, res) => {
           {
             role: "user",
             content: [
-              { type: "text", text: "Analyze this image and guess what percentage of it appears to be AI-generated. Return ONLY a single percentage number followed by '%', e.g., '85%'." },
+              { type: "text", text: "Determine if this image is AI-generated (stable diffusion/midjourney style) or a genuine, real-world screenshot/photo. Return ONLY 'AI Generated' or 'Human-Verified Genuine' based on your analysis." },
               { type: "image_url", image_url: { url: base64Image } }
             ]
           }
@@ -125,17 +130,22 @@ exports.analyzeImage = async (req, res) => {
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
-          "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:5174",
+          "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:5173",
           "X-Title": "Support AI Vision",
         },
+        timeout: 15000 // 15s timeout
       }
     );
 
     const aiResponse = response.data?.choices?.[0]?.message?.content?.trim() || "Analysis failed";
+    console.log('[AI Vision] Result:', aiResponse);
 
     res.json({ analysis: aiResponse });
   } catch (error) {
-    console.log("IMAGE ANALYSIS ERROR:", error.response?.data || error.message);
-    res.status(500).json({ error: "AI Vision analysis failed", details: error.message });
+    console.error('[AI Vision] Error:', error.response?.data || error.message);
+    res.status(500).json({ 
+      error: "AI Vision analysis failed", 
+      details: error.response?.data?.error?.message || error.message 
+    });
   }
 };

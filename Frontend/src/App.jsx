@@ -14,6 +14,7 @@ import TicketDetail from './pages/TicketDetail';
 import Tickets from './pages/Tickets';
 import Customers from './pages/Customers';
 import Analytics from './pages/Analytics';
+import AdminLiveChat from './pages/AdminLiveChat';
 import Settings from './pages/Settings';
 import Layout from './components/Layout/Layout';
 import CustomerLayout from './components/Layout/CustomerLayout';
@@ -43,6 +44,7 @@ const App = () => {
             <Route path="/admin/tickets" element={<PrivateRoute role="admin"><Layout><Tickets /></Layout></PrivateRoute>} />
             <Route path="/admin/tickets/:id" element={<PrivateRoute role="admin"><Layout><TicketDetail /></Layout></PrivateRoute>} />
             <Route path="/admin/customers" element={<PrivateRoute role="admin"><Layout><Customers /></Layout></PrivateRoute>} />
+            <Route path="/admin/chat" element={<PrivateRoute role="admin"><Layout><AdminLiveChat /></Layout></PrivateRoute>} />
             <Route path="/admin/analytics" element={<PrivateRoute role="admin"><Layout><Analytics /></Layout></PrivateRoute>} />
             <Route path="/admin/settings" element={<PrivateRoute role="admin"><Layout><Settings /></Layout></PrivateRoute>} />
 

@@ -97,60 +97,19 @@ const Register = () => {
       <div style={s.bgOverlay} />
       <div style={s.orb1} />
       <div style={s.orb2} />
-      <div style={s.gridBg} />
 
       {/* Navbar */}
       <nav style={s.nav}>
         <div style={s.brand} onClick={() => navigate('/')} role="button">
-          <div style={s.logoBox}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#fff"/>
-            </svg>
-          </div>
-          <span style={s.brandName}>SupportIQ</span>
+          <img src="/logo.png" alt="Logo" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+          <span style={s.brandName}>Swift Support</span>
         </div>
         <Link to="/login" style={s.navLoginLink}>
-          Already have an account? <span style={{ color: '#818cf8' }}>Sign in →</span>
+          Already have an account? <span style={{ color: '#4ADE80' }}>Sign in →</span>
         </Link>
       </nav>
 
       <main style={s.main}>
-
-        {/* LEFT */}
-        <motion.div
-          initial={{ opacity: 0, x: -40 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
-          style={s.left}
-        >
-          <div style={s.badge}>JOIN THE PLATFORM</div>
-          <h1 style={s.heroText}>
-            Start resolving<br />
-            <span style={s.accent}>tickets smarter.</span>
-          </h1>
-          <p style={s.desc}>
-            Create your account to submit, track, and manage support tickets powered by AI-driven analysis and real-time insights.
-          </p>
-          <ul style={s.featureList}>
-            {[
-              { icon: '🎫', text: 'Submit support tickets instantly' },
-              { icon: '🤖', text: 'AI-powered issue categorization' },
-              { icon: '📊', text: 'Real-time status tracking' },
-              { icon: '🔒', text: 'Secure & encrypted data handling' },
-            ].map((item, i) => (
-              <motion.li
-                key={i}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 + i * 0.1 }}
-                style={s.featureItem}
-              >
-                <span style={s.featureIcon}>{item.icon}</span>
-                <span style={s.featureText}>{item.text}</span>
-              </motion.li>
-            ))}
-          </ul>
-        </motion.div>
 
         {/* FORM CARD */}
         <motion.div
@@ -160,11 +119,7 @@ const Register = () => {
           style={s.card}
         >
           <div style={s.cardHeader}>
-            <div style={s.logoBox}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#fff"/>
-              </svg>
-            </div>
+            <img src="/logo.png" alt="Logo" style={{ width: 36, height: 36, objectFit: 'contain' }} />
             <div>
               <h2 style={s.cardTitle}>Create account<span style={s.dot}>.</span></h2>
               <p style={s.cardSubtitle}>All fields are required</p>
@@ -312,7 +267,7 @@ const Register = () => {
             <motion.button
               type="submit"
               disabled={loading}
-              whileHover={!loading ? { scale: 1.02, boxShadow: '0 16px 40px rgba(79,70,229,0.55)' } : {}}
+              whileHover={!loading ? { scale: 1.02, boxShadow: '0 16px 40px rgba(34,197,94,0.3)' } : {}}
               whileTap={!loading ? { scale: 0.98 } : {}}
               style={loading ? { ...s.btn, ...s.btnDisabled } : s.btn}
             >
@@ -339,7 +294,7 @@ const Register = () => {
 
           <Link to="/login" style={{ textDecoration: 'none', display: 'block' }}>
             <motion.div
-              whileHover={{ borderColor: 'rgba(99,102,241,0.4)', background: 'rgba(99,102,241,0.06)' }}
+              whileHover={{ borderColor: 'rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.06)' }}
               style={s.loginBtn}
             >
               Sign in to your account
@@ -349,7 +304,7 @@ const Register = () => {
       </main>
 
       <footer style={s.footer}>
-        <span>© 2025 SupportIQ · AI-Based Customer Support Analysis</span>
+        <span>© {new Date().getFullYear()} Swift Support Inc.</span>
         <div style={{ display: 'flex', gap: 20 }}>
           {['Privacy', 'Terms'].map(l => (
             <span key={l} style={{ color: '#334155', fontSize: 12, cursor: 'pointer' }}>{l}</span>
@@ -363,7 +318,7 @@ const Register = () => {
 const s = {
   page: {
     minHeight: '100vh', width: '100%', position: 'relative', overflow: 'hidden',
-    backgroundColor: '#060912', fontFamily: "'Inter', 'Segoe UI', sans-serif",
+    backgroundColor: '#020B06', fontFamily: "'Inter', 'Segoe UI', sans-serif",
     color: '#f1f5f9', display: 'flex', flexDirection: 'column',
   },
   bgImage: {
@@ -373,23 +328,17 @@ const s = {
   },
   bgOverlay: {
     position: 'absolute', inset: 0, zIndex: 1,
-    background: 'linear-gradient(135deg, rgba(6,9,18,0.95) 0%, rgba(6,9,18,0.80) 100%)',
+    background: 'linear-gradient(135deg, rgba(2,11,6,0.95) 0%, rgba(2,11,6,0.80) 100%)',
   },
   orb1: {
     position: 'absolute', top: '-80px', right: '10%', width: 460, height: 460,
     borderRadius: '50%', zIndex: 1, pointerEvents: 'none',
-    background: 'radial-gradient(circle, rgba(139,92,246,0.13) 0%, transparent 70%)',
+    background: 'radial-gradient(circle, rgba(34,197,94,0.13) 0%, transparent 70%)',
   },
   orb2: {
     position: 'absolute', bottom: '-60px', left: '-30px', width: 360, height: 360,
     borderRadius: '50%', zIndex: 1, pointerEvents: 'none',
-    background: 'radial-gradient(circle, rgba(99,102,241,0.10) 0%, transparent 70%)',
-  },
-  gridBg: {
-    position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none',
-    backgroundImage: `linear-gradient(rgba(99,102,241,0.04) 1px, transparent 1px),
-                      linear-gradient(90deg, rgba(99,102,241,0.04) 1px, transparent 1px)`,
-    backgroundSize: '64px 64px',
+    background: 'radial-gradient(circle, rgba(22,163,74,0.10) 0%, transparent 70%)',
   },
   nav: {
     position: 'relative', zIndex: 10,
@@ -399,50 +348,26 @@ const s = {
   brand: { display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' },
   logoBox: {
     width: 34, height: 34, borderRadius: 10,
-    background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+    background: 'linear-gradient(to bottom right, #4ADE80, #16A34A)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    boxShadow: '0 4px 14px rgba(79,70,229,0.38)',
+    boxShadow: '0 4px 14px rgba(34,197,94,0.3)',
   },
-  brandName: { fontSize: 18, fontWeight: 800, letterSpacing: '-0.4px' },
+  brandName: { fontSize: 18, fontWeight: 800, letterSpacing: '-0.4px', color: '#fff' },
   navLoginLink: { fontSize: 13, fontWeight: 600, color: '#64748b', textDecoration: 'none' },
   main: {
     flex: 1, position: 'relative', zIndex: 10,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    gap: 80, padding: '48px 8%', flexWrap: 'wrap',
+    padding: '48px 8%',
   },
-  left: { flex: '1 1 380px', maxWidth: 500 },
-  badge: {
-    display: 'inline-block', padding: '6px 16px',
-    background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)',
-    borderRadius: 100, fontSize: 10, fontWeight: 800, letterSpacing: '2.5px',
-    color: '#c4b5fd', marginBottom: 28,
-  },
-  heroText: {
-    fontSize: 'clamp(36px, 5vw, 60px)', fontWeight: 900,
-    lineHeight: 1.08, letterSpacing: '-2.5px', marginBottom: 20,
-  },
-  accent: {
-    background: 'linear-gradient(90deg, #a78bfa, #38bdf8)',
-    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-  },
-  desc: { fontSize: 15, color: '#94a3b8', lineHeight: 1.75, marginBottom: 32, fontWeight: 500 },
-  featureList: { listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 12 },
-  featureItem: {
-    display: 'flex', alignItems: 'center', gap: 14,
-    background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
-    borderRadius: 14, padding: '12px 18px',
-  },
-  featureIcon: { fontSize: 18 },
-  featureText: { fontSize: 14, color: '#94a3b8', fontWeight: 500 },
   card: {
-    width: 460, background: 'rgba(10,14,28,0.82)', backdropFilter: 'blur(40px)',
+    width: 460, background: 'rgba(4,18,9,0.82)', backdropFilter: 'blur(40px)',
     border: '1px solid rgba(255,255,255,0.08)', borderRadius: 36, padding: '40px 44px',
-    boxShadow: '0 40px 100px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.03)',
+    boxShadow: '0 40px 100px -20px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.03)',
     flexShrink: 0,
   },
   cardHeader: { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28 },
   cardTitle: { fontSize: 26, fontWeight: 900, letterSpacing: '-0.8px', marginBottom: 4 },
-  dot: { color: '#8b5cf6' },
+  dot: { color: '#22C55E' },
   cardSubtitle: { fontSize: 12, color: '#475569', fontWeight: 500 },
   errorBanner: {
     display: 'flex', alignItems: 'center', gap: 10,
@@ -482,21 +407,21 @@ const s = {
   errText: { fontSize: 12, color: '#f87171', fontWeight: 600 },
   btn: {
     width: '100%', padding: '15px', borderRadius: 14, border: 'none',
-    background: 'linear-gradient(135deg, #8b5cf6, #6366f1)', color: '#fff',
+    background: '#22C55E', color: '#020B06',
     fontSize: 15, fontWeight: 800, cursor: 'pointer',
-    boxShadow: '0 10px 28px -8px rgba(139,92,246,0.5)',
+    boxShadow: '0 10px 28px -8px rgba(34,197,94,0.3)',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     letterSpacing: '0.2px', transition: 'all 0.2s', marginTop: 6,
   },
   btnDisabled: { opacity: 0.65, cursor: 'not-allowed' },
   spinRow: { display: 'flex', alignItems: 'center', gap: 10 },
   spinner: {
-    width: 17, height: 17, border: '2px solid rgba(255,255,255,0.25)',
-    borderTopColor: '#fff', borderRadius: '50%',
+    width: 17, height: 17, border: '2px solid rgba(2,11,6,0.25)',
+    borderTopColor: '#020B06', borderRadius: '50%',
     animation: 'spin 0.7s linear infinite', display: 'inline-block',
   },
   terms: { fontSize: 11, color: '#334155', textAlign: 'center', marginTop: 16, lineHeight: 1.6 },
-  termLink: { color: '#818cf8', fontWeight: 700, cursor: 'pointer' },
+  termLink: { color: '#4ADE80', fontWeight: 700, cursor: 'pointer' },
   divider: { display: 'flex', alignItems: 'center', gap: 12, margin: '22px 0 18px' },
   dividerLine: { flex: 1, height: 1, background: 'rgba(255,255,255,0.06)' },
   dividerText: { fontSize: 11, color: '#475569', fontWeight: 600, whiteSpace: 'nowrap' },

@@ -57,7 +57,7 @@ const Customers = () => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader className="w-10 h-10 text-indigo-500 animate-spin" />
+        <Loader className="w-10 h-10 text-emerald-500 animate-spin" />
         <p className="text-sm font-bold text-slate-500">Retrieving Customer Directory...</p>
       </div>
     );
@@ -68,7 +68,7 @@ const Customers = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
            <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
-             <div className="p-2 bg-indigo-500 rounded-xl shadow-lg shadow-indigo-500/20">
+             <div className="p-2 bg-emerald-500 rounded-xl shadow-lg shadow-emerald-500/20">
                <Users className="w-7 h-7 text-white" />
              </div>
              Customers
@@ -77,11 +77,11 @@ const Customers = () => {
         </div>
         
         <div className="relative w-full sm:w-80 group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
           <input 
             type="text" 
             placeholder="Search customers..." 
-            className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl pl-10 pr-4 py-2.5 text-sm focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all dark:text-white shadow-sm"
+            className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-3xl pl-10 pr-4 py-2.5 text-sm focus:ring-4 focus:ring-emerald-500/5 outline-none transition-all dark:text-white shadow-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -96,10 +96,10 @@ const Customers = () => {
             className="group cursor-pointer bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-6 rounded-3xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
           >
             <div className="flex justify-between items-start mb-6">
-               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center text-white font-black text-2xl shadow-lg ring-4 ring-white dark:ring-slate-900 transition-transform group-hover:scale-110">
+               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-white font-black text-2xl shadow-lg ring-4 ring-white dark:ring-slate-900 transition-transform group-hover:scale-110">
                  {customer.name.substring(0, 1).toUpperCase()}
                </div>
-               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase tracking-wider">
+               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-wider">
                  <UserCheck className="w-3 h-3" />
                  Verified
                </div>
@@ -146,7 +146,7 @@ const Customers = () => {
               {/* Header */}
               <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-xl">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-600 flex items-center justify-center text-white font-bold text-xl">
                       {selectedCustomer.name.substring(0,1).toUpperCase()}
                     </div>
                     <div>
@@ -163,7 +163,7 @@ const Customers = () => {
               <div className="flex-1 overflow-y-auto p-8 space-y-8">
                  <div className="space-y-6">
                     <div>
-                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 text-indigo-500">Contact Details</p>
+                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 text-emerald-500">Contact Details</p>
                        <div className="space-y-4">
                           <div className="flex items-center gap-3">
                              <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg"><Mail className="w-4 h-4 text-slate-400" /></div>
@@ -183,9 +183,9 @@ const Customers = () => {
                        ) : customerTickets.length > 0 ? (
                          <div className="space-y-3">
                             {customerTickets.map(t => (
-                              <div key={t.ticketId} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 hover:border-indigo-300 transition-colors">
+                              <div key={t.ticketId} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 hover:border-emerald-300 transition-colors">
                                  <div className="flex justify-between items-start mb-1">
-                                    <span className="text-xs font-black text-indigo-500">{t.ticketId}</span>
+                                    <span className="text-xs font-black text-emerald-500">{t.ticketId}</span>
                                     <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${t.status === 'resolved' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
                                       {t.status}
                                     </span>
@@ -208,12 +208,7 @@ const Customers = () => {
                  </div>
               </div>
 
-              {/* Footer */}
-              <div className="p-8 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
-                 <button className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm transition-all shadow-lg shadow-indigo-600/20 active:scale-95">
-                    GENERATE ACCOUNT REPORT
-                 </button>
-              </div>
+
             </motion.div>
           </>
         )}

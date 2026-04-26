@@ -9,7 +9,7 @@ const Layout = ({ children }) => {
   const isAdmin = location.pathname.startsWith('/admin');
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-50 transition-colors duration-200 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#FDFDFD] dark:bg-[#020B06] text-slate-900 dark:text-slate-50 transition-colors duration-200 flex flex-col font-sans">
       <Navbar />
       <div className="flex flex-1 pt-16">
         {isAdmin && <Sidebar />}

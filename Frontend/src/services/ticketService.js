@@ -35,10 +35,15 @@ const ticketService = {
    * @param {string} message
    * @param {string} sender - 'user', 'admin', or 'bot'
    */
-  addMessage: async (ticketId, message, sender) => {
-    const response = await apiClient.post(`/tickets/${ticketId}/messages`, {
-      message,
-      sender,
+  addMessage: async (ticketId, message, sender, photo = null) => {
+    const formData = new FormData();
+    formData.append('message', message);
+    formData.append('sender', sender);
+    if (photo) {
+      formData.append('photo', photo);
+    }
+    const response = await apiClient.post(`/tickets/${ticketId}/messages`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
     });
     return response.data;
   },
@@ -68,6 +73,11 @@ const ticketService = {
    */
   getDashboardStats: async () => {
     const response = await apiClient.get('/tickets/stats');
+    return response.data;
+  },
+
+  escalateTicket: async (ticketId, team, reason) => {
+    const response = await apiClient.post(`/tickets/${ticketId}/escalate`, { team, reason });
     return response.data;
   },
 };

@@ -21,12 +21,12 @@ const SuggestedReply = ({ suggestion, onUseSuggestion, onCopy }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-5 border border-purple-200 shadow-sm"
+      className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-5 border border-emerald-200 shadow-sm"
     >
       <div className="flex items-center space-x-2 mb-3">
-        <SparklesIcon className="w-5 h-5 text-purple-600" />
+        <SparklesIcon className="w-5 h-5 text-emerald-600" />
         <h3 className="font-semibold text-gray-900">AI Suggested Reply</h3>
-        <span className="ml-auto text-xs text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">Powered by AI</span>
+        <span className="ml-auto text-xs text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">Powered by AI</span>
       </div>
 
       <div className="bg-white rounded-lg p-4 mb-4 border border-gray-100 shadow-inner">

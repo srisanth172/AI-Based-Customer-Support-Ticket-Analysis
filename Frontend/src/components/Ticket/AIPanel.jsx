@@ -1,169 +1,97 @@
-// src/components/Ticket/AIPanel.jsx
-
 import React from 'react';
 import { motion } from 'framer-motion';
-import {
-  SparklesIcon,
-  LightBulbIcon,
-  DocumentTextIcon,
-  ChartBarIcon
+import { 
+  SparklesIcon, 
+  LightBulbIcon, 
+  ChatBubbleBottomCenterTextIcon,
+  ShieldCheckIcon,
+  ArrowTrendingUpIcon,
+  PlusIcon
 } from '@heroicons/react/24/outline';
-import SuggestedReply from './SuggestedReply';
 
 const AIPanel = ({ ticket, onUseSuggestion }) => {
   const analysis = ticket?.aiAnalysis;
 
-  // Early return for safety
-  if (!analysis) return null;
+  if (!analysis) return (
+    <div className="bg-[#041209]/60 backdrop-blur-xl rounded-[24px] border border-white/5 p-6 shadow-2xl">
+      <div className="flex items-center gap-3 text-slate-500 italic text-sm">
+        <SparklesIcon className="h-5 w-5 animate-pulse" />
+        AI is processing this ticket...
+      </div>
+    </div>
+  );
 
-  // Destructure with fallbacks
   const {
     sentiment = 'neutral',
     priority = 'medium',
     category = 'general',
     reasoning,
     keywords = [],
-    suggestedReply,
-    suggestedTeam = 'unassigned'
+    suggestedSolutions = []
   } = analysis;
 
-  const getSentimentColor = (value) => {
-    switch (value?.toLowerCase()) {
-      case 'positive':
-        return 'text-green-600 bg-green-50 border-green-200';
-      case 'negative':
-        return 'text-red-600 bg-red-50 border-red-200';
-      default:
-        return 'text-gray-600 bg-gray-50 border-gray-200';
-    }
-  };
-
-  const getPriorityColor = (value) => {
-    switch (value?.toLowerCase()) {
-      case 'high':
-        return 'text-red-600 bg-red-50 border-red-200';
-      case 'medium':
-        return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      case 'low':
-        return 'text-green-600 bg-green-50 border-green-200';
-      default:
-        return 'text-gray-600 bg-gray-50 border-gray-200';
+  const getSentimentEmoji = (val) => {
+    switch (val?.toLowerCase()) {
+      case 'positive': return '🙂';
+      case 'negative': return '😡';
+      default: return '😐';
     }
   };
 
   return (
-    <motion.div
-      initial="hidden"
-      animate="visible"
-      variants={{
-        hidden: { opacity: 0, x: 20 },
-        visible: {
-          opacity: 1,
-          x: 0,
-          transition: { staggerChildren: 0.08 }
-        }
-      }}
-      className="space-y-6"
-    >
-      {/* Analysis Card */}
-      <motion.div
-        variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
-        className="bg-white rounded-xl shadow-sm p-5 border border-gray-100"
-      >
-        <div className="flex items-center space-x-2 mb-4">
-          <SparklesIcon className="w-5 h-5 text-purple-600" aria-hidden="true" />
-          <h3 className="font-semibold text-gray-900">AI Analysis</h3>
-        </div>
-
-        {/* Sentiment & Priority */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div
-            className={`p-3 rounded-lg border ${getSentimentColor(sentiment)}`}
-          >
-            <p className="text-xs font-medium">Sentiment</p>
-            <p className="text-lg font-bold">
-              {sentiment.toLowerCase() === 'positive' ? 'Happy 🙂' :
-                sentiment.toLowerCase() === 'negative' ? 'Angry 😡' :
-                  'Neutral 😐'}
-            </p>
-          </div>
-
-          <div
-            className={`p-3 rounded-lg border ${getPriorityColor(priority)}`}
-          >
-            <p className="text-xs font-medium">Priority</p>
-            <p className="text-lg font-bold capitalize">{priority}</p>
-          </div>
-        </div>
-
-        {/* Category & Suggested Team */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
-            <div className="flex items-center space-x-1 mb-1">
-              <ChartBarIcon className="w-4 h-4 text-gray-500" aria-hidden="true" />
-              <p className="text-xs font-medium text-gray-500">Category</p>
+    <div className="space-y-6">
+      {/* Primary AI Insights */}
+      <div className="bg-[#041209]/60 backdrop-blur-xl rounded-[24px] border border-white/5 p-6 shadow-2xl relative overflow-hidden group">
+        <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-600/10 rounded-full blur-3xl group-hover:bg-emerald-600/20 transition-all duration-700" />
+        
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-emerald-600/20 rounded-lg">
+              <SparklesIcon className="h-5 w-5 text-emerald-500" />
             </div>
-            <p className="text-sm font-bold text-gray-800 capitalize truncate">{category}</p>
+            <h3 className="font-black text-white text-sm uppercase tracking-widest">Insights</h3>
           </div>
-          <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-100">
-            <div className="flex items-center space-x-1 mb-1">
-              <SparklesIcon className="w-4 h-4 text-indigo-500" aria-hidden="true" />
-              <p className="text-xs font-medium text-indigo-700">Suggested Team</p>
-            </div>
-            <p className="text-sm font-bold text-indigo-900 capitalize truncate">{suggestedTeam.replace('_', ' ')}</p>
+          <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
+            <span className="text-[10px] font-bold text-slate-400 uppercase">Sentiment:</span>
+            <span className="text-xs">{getSentimentEmoji(sentiment)}</span>
           </div>
         </div>
 
-        {/* Reasoning */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Category</p>
+            <p className="text-sm font-bold text-emerald-500 capitalize">{category}</p>
+          </div>
+          <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">AI Priority</p>
+            <p className={`text-sm font-bold capitalize ${
+              priority === 'high' ? 'text-rose-500' : priority === 'medium' ? 'text-amber-500' : 'text-emerald-500'
+            }`}>{priority}</p>
+          </div>
+        </div>
+
         {reasoning && (
-          <div className="mb-4">
-            <div className="flex items-center space-x-1 mb-2">
-              <LightBulbIcon className="w-4 h-4 text-yellow-600" aria-hidden="true" />
-              <p className="text-xs font-medium text-gray-500">Reasoning</p>
+          <div className="mb-6 p-4 bg-emerald-600/5 rounded-2xl border border-emerald-500/10">
+            <div className="flex items-center gap-2 mb-2">
+              <LightBulbIcon className="h-4 w-4 text-emerald-500" />
+              <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">AI Reasoning</span>
             </div>
-
-            <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
-              {reasoning}
+            <p className="text-xs text-slate-300 leading-relaxed italic">
+              "{reasoning}"
             </p>
           </div>
         )}
 
-        {/* Keywords */}
-        <div>
-          <div className="flex items-center space-x-1 mb-2">
-            <DocumentTextIcon className="w-4 h-4 text-blue-600" aria-hidden="true" />
-            <p className="text-xs font-medium text-gray-500">Keywords</p>
-          </div>
-
-          {keywords.length === 0 ? (
-            <p className="text-xs text-gray-400">No keywords detected</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {keywords.map((keyword, idx) => (
-                <span
-                  key={idx}
-                  className="px-2 py-1 bg-gray-100 rounded-md text-xs text-gray-700"
-                >
-                  {keyword}
-                </span>
-              ))}
-            </div>
-          )}
+        <div className="flex flex-wrap gap-2">
+          {keywords.slice(0, 5).map((kw, idx) => (
+            <span key={idx} className="px-2.5 py-1 bg-white/5 text-[10px] font-bold text-slate-400 rounded-lg border border-white/5 uppercase tracking-tighter">
+              #{kw}
+            </span>
+          ))}
         </div>
-      </motion.div>
+      </div>
 
-      {/* Suggested Reply */}
-      {suggestedReply && (
-        <motion.div
-          variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
-        >
-          <SuggestedReply
-            suggestion={suggestedReply}
-            onUseSuggestion={onUseSuggestion}
-          />
-        </motion.div>
-      )}
-    </motion.div>
+    </div>
   );
 };
 

@@ -1,7 +1,9 @@
 const crypto = require('crypto');
+const axios = require('axios');
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../services/emailService');
+const Notification = require('../models/Notification');
 
 const register = async (req, res, next) => {
   try {
@@ -53,24 +55,41 @@ const register = async (req, res, next) => {
 
 const login = async (req, res, next) => {
   try {
-    const { name, password } = req.body; // 'name' here can be either username or email
-    let user;
-    // Restrict admin login to srisanth only
-    if (name === 'srisanth') {
-      user = await User.findOne({ name: 'srisanth', role: 'admin' });
-      if (!user || password !== 'qwerty@12') {
-        return res.status(401).json({ message: 'Invalid admin credentials' });
-      }
-    } else {
-      user = await User.findOne({ $or: [{ name }, { email: name }] });
-      if (!user || !(await user.matchPassword(password))) {
-        return res.status(401).json({ message: 'Invalid credentials' });
-      }
-      // Prevent customer login as admin
-      if (user.role === 'admin' && user.name !== 'srisanth') {
-        return res.status(403).json({ message: 'Admin access restricted.' });
-      }
+    const { name: loginName, password } = req.body;
+    console.log(`Login attempt for: ${loginName}`);
+
+    if (!loginName || !password) {
+      return res.status(400).json({ message: 'Username and password are required' });
     }
+
+    const identifier = loginName.toLowerCase().trim();
+
+    // Find user by email (direct) or name (case-insensitive)
+    const user = await User.findOne({ 
+      $or: [
+        { email: identifier },
+        { name: { $regex: new RegExp(`^${identifier}$`, 'i') } }
+      ] 
+    });
+
+    if (!user) {
+      console.log(`Login failed: User not found for ${identifier}`);
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) {
+      console.log(`Login failed: Password mismatch for ${identifier}`);
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Restrict admin login to srisanth only
+    if (user.role === 'admin' && user.name.toLowerCase() !== 'srisanth') {
+      console.log(`Login restricted: Admin role but name is ${user.name}`);
+      return res.status(403).json({ message: 'Admin access restricted.' });
+    }
+
+    console.log(`Login successful for: ${user.name} (${user.role})`);
     return res.json({
       message: 'Login successful',
       token: generateToken(user._id, user.role),
@@ -86,10 +105,54 @@ const login = async (req, res, next) => {
   }
 };
 
+const googleLogin = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ message: 'No token provided' });
+
+    const response = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
+    const { email, name, email_verified } = response.data;
+
+    if (email_verified === 'false' || email_verified === false) {
+      return res.status(400).json({ message: 'Email not verified by Google' });
+    }
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      const randomPassword = crypto.randomBytes(16).toString('hex');
+      user = await User.create({
+        name: name || email.split('@')[0],
+        email,
+        password: randomPassword,
+        role: 'customer',
+        isVerified: true
+      });
+    }
+
+    return res.json({
+      message: 'Login successful',
+      token: generateToken(user._id, user.role),
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error('Google login error:', error.response?.data || error.message);
+    return res.status(401).json({ message: 'Invalid Google token' });
+  }
+};
+
 const verifyEmail = async (req, res, next) => {
   try {
     const { email, code } = req.body;
-    const user = await User.findOne({ email, verificationCode: code });
+    if (!email || !code) {
+      return res.status(400).json({ message: 'Email and code are required' });
+    }
+    const user = await User.findOne({ email, verificationCode: code.trim() });
 
     if (!user) {
       return res.status(400).json({ message: 'Invalid verification code' });
@@ -100,6 +163,38 @@ const verifyEmail = async (req, res, next) => {
     await user.save();
 
     return res.json({ message: 'Email verified successfully' });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const resendOTP = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    console.log('Resend OTP requested for:', email);
+    if (!email) return res.status(400).json({ message: 'Email is required' });
+    
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ message: 'Email already verified' });
+    }
+
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    user.verificationCode = verificationCode;
+    await user.save();
+
+    try {
+      await sendVerificationEmail(email, verificationCode);
+      return res.json({ message: 'A new verification code has been sent to your email.' });
+    } catch (err) {
+      console.error('Resend OTP failed:', err);
+      return res.status(500).json({ message: 'Failed to send verification email. Please try again.' });
+    }
   } catch (error) {
     return next(error);
   }
@@ -179,7 +274,16 @@ const updateMe = async (req, res, next) => {
 
     if (name) user.name = name;
     if (email) user.email = email;
-    if (password && password.trim().length >= 6) user.password = password;
+    if (password && password.trim().length >= 6) {
+      user.password = password;
+      // Notify Admin
+      await Notification.create({
+        recipient: 'admin',
+        title: 'User Password Changed',
+        description: `Customer ${user.email} (${user.name}) has changed their password.`,
+        type: 'warning'
+      });
+    }
     
     // Deep merge settings
     if (settings) {
@@ -227,7 +331,9 @@ const getUsers = async (req, res, next) => {
 module.exports = {
   register,
   login,
+  googleLogin,
   verifyEmail,
+  resendOTP,
   forgotPassword,
   resetPassword,
   getMe,

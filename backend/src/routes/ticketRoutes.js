@@ -42,8 +42,13 @@ router.post('/bulk', authMiddleware, adminMiddleware, ticketController.bulkUpdat
 router.get('/:id', authMiddleware, ticketController.getTicketById);
 router.post('/copilot', authMiddleware, adminMiddleware, ticketController.talkToCopilot);
 router.post('/chatbot', authMiddleware, ticketController.customerChatbot);
-router.post('/:id/messages', authMiddleware, ticketController.addMessage);
+router.post('/:id/messages', authMiddleware, upload.single('photo'), ticketController.addMessage);
+router.post('/:id/suggestions', authMiddleware, adminMiddleware, ticketController.generateSuggestions);
+router.post('/:id/request-resolution', authMiddleware, ticketController.requestResolution);
+router.post('/:id/escalate', authMiddleware, adminMiddleware, ticketController.escalateTicket);
+router.patch('/:id/reopen', authMiddleware, ticketController.reopenTicket);
 router.patch('/:id/status', authMiddleware, adminMiddleware, ticketController.updateTicketStatus);
 router.patch('/:id/admin', authMiddleware, adminMiddleware, ticketController.updateTicketAdmin);
+router.post('/:id/feedback', authMiddleware, ticketController.submitFeedback);
 
 module.exports = router;

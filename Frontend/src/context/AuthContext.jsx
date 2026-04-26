@@ -111,6 +111,24 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const googleLogin = async (credential) => {
+    try {
+      const response = await apiClient.post('/auth/google', { token: credential });
+      const { token: newToken, user: userData } = response.data;
+      localStorage.setItem('token', newToken);
+      setToken(newToken);
+      setUser(userData);
+      toast.success(`Welcome back, ${userData.name}!`);
+      if (userData.role === 'admin') navigate('/admin');
+      else navigate('/customer');
+      return userData;
+    } catch (error) {
+      const message = error.response?.data?.message || error.response?.data?.error || 'Google login failed';
+      toast.error(message);
+      throw error;
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     setToken(null);
@@ -155,6 +173,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const resendOTP = async (email) => {
+    try {
+      const response = await apiClient.post('/auth/resend-otp', { email });
+      toast.success(response.data.message || 'OTP resent successfully!');
+      return true;
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to resend OTP';
+      toast.error(message);
+      throw error;
+    }
+  };
+
   const isAuthenticated = !!token;
 
   const toggleTheme = async () => {
@@ -175,11 +205,13 @@ export const AuthProvider = ({ children }) => {
     toggleTheme,
     updateProfile,
     login,
+    googleLogin,
     register,
     logout,
     forgotPassword,
     resetPassword,
     verifyEmail,
+    resendOTP,
     fetchUser,
     loading,
     globalSearch,

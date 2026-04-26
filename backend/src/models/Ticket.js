@@ -24,11 +24,11 @@ const ticketSchema = new mongoose.Schema({
   subject: { type: String },
   description: { type: String },
   photoUrl: { type: String },
-  status: { type: String, enum: ['open', 'in_progress', 'pending', 'resolved', 'escalated', 'spam'], default: 'open' },
+  status: { type: String, enum: ['open', 'in_progress', 'waiting_for_customer', 'resolved', 'closed', 'escalated', 'reopened', 'spam'], default: 'open' },
   priority: { type: String, enum: ['low', 'medium', 'high'], default: 'medium' },
   sentiment: { type: String, enum: ['positive', 'neutral', 'negative'], default: 'neutral' },
-  category: { type: String, enum: ['billing', 'technical', 'delivery', 'account', 'product', 'general'], default: 'general' },
-  assignedTeam: { type: String, enum: ['unassigned', 'billing_team', 'tech_support', 'customer_success', 'shipping_dept'], default: 'unassigned' },
+  category: { type: String, default: 'Product Issues' },
+  assignedTeam: { type: String, default: 'unassigned' },
   eta: { type: Date },
   messages: [messageSchema],
   internalNotes: [internalNoteSchema],
@@ -39,11 +39,17 @@ const ticketSchema = new mongoose.Schema({
     keywords: [String],
     reasoning: String,
     suggestedReply: String,
+    suggestedSolutions: [String],
     suggestedTeam: String,
     isSpam: { type: Boolean, default: false }
   },
   resolvedAt: Date,
   resolutionTime: Number,
+  feedback: {
+    rating: { type: Number, min: 1, max: 5 },
+    comment: String,
+    submittedAt: Date
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

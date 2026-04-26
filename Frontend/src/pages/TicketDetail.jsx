@@ -1,4 +1,3 @@
-// src/pages/TicketDetail.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -7,19 +6,19 @@ import ChatBox from '../components/UI/ChatBox';
 import AIPanel from '../components/Ticket/AIPanel';
 import Button from '../components/UI/Button';
 import { toast } from 'react-hot-toast';
+import { CheckCircleIcon, RocketLaunchIcon, ArrowLeftIcon, PhotoIcon } from '@heroicons/react/24/outline';
+import io from 'socket.io-client';
 
 const TicketDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { getTicketById, updateTicketAdmin, addMessage } = useTickets();
+  const { getTicketById, updateTicketAdmin, addMessage, escalateTicket } = useTickets();
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // Admin action states
   const [team, setTeam] = useState('');
   const [status, setStatus] = useState('');
-  const [eta, setEta] = useState('');
   const [noteText, setNoteText] = useState('');
+  const [userMessageCount, setUserMessageCount] = useState(0);
   
   useEffect(() => {
     const fetchTicket = async () => {
@@ -29,7 +28,11 @@ const TicketDetail = () => {
         setTicket(fetched);
         setTeam(fetched.assignedTeam || 'unassigned');
         setStatus(fetched.status);
-        setEta(fetched.eta ? fetched.eta.substring(0, 10) : '');
+        
+        // Count existing user messages to set initial turn count
+        const userMsgs = (fetched.messages || []).filter(m => m.sender === 'user').length;
+        setUserMessageCount(userMsgs);
+
       } catch (error) {
         toast.error('Failed to load ticket');
       } finally {
@@ -37,11 +40,37 @@ const TicketDetail = () => {
       }
     };
     fetchTicket();
+
+    // Set up real-time socket connection
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5003';
+    const socket = io(apiUrl.replace('/api', ''));
+    
+    socket.emit('join-ticket', id);
+    socket.on('ticket-updated', (updatedTicket) => {
+      if (updatedTicket?.ticketId === id) {
+        setTicket(updatedTicket);
+        
+        // Count existing user messages to set initial turn count
+        const userMsgs = (updatedTicket.messages || []).filter(m => m.sender === 'user').length;
+        setUserMessageCount(userMsgs);
+
+        setTimeout(() => {
+          chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    });
+
+    return () => socket.disconnect();
   }, [id]);
   
-  const handleSendMessage = async (text) => {
+  const chatRef = React.useRef(null);
+  const chatEndRef = React.useRef(null);
+  
+  // Auto-prefill removed as per user request. Admin must click explicitly.
+
+  const handleSendMessage = async (text, photo = null) => {
     try {
-      const updated = await addMessage(id, text, 'admin');
+      const updated = await addMessage(id, text, 'admin', photo);
       setTicket(updated);
       toast.success('Reply sent successfully');
     } catch (error) {
@@ -49,6 +78,19 @@ const TicketDetail = () => {
     }
   };
   
+  const handleUseAISuggestion = (suggestion) => {
+    if (chatRef.current) {
+      // Check if this solution was already tried
+      const adminTexts = (ticket.messages || []).filter(m => m.sender === 'admin').map(m => m.text);
+      if (adminTexts.some(text => text.includes(suggestion.substring(0, 30)))) {
+        toast('This solution was already sent previously!', { icon: '⚠️' });
+      } else {
+        toast.success('Suggestion added to chat box');
+      }
+      chatRef.current.setText(suggestion);
+    }
+  };
+
   const handleAdminUpdate = async (field, value) => {
     try {
       const updated = await updateTicketAdmin(id, { [field]: value });
@@ -56,6 +98,19 @@ const TicketDetail = () => {
       toast.success('Ticket updated');
     } catch {
       toast.error('Failed to update ticket');
+    }
+  };
+
+  const handleEscalate = async () => {
+    const teamName = ticket.category === 'billing' ? 'Billing Team' : 
+                     ticket.category === 'technical' ? 'Tech Support' : 
+                     ticket.category === 'account' ? 'Account Specialists' : 'Support Team';
+                     
+    const escalationText = `This issue is getting forwarded to the ${teamName} and it will be resolved within 24 hours.`;
+    
+    if (chatRef.current) {
+      chatRef.current.setText(escalationText);
+      toast.success('Escalation message drafted. Click Send to confirm.');
     }
   };
 
@@ -71,96 +126,201 @@ const TicketDetail = () => {
     }
   };
   
-  if (loading) return <div className="flex h-screen items-center justify-center">Loading...</div>;
-  if (!ticket) return <div>Ticket not found</div>;
+  if (loading) return (
+    <div className="flex h-[80vh] flex-col items-center justify-center gap-4">
+      <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
+      <p className="text-slate-500 font-semibold animate-pulse">Loading Ticket Details...</p>
+    </div>
+  );
+  if (!ticket) return <div className="text-center py-20 text-slate-500">Ticket not found</div>;
   
   return (
-    <div className="space-y-6 pb-20">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 pb-20 animate-in fade-in duration-500">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Ticket {ticket.id}</h1>
-          <p className="text-gray-600 mt-1">Created {new Date(ticket.createdAt).toLocaleString()} &bull; Category: {ticket.category}</p>
+          <div className="flex items-center gap-3 mb-1">
+            <h1 className="text-3xl font-extrabold text-white tracking-tight">Ticket {ticket.ticketId}</h1>
+            <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+              ticket.status === 'resolved' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+              ticket.status === 'escalated' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+              'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+            }`}>
+              {ticket.status.replace('_', ' ')}
+            </span>
+          </div>
+          <p className="text-slate-400 font-medium">
+            Created {new Date(ticket.createdAt).toLocaleString()} &bull; 
+            <span className="ml-2 text-emerald-500">Category: {ticket.category}</span>
+          </p>
         </div>
-        <Button variant="outline" onClick={() => navigate('/admin')}>
-          Back to Dashboard
-        </Button>
+        <div className="flex gap-3">
+          <Button variant="outline" className="border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10" onClick={() => navigate('/admin')}>
+            Back to Dashboard
+          </Button>
+        </div>
       </div>
       
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden h-[50vh] min-h-[420px]">
-            <ChatBox
-              messages={ticket.messages || []}
-              onSendMessage={handleSendMessage}
-              disabled={ticket.status === 'resolved'}
-            />
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-semibold mb-4 text-slate-800">Internal Notes</h3>
-            <div className="space-y-3 mb-4 max-h-40 overflow-y-auto">
-              {(ticket.internalNotes || []).map((note, i) => (
-                <div key={i} className="p-3 bg-yellow-50 border border-yellow-100 rounded-lg text-sm text-yellow-800">
-                  <div className="font-semibold text-xs mb-1 opacity-70 border-b border-yellow-200/50 pb-1">{new Date(note.timestamp).toLocaleString()}</div>
-                  {note.text}
+      <div className="grid lg:grid-cols-12 gap-6">
+        {/* Main Content Area */}
+        <div className="lg:col-span-8 flex flex-col gap-6">
+          
+          {/* User Issue Summary & Image */}
+          <div className="bg-[#041209]/60 backdrop-blur-xl rounded-[24px] border border-white/5 overflow-hidden shadow-2xl">
+            <div className="p-6 border-b border-white/5 bg-white/[0.02]">
+              <h3 className="font-bold text-white text-lg">Customer Issue Report</h3>
+            </div>
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-2">Description</h4>
+                <p className="text-slate-200 text-sm leading-relaxed whitespace-pre-wrap">
+                  {ticket.description || ticket.subject}
+                </p>
+              </div>
+              {ticket.photoUrl && (
+                <div>
+                  <h4 className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-2">Attached Proof</h4>
+                  <div className="relative group cursor-zoom-in rounded-xl overflow-hidden border border-white/10 aspect-video bg-black/40">
+                    <img 
+                      src={`${import.meta.env.VITE_API_URL}${ticket.photoUrl}`} 
+                      alt="Attachment" 
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="text-white text-xs font-bold bg-emerald-600 px-3 py-1.5 rounded-lg shadow-lg">View Full Image</span>
+                    </div>
+                  </div>
                 </div>
-              ))}
-              {(!ticket.internalNotes || ticket.internalNotes.length === 0) && <p className="text-sm text-gray-400">No internal notes yet.</p>}
-            </div>
-            <div className="flex gap-2">
-              <input type="text" value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Add a private note..." className="flex-1 border rounded-lg px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
-              <Button onClick={handleAddNote}>Add Note</Button>
+              )}
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-semibold mb-4 text-slate-800">Activity Timeline</h3>
-            <div className="relative border-l ml-4 border-gray-200 space-y-6">
+          {/* Chat Interface */}
+          <div className="bg-[#041209]/60 backdrop-blur-xl rounded-[24px] border border-white/5 overflow-hidden shadow-2xl h-[600px] flex flex-col relative">
+            <div className="p-4 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
+              <h3 className="font-bold text-white">Conversation History</h3>
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-tighter">Live Support</span>
+              </div>
+            </div>
+
+            {/* AI Suggested Solutions Chips */}
+            {ticket.aiAnalysis && (
+              <div className="bg-emerald-900/10 border-b border-white/5 p-3 flex gap-2 overflow-x-auto custom-scrollbar shadow-inner">
+                {/* Quick Reply Chip */}
+                {ticket.aiAnalysis.suggestedReply && (
+                  <button 
+                    onClick={() => handleUseAISuggestion(ticket.aiAnalysis.suggestedReply)}
+                    className="whitespace-nowrap px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-[12px] font-bold rounded-xl border border-amber-500/30 transition-all shadow-sm flex items-center gap-2"
+                  >
+                    <span className="text-amber-400">⚡</span>
+                    Quick Acknowledgment
+                  </button>
+                )}
+
+                {/* Solution Chips */}
+                {ticket.aiAnalysis.suggestedSolutions?.map((sol, idx) => {
+                  const adminTexts = (ticket.messages || []).filter(m => m.sender === 'admin').map(m => m.text);
+                  const isTried = adminTexts.some(text => text.includes(sol.substring(0, 30)));
+                  return (
+                    <button 
+                      key={idx}
+                      onClick={() => handleUseAISuggestion(sol)}
+                      className={`whitespace-nowrap px-4 py-2 ${isTried ? 'bg-slate-500/20 hover:bg-slate-500/30 text-slate-400 border-slate-500/30' : 'bg-white/5 hover:bg-emerald-500/20 text-emerald-100 border-white/10 hover:border-emerald-500/30'} text-[12px] font-bold rounded-xl border transition-all shadow-sm flex items-center gap-2`}
+                    >
+                      <span className={isTried ? 'text-slate-400' : 'text-emerald-400'}>{isTried ? '✓' : '💡'}</span>
+                      {isTried ? 'Tried: ' : 'Solution ' + (idx + 1) + ': '}
+                      {sol.length > 30 ? sol.substring(0, 30) + '...' : sol}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="flex-1 overflow-hidden">
+              <ChatBox
+                ref={chatRef}
+                messages={ticket.messages || []}
+                ticketId={ticket.ticketId}
+                onSendMessage={handleSendMessage}
+                disabled={ticket.status === 'closed'}
+              />
+              <div ref={chatEndRef} />
+            </div>
+          </div>
+
+          {/* Activity Timeline */}
+          <div className="bg-[#041209]/60 backdrop-blur-xl rounded-[24px] border border-white/5 p-6 shadow-2xl">
+            <h3 className="font-bold text-white mb-6 flex items-center gap-2">
+              <div className="h-5 w-1 bg-emerald-500 rounded-full" />
+              Activity Timeline
+            </h3>
+            <div className="space-y-6 ml-2">
               {(ticket.activityLog || []).map((log, idx) => (
-                <div key={idx} className="relative pl-6">
-                  <div className="absolute w-3 h-3 bg-indigo-500 rounded-full -left-[1.5px] top-1.5 ring-4 ring-white" />
-                  <p className="text-sm font-medium text-gray-900">{log.message}</p>
-                  <p className="text-xs text-gray-500">{new Date(log.timestamp).toLocaleString()}</p>
+                <div key={idx} className="relative pl-8 border-l-2 border-emerald-500/20 pb-2 last:border-0 last:pb-0">
+                  <div className="absolute w-4 h-4 bg-[#020B06] border-2 border-emerald-500 rounded-full -left-[9px] top-0 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                  <p className="text-sm font-bold text-slate-100">{log.message}</p>
+                  <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">{new Date(log.timestamp).toLocaleString()}</p>
                 </div>
               ))}
-              {(!ticket.activityLog || ticket.activityLog.length === 0) && <p className="ml-6 text-sm text-gray-400">No activity recorded.</p>}
+              {(!ticket.activityLog || ticket.activityLog.length === 0) && <p className="text-sm text-slate-500 italic">No activity recorded yet.</p>}
             </div>
           </div>
         </div>
         
-        <div className="space-y-6">
-          <AIPanel ticket={ticket} />
+        {/* Sidebar Actions */}
+        <div className="lg:col-span-4 space-y-6">
+          <AIPanel ticket={ticket} onUseSuggestion={handleUseAISuggestion} />
           
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-semibold mb-4 text-slate-800 border-b pb-3">Admin Actions</h3>
-            <div className="space-y-5">
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select value={status} onChange={(e) => { setStatus(e.target.value); handleAdminUpdate('status', e.target.value); }} className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 capitalize">
-                  <option value="open">Open</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="escalated">Escalated</option>
-                  <option value="resolved">Resolved</option>
-                </select>
+          <div className="bg-[#041209]/60 backdrop-blur-xl rounded-[24px] border border-white/5 p-6 shadow-2xl sticky top-24">
+            <div className="space-y-6">
+              {/* Assignment Status */}
+              <div className="flex items-center justify-between pb-4 border-b border-white/5">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Ownership</span>
+                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                  ticket.assignedTeam && ticket.assignedTeam !== 'unassigned'
+                    ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                    : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                }`}>
+                  {ticket.assignedTeam && ticket.assignedTeam !== 'unassigned' ? `Assigned: ${ticket.assignedTeam.replace('_', ' ')}` : 'Unassigned'}
+                </span>
               </div>
 
+              {/* Internal Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Team</label>
-                <select value={team} onChange={(e) => { setTeam(e.target.value); handleAdminUpdate('assignedTeam', e.target.value); }} className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 capitalize">
-                  <option value="unassigned">Unassigned</option>
-                  <option value="billing_team">Billing Team</option>
-                  <option value="tech_support">Tech Support</option>
-                  <option value="customer_success">Customer Success</option>
-                  <option value="shipping_dept">Shipping Dept</option>
-                </select>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-4">Internal Staff Notes</label>
+                <div className="space-y-3 mb-4 max-h-60 overflow-y-auto custom-scrollbar">
+                  {(ticket.internalNotes || []).map((note, i) => (
+                    <div key={i} className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-xs text-slate-300">
+                      <p className="mb-1 leading-relaxed">{note.text}</p>
+                      <span className="text-[10px] text-slate-500 font-bold opacity-60 italic">{new Date(note.timestamp).toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={noteText} 
+                    onChange={(e) => setNoteText(e.target.value)} 
+                    placeholder="Add private note..." 
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-slate-200 outline-none focus:ring-2 focus:ring-emerald-500/50" 
+                  />
+                  <button onClick={handleAddNote} className="bg-emerald-600 text-white font-bold p-2 rounded-xl hover:bg-emerald-700 transition-colors">
+                    <CheckCircleIcon className="h-5 w-5" />
+                  </button>
+                </div>
+                {/* Manual Escalation Button */}
+                <div className="mt-6 pt-6 border-t border-white/5">
+                  <button 
+                    onClick={handleEscalate}
+                    className="w-full py-3 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 text-xs font-bold uppercase tracking-widest rounded-xl border border-amber-500/30 transition-all flex items-center justify-center gap-2"
+                  >
+                    <RocketLaunchIcon className="h-4 w-4" />
+                    Escalate Ticket
+                  </button>
+                </div>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Expected Resolution ETA</label>
-                <input type="date" value={eta} onChange={(e) => { setEta(e.target.value); handleAdminUpdate('eta', e.target.value); }} className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500" />
-              </div>
-
             </div>
           </div>
         </div>

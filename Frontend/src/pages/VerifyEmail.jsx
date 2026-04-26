@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { ShieldCheckIcon, CheckCircleIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 
 const VerifyEmail = () => {
-  const { verifyEmail, user } = useAuth();
+  const { verifyEmail, resendOTP, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [code, setCode] = useState('');
@@ -19,20 +19,20 @@ const VerifyEmail = () => {
   const s = {
     container: {
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '40px 20px', position: 'relative', background: '#05070a', color: '#fff',
+      padding: '40px 20px', position: 'relative', background: '#020B06', color: '#fff',
       fontFamily: "'Inter', sans-serif",
     },
     bg: { position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden' },
     bgImg: { position: 'absolute', inset: 0, opacity: 0.18, backgroundImage: 'url(/hero_bg.png)', backgroundSize: 'cover', backgroundPosition: 'center' },
-    bgOverlay: { position: 'absolute', inset: 0, background: 'radial-gradient(circle at center, rgba(5,7,10,0.5) 0%, rgba(5,7,10,0.95) 90%)' },
+    bgOverlay: { position: 'absolute', inset: 0, background: 'radial-gradient(circle at center, rgba(2,11,6,0.5) 0%, rgba(2,11,6,0.95) 90%)' },
     card: {
       width: '100%', maxWidth: '440px', padding: '48px', borderRadius: '32px',
-      background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(40px)',
+      background: 'rgba(4, 18, 9, 0.82)', backdropFilter: 'blur(40px)',
       border: '1px solid rgba(255, 255, 255, 0.08)', position: 'relative', zIndex: 10, textAlign: 'center'
     },
     iconWrap: {
       width: '64px', height: '64px', margin: '0 auto 24px',
-      background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+      background: 'linear-gradient(135deg, #10b981, #059669)',
       borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center',
     },
     title: { fontSize: '32px', fontWeight: '900', marginBottom: '12px', letterSpacing: '-1px' },
@@ -45,9 +45,8 @@ const VerifyEmail = () => {
     },
     button: {
       width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
-      background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
-      color: '#fff', fontSize: '15px', fontWeight: '800', cursor: 'pointer',
-      marginTop: '24px', transition: 'all 0.3s'
+      background: '#22C55E', color: '#020B06', fontSize: '15px', fontWeight: '800', cursor: 'pointer',
+      marginTop: '24px', transition: 'all 0.3s', boxShadow: '0 10px 28px -8px rgba(34,197,94,0.3)'
     },
     error: { color: '#fb7185', fontSize: '13px', marginTop: '16px', fontWeight: '600' }
   };
@@ -64,6 +63,18 @@ const VerifyEmail = () => {
       setTimeout(() => navigate(user?.role === 'admin' ? '/admin' : '/customer'), 2000);
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid verification code. Please check your email.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      await resendOTP(email);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to resend OTP');
     } finally {
       setLoading(false);
     }
@@ -93,7 +104,14 @@ const VerifyEmail = () => {
               </button>
             </form>
             <p className="mt-8 text-sm text-slate-500">
-              Didn't get the code? <button className="text-indigo-400 font-bold hover:underline">Resend Code</button>
+              Didn't get the code? <button 
+                type="button"
+                onClick={handleResend}
+                disabled={loading}
+                className="text-emerald-400 font-bold hover:underline disabled:opacity-50"
+              >
+                Resend Code
+              </button>
             </p>
           </>
         ) : (
