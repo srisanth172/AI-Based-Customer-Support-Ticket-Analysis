@@ -106,6 +106,11 @@ const login = async (req, res, next) => {
     }
 
     console.log(`Login successful for: ${user.name} (${user.role})`);
+    
+    // Set session for cross-domain persistence
+    req.session.userId = user._id;
+    req.session.role = user.role;
+
     return res.json({
       message: 'Login successful',
       token: generateToken(user._id, user.role),
@@ -205,6 +210,12 @@ const googleLogin = async (req, res, next) => {
         role: 'customer',
         isVerified: true
       });
+    }
+
+    // Set session for cross-domain persistence
+    if (req.session) {
+      req.session.userId = user._id;
+      req.session.role = user.role;
     }
 
     return res.json({
