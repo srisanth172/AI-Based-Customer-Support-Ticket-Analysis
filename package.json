@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "description": "Unified runner for frontend and backend",
+  "license": "MIT",
   "scripts": {
     "install:all": "npm --prefix backend install && npm --prefix Frontend install",
     "dev": "concurrently \"npm --prefix backend run dev\" \"npm --prefix Frontend run dev\"",

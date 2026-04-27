@@ -2,6 +2,7 @@
   "name": "support-system-backend",
   "version": "1.0.0",
   "description": "AI-powered customer support ticket system backend",
+  "license": "MIT",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
