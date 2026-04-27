@@ -10,7 +10,7 @@ class AIService {
       return {
         apiKey: groqKey,
         apiUrl: 'https://api.groq.com/openai/v1/chat/completions',
-        model: 'llama3-8b-8192',
+        model: 'llama-3.1-8b-instant',
         visionModel: 'llama-3.2-11b-vision-preview'
       };
     } else if (orKey) {

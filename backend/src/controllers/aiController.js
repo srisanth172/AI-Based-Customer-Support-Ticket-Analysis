@@ -48,7 +48,7 @@ Current Dashboard Context:
       ? "https://api.groq.com/openai/v1/chat/completions" 
       : "https://openrouter.ai/api/v1/chat/completions";
     
-    const model = groqKey ? "llama3-8b-8192" : (process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini");
+    const model = groqKey ? "llama-3.1-8b-instant" : (process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini");
 
     console.log(`--- SENDING TO ${groqKey ? 'GROQ' : 'OPENROUTER'} ---`);
     
