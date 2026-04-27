@@ -456,7 +456,8 @@ class AIService {
   async chatWithCustomer(messages) {
     const config = this._getAIConfig();
     if (!config) {
-      throw new Error('AI API configuration is missing');
+      console.warn('[AI Chat] API configuration is missing (GROQ_API_KEY or OPENROUTER_API_KEY).');
+      return "I'm currently in offline mode because my AI brain (API key) hasn't been configured yet. Please check the server environment variables!";
     }
 
     const { apiKey, apiUrl, model } = config;
