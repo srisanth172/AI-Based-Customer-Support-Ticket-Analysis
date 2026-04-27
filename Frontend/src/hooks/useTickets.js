@@ -86,7 +86,8 @@ export const useTickets = () => {
   };
 
   const updateTicketAdmin = async (id, updates) => {
-    const updated = updates.status
+    const hasOnlyStatus = Object.keys(updates).length === 1 && updates.status;
+    const updated = hasOnlyStatus
       ? mapTicket(await ticketService.updateTicketStatus(id, updates.status))
       : mapTicket(await ticketService.updateTicketAdmin(id, updates));
     setTickets((prev) => {

@@ -1,10 +1,33 @@
 const fs = require('fs');
 
 class AIService {
+  _getAIConfig() {
+    const groqKey = (process.env.GROQ_API_KEY || '').trim();
+    const orKey = (process.env.OPENROUTER_API_KEY || '').trim();
+
+    if (groqKey) {
+      return {
+        apiKey: groqKey,
+        apiUrl: 'https://api.groq.com/openai/v1/chat/completions',
+        model: 'llama3-8b-8192',
+        visionModel: 'llama-3.2-11b-vision-preview'
+      };
+    } else if (orKey) {
+      return {
+        apiKey: orKey,
+        apiUrl: 'https://openrouter.ai/api/v1/chat/completions',
+        model: 'meta-llama/llama-3-8b-instruct',
+        visionModel: 'google/gemini-2.0-flash-001'
+      };
+    }
+    return null;
+  }
+
   async callCategorizationAPI(text) {
-    const groqApiKey = process.env.GROQ_API_KEY;
-    const groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
-    const model = 'llama3-8b-8192';
+    const config = this._getAIConfig();
+    if (!config) return null;
+
+    const { apiKey, apiUrl, model } = config;
 
     const prompt = [
       'You are an AI system that classifies customer support tickets.',
@@ -34,7 +57,7 @@ class AIService {
       '🚫 OUT OF SCOPE RULE',
       'If the issue:',
       '- Does NOT match any category',
-      '- Is irrelevant (e.g., "my pen is lost")',
+      '- Is irrelevant (e.g., "my pen is lost", "toilet repair", "fan repair")',
       '- Is meaningless or spam',
       'Then return:',
       '- category = "OutOfScope"',
@@ -66,11 +89,13 @@ class AIService {
       `classify the following user issue: ${text}`,
     ].join('\n');
 
-    const response = await fetch(groqUrl, {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${groqApiKey}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:5173",
+        "X-Title": "Support System Classifier",
       },
       body: JSON.stringify({
         model,
@@ -91,7 +116,7 @@ class AIService {
 
     if (!response.ok) {
       const textBody = await response.text();
-      throw new Error(`Groq request failed: ${response.status} ${textBody}`);
+      throw new Error(`AI request failed: ${response.status} ${textBody}`);
     }
 
     const data = await response.json();
@@ -103,7 +128,7 @@ class AIService {
     return {
       sentiment: parsed.sentiment || 'neutral',
       priority: (parsed.priority || 'Medium').toLowerCase(),
-      category: parsed.category || 'Technical Issues',
+      category: parsed.category || 'Product Issues',
       isValid: parsed.valid !== undefined ? parsed.valid : true,
       priorityScore: parsed.priorityScore || (parsed.priority === 'High' ? 0.9 : parsed.priority === 'Medium' ? 0.5 : 0.1),
       suggestedReply: parsed.suggestedReply || 'Thanks for your message. We are reviewing it now.',
@@ -168,12 +193,12 @@ class AIService {
       'Payments': ['billing', 'payment', 'charge', 'invoice', 'price', 'cost', 'refund', 'transaction', 'failed', 'deducted'],
       'Orders & Delivery': ['order', 'delivery', 'delayed', 'address', 'tracking', 'shipped', 'shipping', 'not delivered'],
       'Returns & Refunds': ['return', 'refund', 'replacement', 'money back'],
-      'Product Issues': ['damaged', 'defective', 'not working', 'broken', 'quality'],
+      'Product Issues': ['damaged', 'defective', 'not working', 'broken', 'quality', 'error', 'bug', 'crash', 'slow'],
       'Account Issues': ['login', 'password', 'account', 'locked', 'reset', 'sign in', 'email change'],
       'Notifications & Communication': ['otp', 'email', 'sms', 'message', 'notification', 'alert'],
       'Subscription & Plans': ['plan', 'upgrade', 'activation', 'subscription', 'renew', 'tier', 'membership'],
     };
-    let bestMatch = 'Technical Issues';
+    let bestMatch = 'Product Issues';
     let highestScore = 0;
     const lowerText = text.toLowerCase();
     for (const [category, keywords] of Object.entries(categories)) {
@@ -216,15 +241,15 @@ class AIService {
     if (priorityAnalysis.priority === 'high') reasoning.push(`Assigned High Priority (Billing issue or Critical Keywords)`);
     if (priorityAnalysis.keywords.length) reasoning.push(`Key indicators: ${priorityAnalysis.keywords.join(', ')}`);
     const teamMap = {
-      'Payments': 'payments_team',
-      'Orders & Delivery': 'fulfillment_team',
-      'Returns & Refunds': 'customer_success',
-      'Product Issues': 'hardware_support',
-      'Account Issues': 'tech_support',
-      'Notifications & Communication': 'customer_success',
-      'Subscription & Plans': 'customer_success'
+      'Payments': 'Payments',
+      'Orders & Delivery': 'Orders & Delivery',
+      'Returns & Refunds': 'Returns & Refunds',
+      'Product Issues': 'Product Issues',
+      'Account Issues': 'Account Issues',
+      'Notifications & Communication': 'Notifications & Communication',
+      'Subscription & Plans': 'Subscription & Plans'
     };
-    const suggestedTeam = teamMap[category] || 'customer_success';
+    const suggestedTeam = teamMap[category] || 'Support Team';
 
     return {
       sentiment: sentimentAnalysis.sentiment,
@@ -235,7 +260,7 @@ class AIService {
         "Please provide more details about the issue.",
         "Have you tried restarting the application?",
         "Can you clear your browser cache and try again?",
-        "Our technical team is looking into this."
+        "Our support team is looking into this."
       ],
       suggestedTeam,
       reasoning: reasoning.join('. ') || 'No specific indicators.',
@@ -258,29 +283,40 @@ class AIService {
 
   async analyzeTicketWithImage(text, imagePath) {
     try {
+      const config = this._getAIConfig();
+      if (!config) return { ...this.analyzeTicket(text), isSpam: false };
+
+      const { apiKey, apiUrl, visionModel: model } = config;
+
       let base64Image = '';
       if (imagePath && fs.existsSync(imagePath)) {
         const imageBuffer = fs.readFileSync(imagePath);
         base64Image = imageBuffer.toString('base64');
       }
 
-      const groqApiKey = process.env.GROQ_API_KEY;
-      const groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
-      const model = 'llama-3.2-11b-vision-preview';
-
       const promptText = `
       Analyze the customer support message and the attached image.
-      If the image is completely unrelated to the description or issue category (e.g. random internet meme, spam, unrelated picture), you MUST classify it as isSpam: true.
+      You MUST classify the issue into ONE of these 7 categories:
+      1. Payments
+      2. Orders & Delivery
+      3. Returns & Refunds
+      4. Product Issues
+      5. Account Issues
+      6. Notifications & Communication
+      7. Subscription & Plans
+
+      If the issue does NOT fall into these categories, or the image is unrelated/spam (e.g., "toilet repair", "fan repair", "broken table"), you MUST return category: "OutOfScope" and isValid: false.
+
       Return strictly valid JSON only.
       JSON schema:
       {
         "isValid": boolean,
         "sentiment": "positive|neutral|negative",
         "priority": "low|medium|high",
-        "category": "Payments | Electronic Goods | Notifications & Communication | Integrations | Connectivity Issues | Subscription & Plans | Technical Issues | OutOfScope",
+        "category": "Payments | Orders & Delivery | Returns & Refunds | Product Issues | Account Issues | Notifications & Communication | Subscription & Plans | OutOfScope",
         "reasoning": string,
-        "suggestedReply": "A highly empathetic and dynamic 1-sentence quick acknowledgment tailored to the user's intent and emotion (e.g. 'I am so sorry to hear you are facing this error. We are looking into it immediately.' or 'Thank you for providing those details. Please wait a moment while we review.')",
-        "suggestedSolutions": ["A 2-3 line draft reply written directly to the customer in first person (e.g. 'Could you please provide more details about your issue?')", "Another 2-3 line drafted reply written to the customer", "..."],
+        "suggestedReply": "A highly empathetic and dynamic 1-sentence quick acknowledgment tailored to the user's intent and emotion.",
+        "suggestedSolutions": string[],
         "keywords": string[]
       }
       
@@ -289,7 +325,6 @@ class AIService {
       let messagesContent = [{ type: 'text', text: promptText }];
       
       if (base64Image) {
-        // Detect mime type
         const extension = imagePath.split('.').pop().toLowerCase();
         let mimeType = 'image/jpeg';
         if (extension === 'png') mimeType = 'image/png';
@@ -303,11 +338,13 @@ class AIService {
         });
       }
 
-      const response = await fetch(groqUrl, {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${groqApiKey}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:5173",
+          "X-Title": "Support AI Vision",
         },
         body: JSON.stringify({
           model,
@@ -327,7 +364,7 @@ class AIService {
       });
 
       if (!response.ok) {
-        throw new Error(`Groq request failed: ${response.status}`);
+        throw new Error(`Vision AI request failed: ${response.status}`);
       }
 
       const data = await response.json();
@@ -340,7 +377,7 @@ class AIService {
       return {
         sentiment: parsed.sentiment || 'neutral',
         priority: parsed.priority || 'medium',
-        category: parsed.category || 'Technical Issues',
+        category: parsed.category || 'Product Issues',
         suggestedReply: parsed.suggestedReply || 'Thanks for your message. We are reviewing it now.',
         suggestedSolutions: Array.isArray(parsed.suggestedSolutions) ? parsed.suggestedSolutions : ['Please provide more details.', 'Restart your device.', 'Clear your cache.', 'Contact our team.'],
         reasoning: parsed.reasoning || 'Classified by model output.',
@@ -356,11 +393,12 @@ class AIService {
   }
 
   async askCopilot(question, contextData) {
-    if (!process.env.OPENROUTER_API_KEY) {
+    const config = this._getAIConfig();
+    if (!config) {
       return "I'm currently running in offline mode. I can only do basic local reasoning right now!";
     }
 
-
+    const { apiKey, apiUrl, model } = config;
 
     const systemPrompt = `You are an AI assistant for a customer support admin dashboard. 
     Analyze the provided ticket data and provide short, actionable insights. 
@@ -373,16 +411,14 @@ class AIService {
     - Unhappy Customers (Angry Sentiment): ${contextData.negativeTickets || 0}
     - Historical Trends (Last 7 Days): ${JSON.stringify(contextData.trends || [])}`;
 
-    const groqApiKey = process.env.GROQ_API_KEY;
-    const groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
-    const model = 'llama3-8b-8192';
-
     try {
-      const response = await fetch(groqUrl, {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${groqApiKey}`,
+          Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
+          "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:5173",
+          "X-Title": "Nexa Admin Copilot",
         },
         body: JSON.stringify({
           model,
@@ -394,7 +430,7 @@ class AIService {
         })
       });
 
-      if (!response.ok) throw new Error('Copilot Groq API failed');
+      if (!response.ok) throw new Error('Copilot AI API failed');
       const data = await response.json();
       return data?.choices?.[0]?.message?.content || "Sorry, I couldn't process that request at this moment.";
     } catch (error) {
@@ -424,16 +460,24 @@ class AIService {
   }
 
   async chatWithCustomer(messages) {
-    const groqApiKey = process.env.GROQ_API_KEY;
-    const groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
-    const model = 'llama3-8b-8192';
+    const config = this._getAIConfig();
+    if (!config) {
+      throw new Error('AI API configuration is missing');
+    }
 
-    const systemPrompt = `You are a helpful and polite customer support agent for a SaaS text-based application. 
-    Analyze the user's issue. If they are just saying hello, greet them.
-    If they are describing a technical issue, billing issue, or problem, offer brief troubleshooting steps. 
-    If they are very upset or explicitly ask for human help or to create a ticket, ask them: "Would you like me to raise a support ticket for this issue?". Keep your answers concise, empathetic, and professional. Use markdown formatting.`;
+    const { apiKey, apiUrl, model } = config;
 
-    // messages is already an array of { role: 'user' | 'assistant', content: string }
+    const systemPrompt = `You are **Swift AI**, a helpful and professional customer support assistant for a SaaS platform. 
+
+    Your goals:
+    1. **Greeting**: If the user says "Hi", "Hello", or similar, respond warmly. Do NOT suggest a ticket.
+    2. **Answering Questions**: If the user asks what you can do or what categories you support, explain the 7 categories: Payments, Orders & Delivery, Returns & Refunds, Product Issues, Account Issues, Notifications & Communication, and Subscription & Plans. Do NOT suggest a ticket.
+    3. **Troubleshooting**: Offer brief troubleshooting steps for problems.
+    4. **Ticket Escalation**: If (and only if) the user describes a clear issue that needs a ticket, ask: "Would you like me to raise a support ticket for this issue?". 
+       IMPORTANT: If you ask this question, you MUST append the exact tag [PROMPT_TICKET] to the end of your message.
+    
+    CRITICAL: Never append [PROMPT_TICKET] unless you are explicitly asking the user to start the ticket creation process.`;
+
     const apiMessages = [
       { role: 'system', content: systemPrompt },
       ...messages.map(m => ({
@@ -442,11 +486,13 @@ class AIService {
       }))
     ];
 
-    const response = await fetch(groqUrl, {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${groqApiKey}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:5173",
+        "X-Title": "Swift AI Customer Chatbot",
       },
       body: JSON.stringify({
         model,
@@ -455,15 +501,20 @@ class AIService {
       })
     });
 
-    if (!response.ok) throw new Error('Customer Chatbot API failed');
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`AI Chat API failed: ${response.status} ${errorText}`);
+    }
+    
     const data = await response.json();
     return data?.choices?.[0]?.message?.content || "Sorry, I couldn't treat that request at this moment.";
   }
 
   async chatWithCopilot(message, context = "") {
-    const groqApiKey = process.env.GROQ_API_KEY;
-    const groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
-    const model = 'llama3-8b-8192';
+    const config = this._getAIConfig();
+    if (!config) return "I'm having trouble connecting to my brain right now.";
+
+    const { apiKey, apiUrl, model } = config;
 
     const systemPrompt = `You are a helpful AI Copilot for a customer support administrator. 
     You help analyze tickets, suggest replies, and provide insights.
@@ -471,11 +522,13 @@ class AIService {
     Keep your answers concise and professional.`;
 
     try {
-      const response = await fetch(groqUrl, {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${groqApiKey}`,
+          Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
+          "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:5173",
+          "X-Title": "Support Admin Copilot Chat",
         },
         body: JSON.stringify({
           model,

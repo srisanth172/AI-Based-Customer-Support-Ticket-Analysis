@@ -10,8 +10,8 @@ const register = async (req, res, next) => {
     const { name, email, password, role = 'customer' } = req.body;
     // Only allow admin registration for srisanth
     if (role === 'admin') {
-      if (name !== 'srisanth' || password !== 'qwerty@12') {
-        return res.status(403).json({ message: 'Only the reserved admin user can be registered.' });
+      if (name !== 'srisanth' || password !== 'shiva@05') {
+        return res.status(403).json({ message: 'Only the reserved admin user can be registered with the correct credentials.' });
       }
       // Prevent duplicate admin
       const existingAdmin = await User.findOne({ name: 'srisanth', role: 'admin' });
@@ -19,25 +19,37 @@ const register = async (req, res, next) => {
         return res.status(400).json({ message: 'Admin user already exists.' });
       }
     }
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
+
+    const existingUserByEmail = await User.findOne({ email });
+    if (existingUserByEmail) {
+      return res.status(400).json({ message: 'User with this email already exists' });
     }
-    const userName = name || email.split('@')[0];
-    const user = await User.create({ name: userName, email, password, role });
-    
+
+    // Handle Username Collision
+    const baseName = (name || email.split('@')[0]).trim();
+    let finalName = baseName;
+    let counter = 1;
+
+    // Check if name exists, if so append number
+    while (await User.findOne({ name: { $regex: new RegExp(`^${finalName}$`, 'i') } })) {
+      finalName = `${baseName}${counter}`;
+      counter++;
+    }
+
+    const user = await User.create({ name: finalName, email, password, role });
+
     // Generate and send verification code via Brevo API
     const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
     user.verificationCode = verificationCode;
     await user.save();
-    
+
     try {
       await sendVerificationEmail(email, verificationCode);
       console.log(`Verification email sent to ${email}`);
     } catch (err) {
       console.error('Email failed to send, but user was created:', err);
     }
-    
+
     return res.status(201).json({
       message: 'Account created successfully. Please check your email for the verification code.',
       token: generateToken(user._id, user.role),
@@ -62,24 +74,28 @@ const login = async (req, res, next) => {
       return res.status(400).json({ message: 'Username and password are required' });
     }
 
+    const trimmedPassword = password.trim();
     const identifier = loginName.toLowerCase().trim();
 
     // Find user by email (direct) or name (case-insensitive)
-    const user = await User.findOne({ 
+    const user = await User.findOne({
       $or: [
         { email: identifier },
         { name: { $regex: new RegExp(`^${identifier}$`, 'i') } }
-      ] 
-    });
+      ]
+    }).sort({ role: 1 }); // 'admin' comes before 'customer' alphabetically
 
     if (!user) {
       console.log(`Login failed: User not found for ${identifier}`);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const isMatch = await user.matchPassword(password);
+    console.log(`User found during login: ${user.email}, role: ${user.role}`);
+    console.log(`Password sent length: ${password ? password.length : 0}`);
+
+    const isMatch = await user.matchPassword(trimmedPassword);
     if (!isMatch) {
-      console.log(`Login failed: Password mismatch for ${identifier}`);
+      console.log(`Login failed: Password mismatch for ${identifier}. User password hash length in DB: ${user.password ? user.password.length : 'none'}`);
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
@@ -107,18 +123,79 @@ const login = async (req, res, next) => {
 
 const googleLogin = async (req, res, next) => {
   try {
-    const { token } = req.body;
-    if (!token) return res.status(400).json({ message: 'No token provided' });
+    const { token, code } = req.body;
+    console.log('[Google Login] Payload received:', { hasToken: !!token, hasCode: !!code });
 
-    const response = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
-    const { email, name, email_verified } = response.data;
+    let email, name, email_verified;
+
+    if (code) {
+      console.log('[Google Login] Processing as code/access_token');
+      // Auth-code flow (from custom button)
+      try {
+        if (!process.env.GOOGLE_CLIENT_SECRET) {
+          throw new Error('GOOGLE_CLIENT_SECRET is not configured on the server');
+        }
+        const tokenRes = await axios.post('https://oauth2.googleapis.com/token', {
+          code,
+          client_id: process.env.GOOGLE_CLIENT_ID,
+          client_secret: process.env.GOOGLE_CLIENT_SECRET,
+          redirect_uri: 'postmessage',
+          grant_type: 'authorization_code',
+        });
+        const idToken = tokenRes.data.id_token;
+        const info = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`);
+        email = info.data.email;
+        name = info.data.name;
+        email_verified = info.data.email_verified;
+      } catch (exchangeErr) {
+        console.warn('[Google Login] Exchange failed, trying fallback:', exchangeErr.message);
+        // Fallback: If code was actually an id_token or access_token
+        if (code.includes('.')) {
+          console.log('[Google Login] Fallback: Treating as ID Token');
+          const info = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${code}`);
+          email = info.data.email;
+          name = info.data.name;
+          email_verified = info.data.email_verified;
+        } else {
+          console.log('[Google Login] Fallback: Treating as Access Token');
+          const info = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: { Authorization: `Bearer ${code}` }
+          });
+          console.log('[Google Login] Userinfo received for email:', info.data.email);
+          email = info.data.email;
+          name = info.data.name;
+          email_verified = info.data.email_verified || true;
+        }
+      }
+    } else if (token) {
+      // Direct token flow (id_token or access_token)
+      console.log('[Google Login] Processing as direct token');
+      const segments = token.split('.');
+      if (segments.length === 3) {
+        console.log('[Google Login] Treating as JWT (ID Token)');
+        const info = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
+        email = info.data.email;
+        name = info.data.name;
+        email_verified = info.data.email_verified;
+      } else {
+        console.log('[Google Login] Treating as Access Token');
+        const info = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        console.log('[Google Login] Userinfo received for email:', info.data.email);
+        email = info.data.email;
+        name = info.data.name;
+        email_verified = info.data.email_verified || true;
+      }
+    } else {
+      return res.status(400).json({ message: 'No token or code provided' });
+    }
 
     if (email_verified === 'false' || email_verified === false) {
       return res.status(400).json({ message: 'Email not verified by Google' });
     }
 
     let user = await User.findOne({ email });
-
     if (!user) {
       const randomPassword = crypto.randomBytes(16).toString('hex');
       user = await User.create({
@@ -144,6 +221,7 @@ const googleLogin = async (req, res, next) => {
     console.error('Google login error:', error.response?.data || error.message);
     return res.status(401).json({ message: 'Invalid Google token' });
   }
+
 };
 
 const verifyEmail = async (req, res, next) => {
@@ -173,7 +251,7 @@ const resendOTP = async (req, res, next) => {
     const { email } = req.body;
     console.log('Resend OTP requested for:', email);
     if (!email) return res.status(400).json({ message: 'Email is required' });
-    
+
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -284,11 +362,11 @@ const updateMe = async (req, res, next) => {
         type: 'warning'
       });
     }
-    
+
     // Deep merge settings
     if (settings) {
       if (!user.settings) user.settings = {};
-      
+
       if (settings.notifications) {
         user.settings.notifications = { ...user.settings.notifications, ...settings.notifications };
       }

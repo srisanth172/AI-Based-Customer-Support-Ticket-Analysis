@@ -103,7 +103,29 @@ const TicketTable = ({ tickets, updateTicketAdmin, externalFilters }) => {
       const response = await api.post('/ai/analyze-image', { imageUrl });
       const result = response.data.analysis;
       setAnalysisResults(prev => ({ ...prev, [imageUrl]: result }));
-      toast.success('Verification Complete');
+      
+      if (result === 'AI Generated' && selectedTicket) {
+        toast.error('AI Generated Image Detected!', { icon: '⚠️', duration: 4000 });
+        
+        // 1. Mark as spam
+        await handleInlineChange(selectedTicket.id, 'category', 'spam');
+        
+        // 2. Ask admin whether to close
+        setTimeout(async () => {
+          const shouldClose = window.confirm('AI generated image detected. This ticket has been automatically marked as spam. Would you like to CLOSE this ticket?');
+          
+          if (shouldClose) {
+            await handleInlineChange(selectedTicket.id, 'status', 'closed');
+            setSelectedTicket(null);
+            toast.success('Ticket closed as spam');
+          } else {
+            toast.success('Opening conversation for manual resolution...');
+            navigate(`/admin/tickets/${selectedTicket.ticketId}`);
+          }
+        }, 500);
+      } else {
+        toast.success('Verification Complete: Image is Genuine');
+      }
     } catch (error) {
       console.error('Verification failed:', error);
       toast.error('AI Verification Service Offline');

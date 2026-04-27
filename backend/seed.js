@@ -20,10 +20,11 @@ const seed = async () => {
   await Ticket.deleteMany();
 
   const admin = await User.create({
-    name: 'Admin User',
+    name: 'srisanth',
     email: 'bagilishivaprasad9@gmail.com',
     password: 'shiva@05',
-    role: 'admin'
+    role: 'admin',
+    isVerified: true
   });
   const customer = await User.create({
     name: 'John Doe',

@@ -10,4 +10,4 @@ Frontend/.env
 .vscode/
 uploads/
 *.log
-.DS_Store
+.DS_Store\nscratch/

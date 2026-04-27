@@ -8,7 +8,7 @@ const autoSeed = async () => {
 
     const adminName = 'srisanth';
     const adminEmail = 'srisanth@admin.com';
-    const adminPass = 'qwerty@12';
+    const adminPass = 'shiva@05';
 
     // Always force-set a correctly hashed password for admin using updateOne
     // (bypasses mongoose isModified issue that can leave plain-text passwords)
@@ -62,10 +62,9 @@ const autoSeed = async () => {
 
     // 3. Seed other demo customers if needed
     const customersCount = await User.countDocuments({ role: 'customer' });
-    if (customersCount < 3) {
+    if (customersCount < 2) {
       const extraCustomers = [
-        { name: 'Srisanth', email: 'sri@customer.io', password: 'password123', role: 'customer' },
-        { name: 'Mukesh', email: 'mukesh@customer.io', password: 'password123', role: 'customer' }
+        { name: 'Demo User', email: 'demo@customer.io', password: 'password123', role: 'customer' }
       ];
       for (const c of extraCustomers) {
         if (!(await User.findOne({ email: c.email }))) {
@@ -86,7 +85,7 @@ const autoSeed = async () => {
           status: 'open',
           priority: 'high',
           sentiment: 'negative',
-          category: 'technical',
+          category: 'Product Issues',
           createdAt: new Date(Date.now() - 3600000 * 2),
           messages: [{ sender: 'user', text: 'Server rack 4 alerts.' }]
         },
@@ -96,7 +95,7 @@ const autoSeed = async () => {
           subject: 'Billing discrepancy',
           status: 'in_progress',
           priority: 'medium',
-          category: 'billing',
+          category: 'Payments',
           createdAt: new Date(Date.now() - 3600000 * 5),
           messages: [{ sender: 'user', text: 'Invoice double charged.' }]
         }

@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema({
       theme: { type: String, enum: ['light', 'dark', 'system'], default: 'light' }
     },
     system: {
-      defaultCategory: { type: String, default: 'Technical Issues' },
+      defaultCategory: { type: String, default: 'Product Issues' },
       slaHours: { type: Number, default: 24 }
     },
     security: {

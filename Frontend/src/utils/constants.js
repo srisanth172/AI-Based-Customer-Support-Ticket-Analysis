@@ -79,21 +79,23 @@ export const SENTIMENT_COLORS = {
 
 // Ticket categories
 export const TICKET_CATEGORY = {
-  BILLING: 'billing',
-  TECHNICAL: 'technical',
-  DELIVERY: 'delivery',
-  ACCOUNT: 'account',
-  PRODUCT: 'product',
-  GENERAL: 'general',
+  PAYMENTS: 'Payments',
+  ORDERS_DELIVERY: 'Orders & Delivery',
+  RETURNS_REFUNDS: 'Returns & Refunds',
+  PRODUCT_ISSUES: 'Product Issues',
+  ACCOUNT_ISSUES: 'Account Issues',
+  NOTIFICATIONS: 'Notifications & Communication',
+  SUBSCRIPTIONS: 'Subscription & Plans',
 };
 
 export const TICKET_CATEGORY_LABELS = {
-  [TICKET_CATEGORY.BILLING]: 'Billing',
-  [TICKET_CATEGORY.TECHNICAL]: 'Technical',
-  [TICKET_CATEGORY.DELIVERY]: 'Delivery',
-  [TICKET_CATEGORY.ACCOUNT]: 'Account',
-  [TICKET_CATEGORY.PRODUCT]: 'Product',
-  [TICKET_CATEGORY.GENERAL]: 'General',
+  [TICKET_CATEGORY.PAYMENTS]: 'Payments',
+  [TICKET_CATEGORY.ORDERS_DELIVERY]: 'Orders & Delivery',
+  [TICKET_CATEGORY.RETURNS_REFUNDS]: 'Returns & Refunds',
+  [TICKET_CATEGORY.PRODUCT_ISSUES]: 'Product Issues',
+  [TICKET_CATEGORY.ACCOUNT_ISSUES]: 'Account Issues',
+  [TICKET_CATEGORY.NOTIFICATIONS]: 'Notifications & Communication',
+  [TICKET_CATEGORY.SUBSCRIPTIONS]: 'Subscription & Plans',
 };
 
 // User roles

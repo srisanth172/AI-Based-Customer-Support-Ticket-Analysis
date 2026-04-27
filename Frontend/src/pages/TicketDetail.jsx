@@ -102,11 +102,9 @@ const TicketDetail = () => {
   };
 
   const handleEscalate = async () => {
-    const teamName = ticket.category === 'billing' ? 'Billing Team' : 
-                     ticket.category === 'technical' ? 'Tech Support' : 
-                     ticket.category === 'account' ? 'Account Specialists' : 'Support Team';
+    const teamName = ticket.category || 'Support';
                      
-    const escalationText = `This issue is getting forwarded to the ${teamName} and it will be resolved within 24 hours.`;
+    const escalationText = `This issue is getting forwarded to the ${teamName} department and it will be resolved within 24 hours.`;
     
     if (chatRef.current) {
       chatRef.current.setText(escalationText);
@@ -244,6 +242,7 @@ const TicketDetail = () => {
                 messages={ticket.messages || []}
                 ticketId={ticket.ticketId}
                 onSendMessage={handleSendMessage}
+                onUpdateTicket={handleAdminUpdate}
                 disabled={ticket.status === 'closed'}
               />
               <div ref={chatEndRef} />

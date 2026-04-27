@@ -6,6 +6,12 @@ const Notification = require('../models/Notification');
 const { emitTicketCreated, emitTicketUpdated } = require('../services/socketService');
 const path = require('path');
 
+const VALID_CATEGORIES = [
+  'Payments', 'Orders & Delivery', 'Returns & Refunds', 
+  'Product Issues', 'Account Issues', 'Notifications & Communication', 
+  'Subscription & Plans'
+];
+
 const generateTicketId = () => 'TKT-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6).toUpperCase();
 
 exports.createTicket = async (req, res) => {
@@ -122,6 +128,56 @@ exports.addMessage = async (req, res) => {
 
     if (sender === 'user') {
       const lowerMsg = (message || '').toLowerCase().trim();
+
+      // === SPAM RESUBMISSION: Customer sends a new photo on a spam ticket ===
+      if (ticket.status === 'spam' && photoFile) {
+        const newPhotoUrl = `/uploads/${photoFile.filename}`;
+        const fullNewImagePath = path.join(__dirname, '../../../uploads', photoFile.filename);
+
+        // Keep the old photo by pushing to additionalPhotos
+        ticket.additionalPhotos.push({ url: newPhotoUrl, uploadedAt: new Date() });
+
+        // Re-analyze with new photo
+        const reAnalysis = await aiService.analyzeTicketWithImage(ticket.description, fullNewImagePath);
+        const isStillMismatch = reAnalysis.isSpam === true;
+
+        if (isStillMismatch) {
+          // Still a mismatch
+          ticket.messages.push({
+            sender: 'bot',
+            text: `⚠️ **Still Not Matching**\n\nThe new photo you uploaded still does not appear to match your reported issue. Please upload a clear screenshot or photo that directly shows the problem you described.\n\nAll uploaded photos are preserved for admin review.`,
+            timestamp: new Date()
+          });
+        } else {
+          // Photo now matches — reopen ticket
+          ticket.status = 'open';
+          ticket.priority = reAnalysis.priority || ticket.priority;
+          ticket.aiAnalysis = { ...ticket.aiAnalysis, ...reAnalysis };
+          ticket.activityLog.push({
+            actionType: 'SPAM_CLEARED',
+            message: 'Ticket reopened: new photo verified and matches the issue description.'
+          });
+          ticket.messages.push({
+            sender: 'bot',
+            text: `✅ **Photo Verified!**\n\nYour new photo matches the issue description. This ticket has been reopened with all your submitted photos preserved. Our support team will now assist you.`,
+            timestamp: new Date()
+          });
+
+          await Notification.create({
+            recipient: 'admin',
+            title: 'Spam Ticket Reopened',
+            description: `Ticket ${ticket.ticketId} was reopened after customer resubmitted a valid photo.`,
+            type: 'warning',
+            ticketId: ticket.ticketId
+          });
+        }
+
+        await ticket.save();
+        await ticket.populate('userId', 'name email');
+        emitTicketUpdated(ticket);
+        return res.json(ticket);
+      }
+      // === END SPAM RESUBMISSION ===
       
       // 6. Resolution Logic: Detection of "Solved" keywords
       const resolvedKeywords = ['it works', 'solved', 'fixed', 'it worked', 'thanks it worked', 'problem solved', 'thank you solved', 'resolved'];
@@ -206,7 +262,7 @@ exports.addMessage = async (req, res) => {
       // 2. Auto-escalation detection
       else if (lowerAdminMsg.includes('forwarded to') && lowerAdminMsg.includes('within 24 hours')) {
         ticket.status = 'escalated';
-        ticket.assignedTeam = ticket.category === 'billing' ? 'billing_team' : ticket.category === 'technical' ? 'tech_support' : ticket.category === 'account' ? 'customer_success' : 'tech_support';
+        ticket.assignedTeam = ticket.category;
         
         let adminName = 'Admin';
         if (req.user && req.user.userId) {
@@ -403,7 +459,7 @@ exports.getDashboardStats = async (req, res) => {
       { $sort: { count: -1 } },
       { $limit: 1 }
     ]);
-    const topCategory = topCategoryResult[0]?._id || 'Technical Issues';
+    const topCategory = (totalTickets > 0 && topCategoryResult[0]?._id) ? topCategoryResult[0]._id : 'None';
 
     const negativeCount = await Ticket.countDocuments({ sentiment: 'negative' });
     const negativeRatio = totalTickets > 0 ? negativeCount / totalTickets : 0;
@@ -500,65 +556,48 @@ exports.checkDuplicates = async (req, res) => {
 // Updated endpoint: Create ticket with photo upload
 exports.createTicketWithPhoto = async (req, res) => {
   try {
-    console.log('=== CREATE TICKET REQUEST ===');
-    console.log('Body:', req.body);
-    console.log('File:', req.file);
-    console.log('User object:', req.user);
-    console.log('User properties:', Object.keys(req.user || {}));
-    
     const { title, description, category } = req.body;
-    
-    // Try different property names for userId
     const userId = req.user?.userId || req.user?._id || req.user?.id;
-    console.log('Extracted userId:', userId);
-    
     const photoFile = req.file;
-    
-    if (!title || !description) {
-      console.log('Missing title or description');
-      return res.status(400).json({ message: 'Title and description are required' });
-    }
-    
-    if (!photoFile) {
-      console.log('No photo file');
-      return res.status(400).json({ message: 'Photo is required' });
-    }
 
-    if (!category) {
-      console.log('No category');
-      return res.status(400).json({ message: 'Category is required' });
-    }
+    if (!title || !description) return res.status(400).json({ message: 'Title and description are required' });
+    if (!photoFile) return res.status(400).json({ message: 'Photo is required' });
+    if (!category) return res.status(400).json({ message: 'Category is required' });
+    if (!userId) return res.status(401).json({ message: 'User authentication failed' });
 
-    if (!userId) {
-      console.log('No userId extracted');
-      return res.status(401).json({ message: 'User authentication failed' });
-    }
-    
-    // Generate unique ticket ID
     const ticketId = 'TKT-' + Date.now();
-    
-    // Store photo path (in production, use cloud storage like S3)
     const photoUrl = `/uploads/${photoFile.filename}`;
     const fullImagePath = path.join(__dirname, '../../../uploads', photoFile.filename);
 
-    // Call AI vision service
+    // AI vision analysis (checks category, validity AND image-description match)
     const aiAnalysis = await aiService.analyzeTicketWithImage(description, fullImagePath);
 
-    // Use AI categorized domain directly
-    const normalizedCategory = aiAnalysis.category || category || 'Technical Issues';
-    console.log('Category Selection:', normalizedCategory);
-
-    const ticketStatus = aiAnalysis.isSpam ? 'spam' : 'open';
-    const finalPriority = aiAnalysis.isSpam ? 'low' : (aiAnalysis.priority || 'medium');
-    
-    // Check for Validity/Scope per Prompt requirements
-    if (aiAnalysis.category === 'OutOfScope' || aiAnalysis.isValid === false) {
+    // Hard out-of-scope rejection (no ticket created)
+    if (aiAnalysis.category === 'OutOfScope' || aiAnalysis.isValid === false || !VALID_CATEGORIES.includes(aiAnalysis.category)) {
       console.log('Ticket rejected: Out of Scope or Invalid');
-      return res.status(400).json({ 
-        message: 'This issue is outside our support scope.',
+      return res.status(400).json({
+        message: 'This issue is outside our support scope. Please ensure your description is relevant to our supported categories.',
         category: aiAnalysis.category,
         reasoning: aiAnalysis.reasoning
       });
+    }
+
+    const normalizedCategory = aiAnalysis.category;
+    const isImageMismatch = aiAnalysis.isSpam === true;
+
+    // Build ticket — if image doesn't match description, mark as spam and wait for resubmission
+    const ticketStatus = isImageMismatch ? 'spam' : 'open';
+    const finalPriority = isImageMismatch ? 'low' : (aiAnalysis.priority || 'medium');
+
+    const botSpamMessage = isImageMismatch
+      ? `⚠️ **Image Mismatch Detected**\n\nThe photo you uploaded does not appear to match your description: "*${description.slice(0, 100)}*".\n\nThis ticket has been flagged. Please reply with a **correct screenshot or photo** that clearly shows the issue. Once verified, your ticket will be reopened and our team will assist you.`
+      : null;
+
+    const initialMessages = [
+      { sender: 'user', text: description, attachmentUrl: photoUrl, timestamp: new Date() }
+    ];
+    if (botSpamMessage) {
+      initialMessages.push({ sender: 'bot', text: botSpamMessage, timestamp: new Date() });
     }
 
     const ticketData = {
@@ -573,41 +612,40 @@ exports.createTicketWithPhoto = async (req, res) => {
       priority: finalPriority,
       sentiment: aiAnalysis.sentiment || 'neutral',
       aiAnalysis,
-      messages: [
-        {
-          sender: 'user',
-          text: description,
-          attachmentUrl: photoUrl,
-          timestamp: new Date()
-        }
-      ]
+      messages: initialMessages,
+      activityLog: isImageMismatch ? [{
+        actionType: 'SPAM_DETECTED',
+        message: 'Ticket flagged as spam: uploaded image does not match the issue description.'
+      }] : []
     };
-    
-    console.log('Creating ticket with data:', ticketData);
-    
+
     const ticket = new Ticket(ticketData);
     await ticket.save();
-    
-    console.log('Ticket saved successfully:', ticket._id);
-    
-    // Populate user info
     await ticket.populate('userId', 'name email');
-    emitTicketCreated(ticket);
-    
+
+    // Notify admin only for real tickets, not spam
+    if (!isImageMismatch) {
+      await Notification.create({
+        recipient: 'admin',
+        title: 'New Ticket Created',
+        description: `A new ticket (${ticket.ticketId}) was created by ${ticket.userId.name}.`,
+        type: 'info',
+        ticketId: ticket.ticketId
+      });
+      emitTicketCreated(ticket);
+    } else {
+      // Still emit so admin can see spam tickets in real-time
+      emitTicketCreated(ticket);
+    }
+
     res.status(201).json({
-      message: 'Ticket created successfully',
-      ticket
+      message: isImageMismatch ? 'Ticket flagged: image does not match description' : 'Ticket created successfully',
+      ticket,
+      isSpam: isImageMismatch
     });
   } catch (error) {
-    console.error('=== CREATE TICKET ERROR ===');
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
-    console.error('Full error:', error);
-    res.status(500).json({ 
-      message: 'Failed to create ticket', 
-      error: error.message,
-      details: error.stack
-    });
+    console.error('=== CREATE TICKET ERROR ===', error.message);
+    res.status(500).json({ message: 'Failed to create ticket', error: error.message });
   }
 };
 
@@ -689,11 +727,13 @@ exports.talkToCopilot = async (req, res) => {
 
 exports.updateTicketAdmin = async (req, res) => {
   try {
-    const { adminId, internalNote } = req.body;
+    const { adminId, internalNote, category, status } = req.body;
     const ticket = await Ticket.findOne({ ticketId: req.params.id });
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
     
     if (adminId) ticket.assignedTo = adminId;
+    if (category) ticket.category = category;
+    if (status) ticket.status = status;
     
     if (internalNote) {
       if (!ticket.internalNotes) ticket.internalNotes = [];
@@ -746,7 +786,7 @@ exports.escalateTicket = async (req, res) => {
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
 
     ticket.status = 'escalated';
-    ticket.assignedTeam = team || 'tech_support';
+    ticket.assignedTeam = ticket.category;
     
     // Add activity log
     ticket.activityLog.push({

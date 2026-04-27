@@ -16,6 +16,7 @@ import {
 import logo from '../../assets/logo.png';
 import { useAuth } from '../../context/AuthContext';
 import NotificationDropdown from '../UI/NotificationDropdown';
+import CustomerAIChatbot from '../Dashboard/CustomerAIChatbot';
 
 const CustomerLayout = ({ children }) => {
   const { user, logout } = useAuth();
@@ -133,21 +134,22 @@ const CustomerLayout = ({ children }) => {
         </nav>
 
         {/* Bottom user section */}
-        <div className="p-4 border-t border-white/5 bg-white/[0.02]">
-          <div className="flex items-center gap-3 px-3 py-2.5 mb-2">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center text-white font-semibold text-sm ring-1 ring-white/10 shadow-inner">
+        <div className="p-4 border-t border-white/5">
+          {/* Profile Card */}
+          <div className="flex items-center gap-3 px-3 py-3 mb-2 rounded-2xl bg-white/[0.04] border border-white/5">
+            <div className="h-10 w-10 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-base shadow-lg shadow-emerald-500/20 shrink-0">
               {user?.name?.charAt(0).toUpperCase() || 'U'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-bold text-slate-100 truncate">{user?.name || 'User'}</p>
-              <p className="text-[11px] text-slate-500 truncate font-medium">{user?.email || 'user@email.com'}</p>
+              <p className="text-[14px] font-bold text-white truncate">{user?.name || 'User'}</p>
+              <p className="text-[11px] text-slate-400 truncate font-medium">{user?.email || 'user@email.com'}</p>
             </div>
           </div>
           <button
             onClick={logout}
-            className="flex w-full items-center gap-3 px-4 py-2.5 text-[13px] font-medium text-slate-500 rounded-xl hover:bg-rose-500/10 hover:text-rose-400 transition-all group"
+            className="flex w-full items-center gap-3 px-4 py-2.5 text-[13px] font-semibold text-slate-400 rounded-xl hover:bg-rose-500/10 hover:text-rose-400 transition-all group"
           >
-            <ArrowRightOnRectangleIcon className="h-5 w-5 text-slate-600 group-hover:text-rose-400 transition-colors" />
+            <ArrowRightOnRectangleIcon className="h-5 w-5 text-slate-500 group-hover:text-rose-400 transition-colors" />
             Sign Out
           </button>
         </div>
@@ -165,19 +167,6 @@ const CustomerLayout = ({ children }) => {
             >
               <Bars3Icon className="h-6 w-6" />
             </button>
-
-            <div className="max-w-md w-full hidden sm:block">
-              <div className="relative group">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-                  <MagnifyingGlassIcon className="h-5 w-5 text-slate-500 group-focus-within:text-emerald-400 transition-colors" />
-                </div>
-                <input
-                  type="search"
-                  className="block w-full rounded-2xl border border-white/5 py-2.5 pl-11 pr-4 focus:ring-2 focus:ring-emerald-500/50 sm:text-[14px] bg-white/[0.03] transition-all placeholder:text-slate-500 text-slate-200 outline-none"
-                  placeholder="Search tickets..."
-                />
-              </div>
-            </div>
           </div>
 
           {/* Right: notification + profile */}
@@ -241,6 +230,9 @@ const CustomerLayout = ({ children }) => {
             </motion.div>
           </AnimatePresence>
         </main>
+        
+        {/* AI Chatbot Component */}
+        <CustomerAIChatbot />
       </div>
     </div>
   );

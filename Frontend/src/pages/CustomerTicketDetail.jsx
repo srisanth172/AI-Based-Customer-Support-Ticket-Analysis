@@ -205,22 +205,7 @@ const CustomerTicketDetail = () => {
         {/* Main Conversation Area */}
         <div className="flex-1 flex flex-col gap-6 min-w-0">
           
-          {/* AI Reasoning Banner */}
-          {ticket?.aiAnalysis?.reasoning && ticket.messages?.length > 1 && (
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="p-6 bg-emerald-600 rounded-[24px] shadow-2xl shadow-emerald-600/20 text-white flex items-start gap-4 border border-emerald-400/30"
-            >
-              <div className="p-2.5 bg-white/20 rounded-xl shrink-0 backdrop-blur-md">
-                <SparklesIcon className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">Support Intelligence</p>
-                <p className="text-sm font-semibold leading-relaxed">{ticket.aiAnalysis.reasoning}</p>
-              </div>
-            </motion.div>
-          )}
+
 
           {/* Chat Container */}
           <div className="bg-[#041209]/60 backdrop-blur-xl rounded-[24px] border border-white/5 h-[650px] flex flex-col overflow-hidden shadow-2xl">

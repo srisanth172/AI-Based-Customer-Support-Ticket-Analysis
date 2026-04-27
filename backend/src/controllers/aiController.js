@@ -36,12 +36,24 @@ Current Dashboard Context:
 - Negative Customer Sentiment: ${negativeTickets}
 - Average Resolution Time: ${avgResTime} minutes.`;
 
-    console.log('--- SENDING TO OPENROUTER ---');
-    const apiKey = (process.env.OPENROUTER_API_KEY || '').trim();
-    const model = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
+    const groqKey = (process.env.GROQ_API_KEY || '').trim();
+    const orKey = (process.env.OPENROUTER_API_KEY || '').trim();
+    const apiKey = groqKey || orKey;
+    
+    if (!apiKey) {
+      return res.status(500).json({ error: "AI API Key missing" });
+    }
+
+    const apiUrl = groqKey 
+      ? "https://api.groq.com/openai/v1/chat/completions" 
+      : "https://openrouter.ai/api/v1/chat/completions";
+    
+    const model = groqKey ? "llama3-8b-8192" : (process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini");
+
+    console.log(`--- SENDING TO ${groqKey ? 'GROQ' : 'OPENROUTER'} ---`);
     
     const response = await axios.post(
-      "https://openrouter.ai/api/v1/chat/completions",
+      apiUrl,
       {
         model: model,
         messages: [
@@ -107,13 +119,24 @@ exports.analyzeImage = async (req, res) => {
       }
     }
 
-    const apiKey = (process.env.OPENROUTER_API_KEY || '').trim();
-    const model = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
+    const groqKey = (process.env.GROQ_API_KEY || '').trim();
+    const orKey = (process.env.OPENROUTER_API_KEY || '').trim();
+    const apiKey = groqKey || orKey;
+
+    if (!apiKey) {
+      return res.status(500).json({ error: "AI API Key missing" });
+    }
+
+    const apiUrl = groqKey 
+      ? "https://api.groq.com/openai/v1/chat/completions" 
+      : "https://openrouter.ai/api/v1/chat/completions";
     
-    console.log('[AI Vision] Sending to OpenRouter model:', model);
+    const model = groqKey ? "llama-3.2-11b-vision-preview" : (process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini");
+    
+    console.log(`[AI Vision] Sending to ${groqKey ? 'Groq' : 'OpenRouter'} model:`, model);
 
     const response = await axios.post(
-      "https://openrouter.ai/api/v1/chat/completions",
+      apiUrl,
       {
         model: model,
         messages: [
@@ -147,5 +170,21 @@ exports.analyzeImage = async (req, res) => {
       error: "AI Vision analysis failed", 
       details: error.response?.data?.error?.message || error.message 
     });
+  }
+};
+const aiService = require('../services/aiService');
+
+exports.customerChat = async (req, res) => {
+  try {
+    const { messages } = req.body;
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: 'Messages array is required' });
+    }
+
+    const reply = await aiService.chatWithCustomer(messages);
+    res.json({ reply });
+  } catch (error) {
+    console.error('[AI Chat] Error:', error.message);
+    res.status(500).json({ error: 'Chat failed', details: error.message });
   }
 };

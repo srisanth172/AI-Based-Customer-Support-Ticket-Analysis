@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const messageSchema = new mongoose.Schema({
   sender: { type: String, enum: ['user', 'bot', 'admin'], required: true },
   text: { type: String, required: true },
+  attachmentUrl: { type: String },
   files: [{ name: String, url: String, fileType: String }],
   timestamp: { type: Date, default: Date.now },
 });
@@ -27,9 +28,18 @@ const ticketSchema = new mongoose.Schema({
   status: { type: String, enum: ['open', 'in_progress', 'waiting_for_customer', 'resolved', 'closed', 'escalated', 'reopened', 'spam'], default: 'open' },
   priority: { type: String, enum: ['low', 'medium', 'high'], default: 'medium' },
   sentiment: { type: String, enum: ['positive', 'neutral', 'negative'], default: 'neutral' },
-  category: { type: String, default: 'Product Issues' },
+  category: { 
+    type: String, 
+    enum: [
+      'Payments', 'Orders & Delivery', 'Returns & Refunds', 
+      'Product Issues', 'Account Issues', 'Notifications & Communication', 
+      'Subscription & Plans', 'OutOfScope'
+    ],
+    default: 'Product Issues' 
+  },
   assignedTeam: { type: String, default: 'unassigned' },
   eta: { type: Date },
+  additionalPhotos: [{ url: String, uploadedAt: { type: Date, default: Date.now } }],
   messages: [messageSchema],
   internalNotes: [internalNoteSchema],
   activityLog: [activityLogSchema],

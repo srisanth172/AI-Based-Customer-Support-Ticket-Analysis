@@ -60,7 +60,7 @@ const AIPanel = ({ ticket, onUseSuggestion }) => {
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Category</p>
-            <p className="text-sm font-bold text-emerald-500 capitalize">{category}</p>
+            <p className="text-sm font-bold text-emerald-500 capitalize">{category || 'General Support'}</p>
           </div>
           <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">AI Priority</p>

@@ -111,9 +111,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const googleLogin = async (credential) => {
+  const googleLogin = async (credentialOrCode) => {
     try {
-      const response = await apiClient.post('/auth/google', { token: credential });
+      // auth-code flow sends a code string (longer), id_token flow sends a JWT
+      const isAuthCode = credentialOrCode && !credentialOrCode.includes('.');
+      const payload = isAuthCode
+        ? { code: credentialOrCode }
+        : { token: credentialOrCode };
+
+      const response = await apiClient.post('/auth/google', payload);
       const { token: newToken, user: userData } = response.data;
       localStorage.setItem('token', newToken);
       setToken(newToken);

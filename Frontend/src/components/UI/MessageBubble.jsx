@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
-const MessageBubble = ({ message, ticketId }) => {
+const MessageBubble = ({ message, ticketId, onUpdateTicket }) => {
   const isOwnMessage = message.sender === 'admin';
   const isUser = message.sender === 'user';
   const isBot = message.sender === 'bot';
@@ -13,16 +13,37 @@ const MessageBubble = ({ message, ticketId }) => {
     setAnalyzingMap(prev => ({ ...prev, [idx]: true }));
     try {
       const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      const token = localStorage.getItem('token'); // assuming token is here
+      const token = localStorage.getItem('token'); 
       const res = await axios.post(
         `${BASE_URL}/ai/analyze-image`,
         { imageUrl: url },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setAnalysisResultMap(prev => ({ ...prev, [idx]: res.data.analysis || 'Checked' }));
-      toast.success('Image analyzed successfully!');
+      const result = res.data.analysis;
+      setAnalysisResultMap(prev => ({ ...prev, [idx]: result || 'Checked' }));
+      
+      if (result === 'AI Generated' && onUpdateTicket && ticketId) {
+        toast.error('AI Generated Image Detected!', { icon: '⚠️', duration: 4000 });
+        
+        // 1. Mark as spam
+        await onUpdateTicket('category', 'spam');
+        
+        // 2. Ask admin whether to close
+        setTimeout(async () => {
+          const shouldClose = window.confirm('AI generated image detected. This ticket has been automatically marked as spam. Would you like to CLOSE this ticket?');
+          
+          if (shouldClose) {
+            await onUpdateTicket('status', 'closed');
+            toast.success('Ticket closed as spam');
+          } else {
+            toast.success('Ticket kept open for manual resolution');
+          }
+        }, 500);
+      } else {
+        toast.success('Image Verified as Genuine');
+      }
     } catch (error) {
-      toast.error('Failed to analyze image for AI artifacts');
+      toast.error('Failed to analyze image');
       setAnalysisResultMap(prev => ({ ...prev, [idx]: 'Analysis failed' }));
     } finally {
       setAnalyzingMap(prev => ({ ...prev, [idx]: false }));
@@ -77,10 +98,14 @@ const MessageBubble = ({ message, ticketId }) => {
                             disabled={analyzingMap[idx]}
                             className="text-[10px] font-black bg-white/10 text-white px-2.5 py-1 rounded-lg hover:bg-emerald-500 transition-all uppercase tracking-widest whitespace-nowrap active:scale-95"
                           >
-                            {analyzingMap[idx] ? 'Checking...' : 'AI Scan'}
+                            {analyzingMap[idx] ? 'Analyzing...' : 'Verify Authenticity'}
                           </button>
                         ) : (
-                          <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
+                          <span className={`text-xs font-bold px-2 py-1 rounded ${
+                            analysisResultMap[idx].includes('AI Generated') 
+                              ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30' 
+                              : 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
+                          }`}>
                             {analysisResultMap[idx]}
                           </span>
                         )}

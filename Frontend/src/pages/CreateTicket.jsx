@@ -87,7 +87,7 @@ const CreateTicket = () => {
     } catch (error) {
       console.error('Classification error:', error);
       // Return default category on error
-      return { category: 'General Inquiry', priority: 'Medium' };
+      return { category: 'Product Issues', priority: 'Medium' };
     }
   };
 

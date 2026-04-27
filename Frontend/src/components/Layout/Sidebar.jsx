@@ -17,10 +17,6 @@ const Sidebar = () => {
   return (
     <aside className="fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 border-r border-emerald-50 dark:border-emerald-900/20 bg-white/50 dark:bg-[#020B06]/90 backdrop-blur-xl transition-colors duration-200 p-4 z-20 hidden lg:flex flex-col">
       
-      <div className="text-xl font-bold bg-gradient-to-r from-emerald-500 to-emerald-700 bg-clip-text text-transparent px-3 mb-8 mt-2 uppercase tracking-tight">
-        Support Admin
-      </div>
-      
       <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4 px-3 mt-4">Main Menu</div>
       
       <nav className="space-y-1.5 flex-1">
@@ -51,14 +47,14 @@ const Sidebar = () => {
       </nav>
 
       <div className="mt-auto space-y-4">
-        <div className="p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-[#041209] dark:to-[#020B06] border border-emerald-100 dark:border-emerald-900/30 rounded-2xl">
+        <div className="p-4 bg-white/[0.04] border border-white/5 rounded-2xl mx-1">
            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-inner font-bold text-lg">
+              <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 font-bold text-lg shrink-0">
                 {user?.name ? user.name.substring(0, 1).toUpperCase() : 'S'}
               </div>
-              <div>
-                <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate w-32">{user?.name || 'Admin'}</p>
-                <p className="text-[11px] text-slate-500 truncate mt-0.5">{user?.email || 'admin@swift.com'}</p>
+              <div className="min-w-0">
+                <p className="text-[14px] font-bold text-white truncate">{user?.name || 'shivaniiii'}</p>
+                <p className="text-[11px] text-slate-400 truncate mt-0.5">{user?.email || 'bonguukinguu@gmail.com'}</p>
               </div>
            </div>
         </div>
