@@ -481,20 +481,26 @@ class AIService {
       }))
     ];
 
-    const response = await axios.post(apiUrl, {
-        model,
-        temperature: 0.5,
-        messages: apiMessages
-      }, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:5173",
-        "X-Title": "Swift AI Customer Chatbot",
-      }
-    });
+    try {
+      const response = await axios.post(apiUrl, {
+          model,
+          temperature: 0.5,
+          messages: apiMessages
+        }, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:5173",
+          "X-Title": "Swift AI Customer Chatbot",
+        }
+      });
 
-    return response.data?.choices?.[0]?.message?.content || "Sorry, I couldn't treat that request at this moment.";
+      return response.data?.choices?.[0]?.message?.content || "Sorry, I couldn't treat that request at this moment.";
+    } catch (error) {
+      console.error('[AI Chat] Provider Error:', error.response?.data || error.message);
+      const details = error.response?.data?.error?.message || error.message;
+      return `⚠️ **AI Service Error**: ${details}\n\nPlease check your API keys and quotas in the dashboard.`;
+    }
   }
 
   async chatWithCopilot(message, context = "") {
