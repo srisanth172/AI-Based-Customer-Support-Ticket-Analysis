@@ -1,4 +1,5 @@
 const fs = require('fs');
+const axios = require('axios');
 
 class AIService {
   _getAIConfig() {
@@ -89,15 +90,7 @@ class AIService {
       `classify the following user issue: ${text}`,
     ].join('\n');
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:5173",
-        "X-Title": "Support System Classifier",
-      },
-      body: JSON.stringify({
+    const response = await axios.post(apiUrl, {
         model,
         temperature: 0.2,
         messages: [
@@ -111,20 +104,26 @@ class AIService {
           },
         ],
         response_format: { type: "json_object" }
-      }),
+      }, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:5173",
+        "X-Title": "Support System Classifier",
+      }
     });
 
-    if (!response.ok) {
-      const textBody = await response.text();
-      throw new Error(`AI request failed: ${response.status} ${textBody}`);
-    }
-
-    const data = await response.json();
-    const content = data?.choices?.[0]?.message?.content;
+    const content = response.data?.choices?.[0]?.message?.content;
     if (!content) return null;
 
-    const normalized = content.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/, '').trim();
-    const parsed = JSON.parse(normalized);
+    let parsed;
+    try {
+      const normalized = content.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/, '').trim();
+      parsed = JSON.parse(normalized);
+    } catch (e) {
+      console.error('[AI Categorization] JSON Parse Error:', e.message, 'Content:', content);
+      return null;
+    }
     return {
       sentiment: parsed.sentiment || 'neutral',
       priority: (parsed.priority || 'Medium').toLowerCase(),
@@ -338,15 +337,7 @@ class AIService {
         });
       }
 
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:5173",
-          "X-Title": "Support AI Vision",
-        },
-        body: JSON.stringify({
+      const response = await axios.post(apiUrl, {
           model,
           temperature: 0.2,
           messages: [
@@ -360,19 +351,26 @@ class AIService {
             }
           ],
           response_format: { type: "json_object" }
-        })
+        }, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:5173",
+          "X-Title": "Support AI Vision",
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`Vision AI request failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const content = data?.choices?.[0]?.message?.content;
+      const content = response.data?.choices?.[0]?.message?.content;
       if (!content) return { ...this.analyzeTicket(text), isSpam: false };
 
-      const normalized = content.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/, '').trim();
-      const parsed = JSON.parse(normalized);
+      let parsed;
+      try {
+        const normalized = content.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/, '').trim();
+        parsed = JSON.parse(normalized);
+      } catch (e) {
+        console.error('[AI Vision] JSON Parse Error:', e.message, 'Content:', content);
+        return { ...this.analyzeTicket(text), isSpam: false };
+      }
       
       return {
         sentiment: parsed.sentiment || 'neutral',
@@ -412,27 +410,23 @@ class AIService {
     - Historical Trends (Last 7 Days): ${JSON.stringify(contextData.trends || [])}`;
 
     try {
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:5173",
-          "X-Title": "Nexa Admin Copilot",
-        },
-        body: JSON.stringify({
+      const response = await axios.post(apiUrl, {
           model,
           temperature: 0.3,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: question }
           ]
-        })
+        }, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:5173",
+          "X-Title": "Nexa Admin Copilot",
+        }
       });
 
-      if (!response.ok) throw new Error('Copilot AI API failed');
-      const data = await response.json();
-      return data?.choices?.[0]?.message?.content || "Sorry, I couldn't process that request at this moment.";
+      return response.data?.choices?.[0]?.message?.content || "Sorry, I couldn't process that request at this moment.";
     } catch (error) {
       console.warn('Copilot using local intelligence fallback:', error.message);
       
@@ -486,28 +480,20 @@ class AIService {
       }))
     ];
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
+    const response = await axios.post(apiUrl, {
+        model,
+        temperature: 0.5,
+        messages: apiMessages
+      }, {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:5173",
         "X-Title": "Swift AI Customer Chatbot",
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.5,
-        messages: apiMessages
-      })
+      }
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`AI Chat API failed: ${response.status} ${errorText}`);
-    }
-    
-    const data = await response.json();
-    return data?.choices?.[0]?.message?.content || "Sorry, I couldn't treat that request at this moment.";
+    return response.data?.choices?.[0]?.message?.content || "Sorry, I couldn't treat that request at this moment.";
   }
 
   async chatWithCopilot(message, context = "") {
@@ -522,26 +508,22 @@ class AIService {
     Keep your answers concise and professional.`;
 
     try {
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:5173",
-          "X-Title": "Support Admin Copilot Chat",
-        },
-        body: JSON.stringify({
+      const response = await axios.post(apiUrl, {
           model,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: message }
           ]
-        })
+        }, {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:5173",
+          "X-Title": "Support Admin Copilot Chat",
+        }
       });
 
-      if (!response.ok) return "I'm having trouble connecting to my brain right now.";
-      const data = await response.json();
-      return data?.choices?.[0]?.message?.content || "I couldn't process that request.";
+      return response.data?.choices?.[0]?.message?.content || "I couldn't process that request.";
     } catch (error) {
       console.error('Copilot Chat error:', error);
       return "Something went wrong with the Copilot service.";
