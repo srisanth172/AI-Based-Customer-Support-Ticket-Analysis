@@ -3,6 +3,7 @@ const http = require('http');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
+const fs = require('fs');
 const connectDB = require('./config/database');
 const authRoutes = require('./routes/authRoutes');
 const ticketRoutes = require('./routes/ticketRoutes');
@@ -50,6 +51,11 @@ app.use((req, res, next) => {
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
 app.get('/', (req, res) => {
+  // If the frontend build exists, serve it, otherwise show the API message
+  const distPath = path.join(__dirname, '../../Frontend/dist/index.html');
+  if (fs.existsSync(distPath)) {
+    return res.sendFile(distPath);
+  }
   res.json({ message: 'AI Ticket Analysis API is running' });
 });
 
@@ -64,12 +70,28 @@ app.use('/api/live-chat', liveChatRoutes);
 app.use('/api/ai', require('./routes/aiRoutes'));
 app.use('/api/notifications', notificationRoutes);
 
+// Serve static files from the Frontend dist directory
+app.use(express.static(path.join(__dirname, '../../Frontend/dist')));
+
+// SPA fallback: for any non-API route, serve the frontend's index.html
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+  const distPath = path.join(__dirname, '../../Frontend/dist/index.html');
+  if (fs.existsSync(distPath)) {
+    res.sendFile(distPath);
+  } else {
+    next();
+  }
+});
+
 app.use(notFound);
 app.use(errorHandler);
 
 initSocket(server);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5003;
 
 const bootstrap = async () => {
   await connectDB();
