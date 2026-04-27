@@ -39,7 +39,13 @@ const corsOptions = {
     // Allow requests with no origin (like mobile apps or curl)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin)) {
+    // Normalize origin by removing trailing slash for comparison
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    
+    if (
+      allowedOrigins.some(o => o.replace(/\/$/, '') === normalizedOrigin) ||
+      normalizedOrigin.endsWith('.vercel.app') // Allow all vercel subdomains for easier deployment
+    ) {
       return callback(null, true);
     }
     return callback(new Error('Not allowed by CORS'));
