@@ -28,34 +28,36 @@ const server = http.createServer(app);
 // Trust proxy for production (Render/Vercel) to handle HTTPS cookies
 app.set('trust proxy', 1);
 
-const allowedOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || 'http://localhost:5173,http://localhost:3000')
+const allowedOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || 'http://localhost:5173,http://localhost:3000,https://ai-based-customer-support-ticket-an-beige.vercel.app')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-// Update CORS to be more explicit for production
+// CORS configuration
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl)
     if (!origin) return callback(null, true);
     
-    // Normalize origin by removing trailing slash for comparison
     const normalizedOrigin = origin.replace(/\/$/, '');
-    
-    if (
-      allowedOrigins.some(o => o.replace(/\/$/, '') === normalizedOrigin) ||
-      normalizedOrigin.endsWith('.vercel.app') // Allow all vercel subdomains for easier deployment
-    ) {
-      return callback(null, true);
+    const isAllowed = allowedOrigins.some(o => o.replace(/\/$/, '') === normalizedOrigin) || 
+                     normalizedOrigin.endsWith('.vercel.app');
+
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      console.warn(`[CORS] Origin ${origin} not allowed`);
+      callback(new Error('Not allowed by CORS'));
     }
-    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Set-Cookie']
 };
 
 app.use(cors(corsOptions));
+// Explicitly handle pre-flight requests for all routes
+app.options('*', cors(corsOptions));
 
 // Session configuration
 app.use(
