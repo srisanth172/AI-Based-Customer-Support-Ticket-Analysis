@@ -25,6 +25,12 @@ dotenv.config({
 const app = express();
 const server = http.createServer(app);
 
+// Ensure uploads directory exists
+const uploadDir = path.join(__dirname, '../../uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
 // Trust proxy for production (Render/Vercel) to handle HTTPS cookies
 app.set('trust proxy', 1);
 
