@@ -21,6 +21,7 @@ const GoogleBtn = ({ onSuccess, onError, setLoading }) => {
   const [active, setActive] = useState(false);
 
   const handleGoogleLogin = useGoogleLogin({
+    use_fedcm_for_prompt: true,
     onSuccess: async (tokenResponse) => {
       setLoading(true);
       try {
