@@ -5,6 +5,7 @@ const messageSchema = new mongoose.Schema({
   text: { type: String, required: true },
   attachmentUrl: { type: String },
   files: [{ name: String, url: String, fileType: String }],
+  aiVerification: { type: String }, // 'Genuine', 'AI Generated', 'Mismatch'
   timestamp: { type: Date, default: Date.now },
 });
 

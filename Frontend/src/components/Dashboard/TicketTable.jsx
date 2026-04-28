@@ -6,6 +6,7 @@ import { Search, ChevronDown, CheckCircle2, AlertTriangle, ArrowUpDown, AlertCir
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
+import { getAssetUrl } from '../../utils/assets';
 
 const Avatar = ({ name }) => (
   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-bold text-xs shadow-sm ring-2 ring-white dark:ring-slate-800 shrink-0">
@@ -320,7 +321,7 @@ const TicketTable = ({ tickets, updateTicketAdmin, externalFilters }) => {
                         <p className="text-[10px] font-bold text-slate-400/90 tracking-wide uppercase px-1">Primary Proof</p>
                         <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
                           <img 
-                            src={`${import.meta.env.VITE_API_URL}${selectedTicket.photoUrl}`} 
+                            src={getAssetUrl(selectedTicket.photoUrl)} 
                             alt="Primary Proof" 
                             className="w-full h-auto max-h-64 object-cover"
                           />
@@ -338,16 +339,33 @@ const TicketTable = ({ tickets, updateTicketAdmin, externalFilters }) => {
                                {analysisResults[selectedTicket.photoUrl]}
                              </span>
                            ) : (
-                             <button 
-                               onClick={() => verifyFile(selectedTicket.photoUrl)}
-                               className="text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-500"
-                             >
-                               {verifying === selectedTicket.photoUrl ? 'Analyzing...' : 'Verify Authenticity'}
-                             </button>
+                             // Only show manual verification for spam or if it's the primary proof
+                             (selectedTicket.category === 'spam') && (
+                               <button 
+                                 onClick={() => verifyFile(selectedTicket.photoUrl)}
+                                 className="text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-500"
+                               >
+                                 {verifying === selectedTicket.photoUrl ? 'Analyzing...' : 'Verify Authenticity'}
+                               </button>
+                             )
                            )}
                         </div>
                       </div>
                     )}
+
+                    {/* Additional Resubmitted Photos */}
+                    {(selectedTicket.additionalPhotos || []).map((photo, idx) => (
+                      <div key={`additional-${idx}`} className="space-y-2">
+                        <p className="text-[10px] font-bold text-slate-400/90 tracking-wide uppercase px-1">Resubmitted #{idx + 1}</p>
+                        <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+                          <img 
+                            src={getAssetUrl(photo.url)} 
+                            alt={`Additional Proof ${idx + 1}`} 
+                            className="w-full h-auto max-h-64 object-cover"
+                          />
+                        </div>
+                      </div>
+                    ))}
 
                     {/* Message Attachments */}
                     {selectedTicket.messages.map((m, msgIdx) => (
@@ -356,7 +374,7 @@ const TicketTable = ({ tickets, updateTicketAdmin, externalFilters }) => {
                           <div className="space-y-2">
                             <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
                               <img 
-                                src={`${import.meta.env.VITE_API_URL}${m.attachmentUrl}`} 
+                                src={getAssetUrl(m.attachmentUrl)} 
                                 alt="Attachment" 
                                 className="w-full h-auto max-h-48 object-cover"
                               />

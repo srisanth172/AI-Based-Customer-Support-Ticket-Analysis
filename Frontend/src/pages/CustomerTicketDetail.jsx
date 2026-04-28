@@ -8,6 +8,7 @@ import io from 'socket.io-client';
 import confetti from 'canvas-confetti';
 import { debounce } from 'lodash';
 import FeedbackModal from '../components/UI/FeedbackModal';
+import { getAssetUrl } from '../utils/assets';
 
 const CustomerTicketDetail = () => {
   const { id } = useParams();
@@ -240,7 +241,7 @@ const CustomerTicketDetail = () => {
                       {msg.attachmentUrl && (
                         <div className="mt-4 overflow-hidden rounded-xl border border-white/10 bg-black/20">
                           <img 
-                            src={`${import.meta.env.VITE_API_URL || 'http://localhost:5003'}${msg.attachmentUrl}`} 
+                            src={getAssetUrl(msg.attachmentUrl)} 
                             alt="Attachment" 
                             className="max-h-80 w-full object-contain bg-black/40 hover:scale-105 transition-transform duration-500"
                           />

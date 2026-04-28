@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { getAssetUrl } from '../../utils/assets';
 
-const MessageBubble = ({ message, ticketId, onUpdateTicket }) => {
+const MessageBubble = ({ message, ticketId, ticketStatus, onUpdateTicket }) => {
   const isOwnMessage = message.sender === 'admin';
   const isUser = message.sender === 'user';
   const isBot = message.sender === 'bot';
@@ -89,24 +90,28 @@ const MessageBubble = ({ message, ticketId, onUpdateTicket }) => {
                 <div key={idx} className="relative group">
                   {isImage ? (
                     <div className="rounded-xl overflow-hidden border border-white/10 bg-black/20 p-1.5 shadow-2xl">
-                      <img src={`${import.meta.env.VITE_API_URL}${file.url}`} alt={file.name || 'attachment'} className="max-w-full h-auto max-h-64 rounded-lg object-cover" />
+                      <img src={getAssetUrl(file.url)} alt={file.name || 'attachment'} className="max-w-full h-auto max-h-64 rounded-lg object-cover" />
                       <div className="mt-2 flex items-center justify-between px-1">
                         <span className="text-[11px] text-slate-500 truncate font-bold uppercase tracking-wider">{file.name}</span>
-                        {!analysisResultMap[idx] ? (
-                          <button
-                            onClick={() => handleAnalyzeImage(file.url, idx)}
-                            disabled={analyzingMap[idx]}
-                            className="text-[10px] font-black bg-white/10 text-white px-2.5 py-1 rounded-lg hover:bg-emerald-500 transition-all uppercase tracking-widest whitespace-nowrap active:scale-95"
-                          >
-                            {analyzingMap[idx] ? 'Analyzing...' : 'Verify Authenticity'}
-                          </button>
+                        {(!analysisResultMap[idx] && !message.aiVerification) ? (
+                          // Only show manual verification button if backend hasn't verified it yet
+                          // and it's a flagged or customer chat
+                          (onUpdateTicket && ticketId && (ticketStatus === 'spam' || ticketStatus === 'reopened' || isUser)) && (
+                            <button
+                              onClick={() => handleAnalyzeImage(file.url, idx)}
+                              disabled={analyzingMap[idx]}
+                              className="text-[10px] font-black bg-white/10 text-white px-2.5 py-1 rounded-lg hover:bg-emerald-500 transition-all uppercase tracking-widest whitespace-nowrap active:scale-95"
+                            >
+                              {analyzingMap[idx] ? 'Analyzing...' : 'Verify Authenticity'}
+                            </button>
+                          )
                         ) : (
-                          <span className={`text-xs font-bold px-2 py-1 rounded ${
-                            analysisResultMap[idx].includes('AI Generated') 
-                              ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30' 
-                              : 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
+                          <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg border ${
+                            (analysisResultMap[idx] || message.aiVerification)?.includes('Genuine') 
+                              ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
+                              : 'bg-rose-500/20 text-rose-500 border-rose-500/30'
                           }`}>
-                            {analysisResultMap[idx]}
+                            {analysisResultMap[idx] || message.aiVerification}
                           </span>
                         )}
                       </div>

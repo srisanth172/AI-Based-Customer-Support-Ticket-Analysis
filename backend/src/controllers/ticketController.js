@@ -112,15 +112,19 @@ exports.addMessage = async (req, res) => {
     const ticket = await Ticket.findOne({ ticketId: req.params.id });
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
     
-    let attachmentUrl = null;
+    let aiVerification = null;
     if (photoFile) {
       attachmentUrl = `/uploads/${photoFile.filename}`;
+      const fullPath = path.join(__dirname, '../../../uploads', photoFile.filename);
+      const verifyResult = await aiService.analyzeTicketWithImage(message || ticket.description, fullPath);
+      aiVerification = verifyResult.isSpam ? 'Mismatch' : (verifyResult.isAI ? 'AI Generated' : 'Genuine');
     }
 
     const newMessage = { 
       sender, 
       text: message || (photoFile ? 'Attached a photo' : ''), 
       attachmentUrl,
+      aiVerification,
       timestamp: new Date() 
     };
     
@@ -146,6 +150,7 @@ exports.addMessage = async (req, res) => {
           ticket.messages.push({
             sender: 'bot',
             text: `⚠️ **Still Not Matching**\n\nThe new photo you uploaded still does not appear to match your reported issue. Please upload a clear screenshot or photo that directly shows the problem you described.\n\nAll uploaded photos are preserved for admin review.`,
+            aiVerification: 'Mismatch',
             timestamp: new Date()
           });
         } else {
@@ -160,6 +165,7 @@ exports.addMessage = async (req, res) => {
           ticket.messages.push({
             sender: 'bot',
             text: `✅ **Photo Verified!**\n\nYour new photo matches the issue description. This ticket has been reopened with all your submitted photos preserved. Our support team will now assist you.`,
+            aiVerification: 'Genuine',
             timestamp: new Date()
           });
 
@@ -594,7 +600,13 @@ exports.createTicketWithPhoto = async (req, res) => {
       : null;
 
     const initialMessages = [
-      { sender: 'user', text: description, attachmentUrl: photoUrl, timestamp: new Date() }
+      { 
+        sender: 'user', 
+        text: description, 
+        attachmentUrl: photoUrl, 
+        aiVerification: isImageMismatch ? 'Mismatch' : (aiAnalysis.isAI ? 'AI Generated' : 'Genuine'),
+        timestamp: new Date() 
+      }
     ];
     if (botSpamMessage) {
       initialMessages.push({ sender: 'bot', text: botSpamMessage, timestamp: new Date() });

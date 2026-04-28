@@ -8,6 +8,7 @@ import Button from '../components/UI/Button';
 import { toast } from 'react-hot-toast';
 import { CheckCircleIcon, RocketLaunchIcon, ArrowLeftIcon, PhotoIcon } from '@heroicons/react/24/outline';
 import io from 'socket.io-client';
+import { getAssetUrl } from '../utils/assets';
 
 const TicketDetail = () => {
   const { id } = useParams();
@@ -178,15 +179,32 @@ const TicketDetail = () => {
               {ticket.photoUrl && (
                 <div>
                   <h4 className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-2">Attached Proof</h4>
-                  <div className="relative group cursor-zoom-in rounded-xl overflow-hidden border border-white/10 aspect-video bg-black/40">
-                    <img 
-                      src={`${import.meta.env.VITE_API_URL}${ticket.photoUrl}`} 
-                      alt="Attachment" 
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <span className="text-white text-xs font-bold bg-emerald-600 px-3 py-1.5 rounded-lg shadow-lg">View Full Image</span>
+                  <div className="space-y-4">
+                    {/* Primary Photo */}
+                    <div className="relative group cursor-zoom-in rounded-xl overflow-hidden border border-white/10 aspect-video bg-black/40">
+                      <img 
+                        src={getAssetUrl(ticket.photoUrl)} 
+                        alt="Primary Attachment" 
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-white text-xs font-bold bg-emerald-600 px-3 py-1.5 rounded-lg shadow-lg">Primary Proof</span>
+                      </div>
                     </div>
+
+                    {/* Additional Photos (e.g. 2nd photo after mismatch) */}
+                    {(ticket.additionalPhotos || []).map((photo, idx) => (
+                      <div key={idx} className="relative group cursor-zoom-in rounded-xl overflow-hidden border border-white/10 aspect-video bg-black/40">
+                        <img 
+                          src={getAssetUrl(photo.url)} 
+                          alt={`Additional ${idx + 1}`} 
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-white text-xs font-bold bg-amber-600 px-3 py-1.5 rounded-lg shadow-lg">Resubmitted #{idx + 1}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -241,6 +259,7 @@ const TicketDetail = () => {
                 ref={chatRef}
                 messages={ticket.messages || []}
                 ticketId={ticket.ticketId}
+                ticketStatus={ticket.status}
                 onSendMessage={handleSendMessage}
                 onUpdateTicket={handleAdminUpdate}
                 disabled={ticket.status === 'closed'}
