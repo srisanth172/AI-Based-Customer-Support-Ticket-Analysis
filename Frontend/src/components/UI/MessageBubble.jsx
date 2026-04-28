@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../../services/api';
 import { toast } from 'react-hot-toast';
 import { getAssetUrl } from '../../utils/assets';
 
@@ -13,13 +13,7 @@ const MessageBubble = ({ message, ticketId, ticketStatus, onUpdateTicket }) => {
   const handleAnalyzeImage = async (url, idx) => {
     setAnalyzingMap(prev => ({ ...prev, [idx]: true }));
     try {
-      const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      const token = localStorage.getItem('token'); 
-      const res = await axios.post(
-        `${BASE_URL}/ai/analyze-image`,
-        { imageUrl: url },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await api.post('/ai/analyze-image', { imageUrl: url });
       const result = res.data.analysis;
       setAnalysisResultMap(prev => ({ ...prev, [idx]: result || 'Checked' }));
       
