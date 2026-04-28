@@ -2,7 +2,7 @@ import React, { useState, useRef, useImperativeHandle, forwardRef, useEffect } f
 import MessageBubble from './MessageBubble';
 import { PhotoIcon, XMarkIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline';
 
-const ChatBox = forwardRef(({ messages = [], ticketId, ticketStatus, onSendMessage, showRaiseButton = false, onRaiseTicket, disabled = false, onUpdateTicket }, ref) => {
+const ChatBox = forwardRef(({ messages = [], ticketId, ticketStatus, primaryPhotoUrl, onSendMessage, showRaiseButton = false, onRaiseTicket, disabled = false, onUpdateTicket }, ref) => {
   const [text, setText] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -57,7 +57,14 @@ const ChatBox = forwardRef(({ messages = [], ticketId, ticketStatus, onSendMessa
     <div className="h-full flex flex-col bg-[#020B06]/40 backdrop-blur-xl">
       <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">
         {messages.map((message, index) => (
-          <MessageBubble key={`${message.timestamp || index}-${index}`} message={message} ticketId={ticketId} ticketStatus={ticketStatus} onUpdateTicket={onUpdateTicket} />
+          <MessageBubble 
+            key={`${message.timestamp || index}-${index}`} 
+            message={message} 
+            ticketId={ticketId} 
+            ticketStatus={ticketStatus} 
+            primaryPhotoUrl={primaryPhotoUrl}
+            onUpdateTicket={onUpdateTicket} 
+          />
         ))}
         <div ref={internalChatEndRef} />
       </div>

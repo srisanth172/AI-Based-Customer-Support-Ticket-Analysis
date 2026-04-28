@@ -3,7 +3,7 @@ import api from '../../services/api';
 import { toast } from 'react-hot-toast';
 import { getAssetUrl } from '../../utils/assets';
 
-const MessageBubble = ({ message, ticketId, ticketStatus, onUpdateTicket }) => {
+const MessageBubble = ({ message, ticketId, ticketStatus, primaryPhotoUrl, onUpdateTicket }) => {
   const isOwnMessage = message.sender === 'admin';
   const isUser = message.sender === 'user';
   const isBot = message.sender === 'bot';
@@ -46,7 +46,7 @@ const MessageBubble = ({ message, ticketId, ticketStatus, onUpdateTicket }) => {
   };
 
   const rawFiles = message.files || [];
-  if (message.attachmentUrl) {
+  if (message.attachmentUrl && message.attachmentUrl !== primaryPhotoUrl) {
     rawFiles.push({ url: message.attachmentUrl, name: 'Attachment', fileType: 'image' });
   }
 

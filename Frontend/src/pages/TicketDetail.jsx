@@ -260,6 +260,7 @@ const TicketDetail = () => {
                 messages={ticket.messages || []}
                 ticketId={ticket.ticketId}
                 ticketStatus={ticket.status}
+                primaryPhotoUrl={ticket.photoUrl}
                 onSendMessage={handleSendMessage}
                 onUpdateTicket={handleAdminUpdate}
                 disabled={ticket.status === 'closed'}

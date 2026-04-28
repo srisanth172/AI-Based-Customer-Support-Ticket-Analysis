@@ -202,6 +202,40 @@ const CustomerTicketDetail = () => {
         )}
       </div>
 
+      {/* Ticket Details & Image Panel */}
+      <div className="grid lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-12">
+          <div className="bg-[#041209]/60 backdrop-blur-xl rounded-[24px] border border-white/5 overflow-hidden shadow-2xl">
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] mb-2">Issue Description</h4>
+                  <p className="text-slate-200 text-sm leading-relaxed whitespace-pre-wrap">{ticket.description || ticket.subject}</p>
+                </div>
+                <div className="pt-4 border-t border-white/5">
+                   <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">Category</h4>
+                   <span className="text-sm font-bold text-white">{ticket.category}</span>
+                </div>
+              </div>
+              {ticket.photoUrl && (
+                <div>
+                  <h4 className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] mb-3 text-center md:text-left">Submitted Proof</h4>
+                  <div className="rounded-2xl overflow-hidden border border-white/10 bg-black/40 shadow-2xl group relative cursor-zoom-in aspect-video max-w-sm mx-auto md:mx-0">
+                    <img 
+                      src={getAssetUrl(ticket.photoUrl)} 
+                      alt="Primary Proof" 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                    />
+                    <div className="absolute inset-0 bg-emerald-900/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                       <span className="bg-emerald-600 text-white text-[10px] font-black px-4 py-2 rounded-full shadow-xl">Primary Screenshot</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Main Conversation Area */}
         <div className="flex-1 flex flex-col gap-6 min-w-0">
@@ -238,7 +272,7 @@ const CustomerTicketDetail = () => {
                       )}
                       <p className="text-[15px] leading-relaxed whitespace-pre-wrap font-medium">{msg.text}</p>
                       
-                      {msg.attachmentUrl && (
+                      {msg.attachmentUrl && msg.attachmentUrl !== ticket.photoUrl && (
                         <div className="mt-4 overflow-hidden rounded-xl border border-white/10 bg-black/20">
                           <img 
                             src={getAssetUrl(msg.attachmentUrl)} 
