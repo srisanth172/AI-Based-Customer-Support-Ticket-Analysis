@@ -63,6 +63,8 @@ const ticketSchema = new mongoose.Schema({
   },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
+  spamResubmitCount: { type: Number, default: 0 },  // tracks how many resubmissions happened on spam tickets
+  spamAdminReviewed: { type: Boolean, default: false },  // true after admin has been shown the spam notice
 });
 
 ticketSchema.pre('save', function preSave(next) {

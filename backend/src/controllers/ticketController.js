@@ -100,6 +100,19 @@ exports.getTicketById = async (req, res) => {
     const ticket = await Ticket.findOne({ ticketId: req.params.id }).populate('userId', 'name email');
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
     if (req.user.role === 'customer' && ticket.userId._id.toString() !== req.user.userId) return res.status(403).json({ error: 'Access denied' });
+
+    // === SPAM WORKFLOW: Admin Briefing ===
+    // If admin is opening a spam ticket for the first time, Swift AI explains why it's spam
+    if (req.user.role === 'admin' && ticket.status === 'spam' && !ticket.spamAdminReviewed) {
+      ticket.messages.push({
+        sender: 'bot',
+        text: `🤖 **Swift AI Admin Briefing**\n\nThis ticket has been automatically flagged as **SPAM** because the customer's description did not match the uploaded image.\n\nAdmin, please review the description and attachment. Reply with **"keep spam"** to confirm the flag (which will ask the user for a better photo) or **"not spam"** to reinstate the ticket as legitimate.`,
+        timestamp: new Date()
+      });
+      ticket.spamAdminReviewed = true;
+      await ticket.save();
+    }
+
     res.json(ticket);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -110,80 +123,188 @@ exports.addMessage = async (req, res) => {
   try {
     const { message, sender } = req.body;
     const photoFile = req.file;
-    
-    const ticket = await Ticket.findOne({ ticketId: req.params.id });
+
+    const ticket = await Ticket.findOne({ ticketId: req.params.id }).populate('userId', 'name email');
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
-    
+
+    // ─── Build and push the human message ───────────────────────────────────
     let aiVerification = null;
     let attachmentUrl = null;
+
     if (photoFile) {
       attachmentUrl = `/uploads/${photoFile.filename}`;
-      const fullPath = path.join(__dirname, '../../uploads', photoFile.filename);
-      const verifyResult = await aiService.analyzeTicketWithImage(message || ticket.description, fullPath);
-      aiVerification = verifyResult.isSpam ? 'Mismatch' : (verifyResult.isAI ? 'AI Generated' : 'Genuine');
     }
 
-    const newMessage = { 
-      sender, 
-      text: message || (photoFile ? 'Attached a photo' : ''), 
-      attachmentUrl,
-      aiVerification,
-      timestamp: new Date() 
-    };
-    
-    ticket.messages.push(newMessage);
+    // Don't push an empty message when only a file was sent
+    if (message || attachmentUrl) {
+      const newMessage = {
+        sender,
+        text: message || (attachmentUrl ? 'Attached a photo for review.' : ''),
+        attachmentUrl,
+        aiVerification,
+        timestamp: new Date()
+      };
+      ticket.messages.push(newMessage);
+    }
 
-    if (sender === 'user') {
+    // ════════════════════════════════════════════════════════════════════════
+    //  ADMIN BRANCH
+    // ════════════════════════════════════════════════════════════════════════
+    if (sender === 'admin') {
+      const lowerAdminMsg = (message || '').toLowerCase().trim();
+
+      // ── SPAM WORKFLOW: Admin decides after Swift AI briefing ─────────────
+      if (ticket.status === 'spam') {
+        // Admin says "close", "yes close", "close ticket" → close it
+        const wantsClose = ['close', 'yes close', 'close ticket', 'yes', 'confirm close'].some(k => lowerAdminMsg.includes(k));
+        // Admin says "keep spam", "keep it spam", "spam" → prompt user to resubmit
+        const keepSpam   = ['keep spam', 'keep it spam', 'mark spam', 'spam', 'keep as spam'].some(k => lowerAdminMsg.includes(k));
+        // Admin says "not spam", "legitimate", "reopen", "open" → clear spam
+        const notSpam    = ['not spam', 'legitimate', 'valid', 'reopen', 'open ticket', 'clear spam'].some(k => lowerAdminMsg.includes(k));
+
+        // Check if Swift AI already asked admin to close (i.e. second resubmission also failed)
+        const lastBotMsg = ticket.messages.filter(m => m.sender === 'bot').slice(-3).reverse().find(m => m.text.includes('close this ticket'));
+
+        if (lastBotMsg && wantsClose) {
+          // ── Close ticket ──
+          ticket.status = 'closed';
+          ticket.activityLog.push({ actionType: 'SPAM_CLOSED', message: 'Ticket closed by admin after repeated invalid image submissions.' });
+          ticket.messages.push({
+            sender: 'bot',
+            text: `🔒 **Ticket Closed**\n\nThis ticket has been permanently closed by the admin due to repeated invalid image submissions. The customer will be notified.`,
+            timestamp: new Date()
+          });
+          await ticket.save();
+          await ticket.populate('userId', 'name email');
+          emitTicketUpdated(ticket);
+          return res.json(ticket);
+        }
+
+        if (keepSpam) {
+          // ── Tell the user to send a valid photo ──
+          ticket.messages.push({
+            sender: 'bot',
+            text: `⚠️ **Action Required**\n\nOur support team has reviewed your ticket and confirmed that the image you submitted does not match your reported issue.\n\nPlease upload a **new, genuine screenshot or photo** that clearly shows your actual problem. Once you resubmit a valid image, your ticket will be reopened and processed immediately.`,
+            timestamp: new Date()
+          });
+          ticket.internalNotes.push({ text: `Admin confirmed spam status. Customer prompted to resubmit a valid image.`, timestamp: new Date() });
+          await ticket.save();
+          await ticket.populate('userId', 'name email');
+          emitTicketUpdated(ticket);
+          return res.json(ticket);
+        }
+
+        if (notSpam) {
+          // ── Admin clears spam manually ──
+          ticket.status = 'open';
+          ticket.activityLog.push({ actionType: 'SPAM_CLEARED', message: 'Ticket spam flag removed by admin. Ticket reopened.' });
+          ticket.messages.push({
+            sender: 'bot',
+            text: `✅ **Ticket Reinstated**\n\nAdmin has reviewed and cleared this ticket. Your issue has been verified and the ticket is now open. Our support team will assist you shortly.`,
+            timestamp: new Date()
+          });
+          await Notification.create({ recipient: 'admin', title: 'Spam Cleared', description: `Admin cleared spam flag on ticket ${ticket.ticketId}.`, type: 'info', ticketId: ticket.ticketId });
+          await ticket.save();
+          await ticket.populate('userId', 'name email');
+          emitTicketUpdated(ticket);
+          return res.json(ticket);
+        }
+
+        // Admin typed something else on a spam ticket — just save and continue
+        await ticket.save();
+        await ticket.populate('userId', 'name email');
+        emitTicketUpdated(ticket);
+        return res.json(ticket);
+      }
+
+      // ── RESOLVED: Admin approves closure ────────────────────────────────
+      if (ticket.status === 'resolved' && (lowerAdminMsg.includes('ok') || lowerAdminMsg.includes('close'))) {
+        ticket.status = 'closed';
+        ticket.messages.push({ sender: 'bot', text: 'Ticket has been successfully closed based on Admin approval.', timestamp: new Date() });
+      }
+      // ── Auto-escalation detection ────────────────────────────────────────
+      else if (lowerAdminMsg.includes('forwarded to') && lowerAdminMsg.includes('within 24 hours')) {
+        ticket.status = 'escalated';
+        ticket.assignedTeam = ticket.category;
+        const adminUser = req.user?.userId ? await User.findById(req.user.userId) : null;
+        const adminName = adminUser?.name || 'Admin';
+        ticket.activityLog.push({ actionType: 'ESCALATION', message: `Ticket escalated to ${ticket.assignedTeam.replace('_', ' ')} by ${adminName}` });
+      }
+      // ── Question to customer ─────────────────────────────────────────────
+      else if (message && (message.endsWith('?') || lowerAdminMsg.includes('please let us know'))) {
+        ticket.status = 'waiting_for_customer';
+      }
+      // ── Default admin reply ──────────────────────────────────────────────
+      else {
+        if (ticket.status !== 'closed' && ticket.status !== 'resolved') {
+          ticket.status = 'in_progress';
+        }
+      }
+
+      // Send email notification to user about admin reply
+      if (ticket.userId?.email) {
+        await emailService.sendTicketNotification(ticket.userId.email, ticket.ticketId, 'New reply from support');
+      }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    //  USER BRANCH
+    // ════════════════════════════════════════════════════════════════════════
+    else if (sender === 'user') {
       const lowerMsg = (message || '').toLowerCase().trim();
 
-      // === SPAM RESUBMISSION: Customer sends a new photo on a spam ticket ===
+      // ── SPAM RESUBMISSION: Customer sends a new photo ────────────────────
       if (ticket.status === 'spam' && photoFile) {
         const newPhotoUrl = `/uploads/${photoFile.filename}`;
         const fullNewImagePath = path.join(__dirname, '../../uploads', photoFile.filename);
 
-        // Keep the old photo by pushing to additionalPhotos
+        // Track resubmission in additionalPhotos
         ticket.additionalPhotos.push({ url: newPhotoUrl, uploadedAt: new Date() });
+        ticket.spamResubmitCount = (ticket.spamResubmitCount || 0) + 1;
 
-        // Re-analyze with new photo
-        const reAnalysis = await aiService.analyzeTicketWithImage(ticket.description, fullNewImagePath);
+        // Update the attachmentUrl on the message we just pushed
+        const lastMsg = ticket.messages[ticket.messages.length - 1];
+        if (lastMsg && !lastMsg.attachmentUrl) lastMsg.attachmentUrl = newPhotoUrl;
+
+        // Re-analyze via Groq
+        console.log(`[Spam Resubmit] Re-analyzing image for ticket ${ticket.ticketId}, resubmit #${ticket.spamResubmitCount}`);
+        const reAnalysis = await aiService.analyzeTicketWithImage(ticket.description || ticket.subject, fullNewImagePath);
         const isStillMismatch = reAnalysis.isSpam === true;
 
-        if (isStillMismatch) {
-          // Still a mismatch
-          ticket.messages.push({
-            sender: 'bot',
-            text: `⚠️ **Still Not Matching**\n\nThe new photo you uploaded still does not appear to match your reported issue. Admin, the user has uploaded another invalid image. Shall I close this ticket? Reply "close" to confirm.`,
-            aiVerification: 'Mismatch',
-            timestamp: new Date()
-          });
-          
-          ticket.internalNotes.push({
-            text: `Swift AI: User uploaded a second invalid image (${reAnalysis.isAI ? 'AI generated' : 'mismatched'}). Requested admin approval to close.`,
-            timestamp: new Date()
-          });
-        } else {
-          // Photo now matches — reopen ticket
+        if (!isStillMismatch) {
+          // ── Photo now valid → reopen ticket ──
           ticket.status = 'open';
           ticket.priority = reAnalysis.priority || ticket.priority;
           ticket.aiAnalysis = { ...ticket.aiAnalysis, ...reAnalysis };
-          ticket.activityLog.push({
-            actionType: 'SPAM_CLEARED',
-            message: 'Ticket reopened: new photo verified and matches the issue description.'
-          });
+          ticket.activityLog.push({ actionType: 'SPAM_CLEARED', message: 'Ticket reopened: resubmitted photo verified and matches the issue description.' });
           ticket.messages.push({
             sender: 'bot',
-            text: `✅ **Photo Verified!**\n\nYour new photo matches the issue description. This ticket has been reopened with all your submitted photos preserved. Our support team will now assist you.`,
+            text: `✅ **Photo Verified!**\n\nYour new photo has been analyzed and matches your reported issue. This ticket has been reopened and our support team will now assist you shortly.`,
             aiVerification: 'Genuine',
             timestamp: new Date()
           });
-
-          await Notification.create({
-            recipient: 'admin',
-            title: 'Spam Ticket Reopened',
-            description: `Ticket ${ticket.ticketId} was reopened after customer resubmitted a valid photo.`,
-            type: 'warning',
-            ticketId: ticket.ticketId
+          await Notification.create({ recipient: 'admin', title: 'Spam Ticket Reopened', description: `Ticket ${ticket.ticketId} was reopened after the customer resubmitted a valid photo.`, type: 'warning', ticketId: ticket.ticketId });
+        } else if (ticket.spamResubmitCount >= 2) {
+          // ── Second invalid resubmission → ask admin to close ──
+          const mismatchReason = reAnalysis.isAI ? 'appears to be AI-generated' : 'still does not match the issue description';
+          ticket.messages.push({
+            sender: 'bot',
+            text: `🚨 **Admin Notice — Close Ticket?**\n\nThe customer has now submitted **${ticket.spamResubmitCount} invalid images**. The latest photo ${mismatchReason}.\n\nDo you want to **close this ticket**? Reply **"close"** to confirm, or **"not spam"** if you believe this is a valid submission.`,
+            timestamp: new Date()
           });
+          ticket.internalNotes.push({ text: `Swift AI: Customer submitted ${ticket.spamResubmitCount} invalid images. Latest image ${mismatchReason}. Admin prompted to close.`, timestamp: new Date() });
+          await Notification.create({ recipient: 'admin', title: 'Repeated Invalid Images', description: `Customer has submitted ${ticket.spamResubmitCount} invalid images on ticket ${ticket.ticketId}. Admin action required.`, type: 'warning', ticketId: ticket.ticketId });
+        } else {
+          // ── First invalid resubmission → tell user and notify admin ──
+          const mismatchReason = reAnalysis.isAI ? 'appears to be AI-generated' : 'still does not match your described issue';
+          ticket.messages.push({
+            sender: 'bot',
+            text: `⚠️ **Still Not Valid**\n\nThe new image you uploaded ${mismatchReason}. Please submit a clear, genuine screenshot or photo that directly shows the problem you described.\n\nIf you need help, our support team is monitoring this ticket.`,
+            aiVerification: 'Mismatch',
+            timestamp: new Date()
+          });
+          ticket.internalNotes.push({ text: `Swift AI: First resubmission also failed. Image ${mismatchReason}. Awaiting customer's next submission or admin action.`, timestamp: new Date() });
+          await Notification.create({ recipient: 'admin', title: 'Invalid Resubmission', description: `Customer resubmitted an invalid image on spam ticket ${ticket.ticketId}.`, type: 'warning', ticketId: ticket.ticketId });
         }
 
         await ticket.save();
@@ -191,113 +312,52 @@ exports.addMessage = async (req, res) => {
         emitTicketUpdated(ticket);
         return res.json(ticket);
       }
-      // === END SPAM RESUBMISSION ===
-      
-      // 6. Resolution Logic: Detection of "Solved" keywords
+
+      // ── RESOLUTION CONFIRMATION ──────────────────────────────────────────
       const resolvedKeywords = ['it works', 'solved', 'fixed', 'it worked', 'thanks it worked', 'problem solved', 'thank you solved', 'resolved'];
       const isResolution = resolvedKeywords.some(k => lowerMsg.includes(k));
-      
-      // 10. Reopen Logic: Detection of "Still not working"
+
       const reopenKeywords = ['still not working', 'not fixed', 'problem persists', 'issue persists', 'still failing'];
       const isReopen = reopenKeywords.some(k => lowerMsg.includes(k));
-      
+
       const lastBotMsg = ticket.messages.filter(m => m.sender === 'bot').pop()?.text || '';
       const wasAskingConfirmation = lastBotMsg.includes('should I mark this ticket as Resolved');
-      
-      console.log('=== DEBUG RESOLUTION ===');
-      console.log('lowerMsg:', lowerMsg);
-      console.log('isResolution:', isResolution);
-      console.log('lastBotMsg:', lastBotMsg);
-      console.log('wasAskingConfirmation:', wasAskingConfirmation);
-      console.log('========================');
 
       if (wasAskingConfirmation && (lowerMsg.includes('yes') || lowerMsg.includes('yep') || lowerMsg.includes('ok') || lowerMsg.includes('confirm') || isResolution)) {
         ticket.status = 'resolved';
         ticket.resolvedAt = new Date();
         ticket.resolutionTime = Math.round((ticket.resolvedAt - ticket.createdAt) / (1000 * 60));
-        // Notify Admin of resolution confirmation request
-        await Notification.create({
-          recipient: 'admin',
-          title: 'Resolution Approval Needed',
-          description: `Customer confirmed resolution for ticket ${ticket.ticketId}. Please review and close.`,
-          type: 'warning',
-          ticketId: ticket.ticketId
-        });
-
-        ticket.messages.push({ 
-          sender: 'bot', 
-          text: 'Great! I have marked the ticket as Resolved. Admin, the customer has confirmed resolution. Please reply with "ok" or "close" to finalize and close the ticket.', 
-          timestamp: new Date() 
-        });
+        await Notification.create({ recipient: 'admin', title: 'Resolution Approval Needed', description: `Customer confirmed resolution for ticket ${ticket.ticketId}. Please review and close.`, type: 'warning', ticketId: ticket.ticketId });
+        ticket.messages.push({ sender: 'bot', text: 'Great! I have marked the ticket as Resolved. Admin, the customer has confirmed resolution. Please reply with "ok" or "close" to finalize and close the ticket.', timestamp: new Date() });
       } else if (isResolution) {
-        ticket.messages.push({ 
-          sender: 'bot', 
-          text: 'Glad to hear it is working! Just to be sure, should I mark this ticket as Resolved? (Reply "Yes" to confirm)', 
-          timestamp: new Date() 
-        });
+        ticket.messages.push({ sender: 'bot', text: 'Glad to hear it is working! Just to be sure, should I mark this ticket as Resolved? (Reply "Yes" to confirm)', timestamp: new Date() });
       } else if (isReopen && (ticket.status === 'resolved' || ticket.status === 'closed')) {
         ticket.status = 'reopened';
-        ticket.priority = 'high'; // Increase priority on reopen
+        ticket.priority = 'high';
         ticket.messages.push({ sender: 'bot', text: 'I am sorry to hear that the issue persists. I have reopened the ticket and escalated the priority for our team.', timestamp: new Date() });
       } else {
-        // 5. Conversation Workflow: User replies -> In Progress
-        if (ticket.status !== 'resolved') {
+        if (ticket.status !== 'resolved' && ticket.status !== 'spam') {
           ticket.status = 'in_progress';
         }
-        
-        // Notify Admin of new message
-        await Notification.create({
-          recipient: 'admin',
-          title: 'New Message from User',
-          description: `Customer ${ticket.userId.name} replied to ticket ${ticket.ticketId}.`,
-          type: 'info',
-          ticketId: ticket.ticketId
-        });
-
-        // Update AI insights on the fly if text is provided
+        await Notification.create({ recipient: 'admin', title: 'New Message from User', description: `Customer ${ticket.userId?.name || 'Unknown'} replied to ticket ${ticket.ticketId}.`, type: 'info', ticketId: ticket.ticketId });
         if (message) {
           const lastMessages = ticket.messages.slice(-3).map(m => m.text).join(' ');
           const newAnalysis = await aiService.analyzeTicketWithAI(lastMessages);
           ticket.aiAnalysis = { ...ticket.aiAnalysis, ...newAnalysis };
         }
       }
-    } else if (sender === 'admin') {
-      const lowerAdminMsg = (message || '').toLowerCase();
-      
-      // 1. Admin Approval for closure
-      if (ticket.status === 'resolved' && (lowerAdminMsg.includes('ok') || lowerAdminMsg.includes('close'))) {
-        ticket.status = 'closed';
-        ticket.messages.push({
-          sender: 'bot',
-          text: 'Ticket has been successfully closed based on Admin approval.',
-          timestamp: new Date()
-        });
-      }
-      // 2. Auto-escalation detection
-      else if (lowerAdminMsg.includes('forwarded to') && lowerAdminMsg.includes('within 24 hours')) {
-        ticket.status = 'escalated';
-        ticket.assignedTeam = ticket.category;
-        
-        let adminName = 'Admin';
-        if (req.user && req.user.userId) {
-          const User = require('../models/User'); // Ensure User model is available
-          const adminUser = await User.findById(req.user.userId);
-          if (adminUser) adminName = adminUser.name;
-        }
+    }
 
-        ticket.activityLog.push({
-          actionType: 'ESCALATION',
-          message: `Ticket escalated to ${ticket.assignedTeam.replace('_', ' ')} by ${adminName}`
-        });
-      } 
-      // 3. Question detection
-      else if (message && (message.endsWith('?') || lowerAdminMsg.includes('please let us know'))) {
-        ticket.status = 'waiting_for_customer';
-      } 
-      // 4. Default reply
-      else {
-        // Only set to in_progress if not already closed
-        if (ticket.status !== 'closed' && ticket.status !== 'resolved') {
+    await ticket.save();
+    await ticket.populate('userId', 'name email');
+    emitTicketUpdated(ticket);
+    res.json(ticket);
+  } catch (error) {
+    console.error('[addMessage] Error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+};
+
           ticket.status = 'in_progress';
         }
       }

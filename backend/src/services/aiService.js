@@ -304,7 +304,7 @@ class AIService {
       6. Notifications & Communication
       7. Subscription & Plans
 
-      If the issue does NOT fall into these categories, or the image is unrelated/spam (e.g., "toilet repair", "fan repair", "broken table"), or if the image is AI-generated, you MUST return category: "OutOfScope" and isValid: false.
+      If the issue does NOT fall into these categories, or if the image is unrelated to the text description (e.g., description talks about "billing" but image is a "scenic photo"), or if the image is AI-generated, you MUST return category: "OutOfScope" and isValid: false.
 
       Return strictly valid JSON only.
       JSON schema:
