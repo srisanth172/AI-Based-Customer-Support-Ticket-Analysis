@@ -663,8 +663,7 @@ exports.createTicketWithPhoto = async (req, res) => {
       { 
         sender: 'user', 
         text: description, 
-        attachmentUrl: photoUrl, 
-        aiVerification: isImageMismatch ? 'Mismatch' : (aiAnalysis.isAI ? 'AI Generated' : 'Genuine'),
+        // attachmentUrl: photoUrl,  <-- REMOVED: redundant as it's the primary proof
         timestamp: new Date() 
       }
     ];

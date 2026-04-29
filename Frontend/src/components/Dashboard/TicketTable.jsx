@@ -368,7 +368,9 @@ const TicketTable = ({ tickets, updateTicketAdmin, externalFilters }) => {
                     {/* Message Attachments */}
                     {selectedTicket.messages.map((m, msgIdx) => (
                       <React.Fragment key={msgIdx}>
-                        {m.attachmentUrl && m.attachmentUrl !== selectedTicket.photoUrl && !(selectedTicket.additionalPhotos || []).find(p => p.url === m.attachmentUrl) && (
+                        {m.attachmentUrl && 
+                         m.attachmentUrl.split('/').pop() !== selectedTicket.photoUrl?.split('/').pop() && 
+                         !(selectedTicket.additionalPhotos || []).find(p => p.url?.split('/').pop() === m.attachmentUrl.split('/').pop()) && (
                           <div className="space-y-2">
                             <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
                               <img 
