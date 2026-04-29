@@ -9,7 +9,7 @@ const path = require('path');
 const VALID_CATEGORIES = [
   'Payments', 'Orders & Delivery', 'Returns & Refunds', 
   'Product Issues', 'Account Issues', 'Notifications & Communication', 
-  'Subscription & Plans'
+  'Subscription & Plans', 'Spam'
 ];
 
 const generateTicketId = () => 'TKT-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6).toUpperCase();
@@ -820,12 +820,32 @@ exports.talkToCopilot = async (req, res) => {
 exports.updateTicketAdmin = async (req, res) => {
   try {
     const { adminId, internalNote, category, status } = req.body;
-    const ticket = await Ticket.findOne({ ticketId: req.params.id });
+    const ticket = await Ticket.findOne({ ticketId: req.params.id }).populate('userId', 'name email');
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
     
     if (adminId) ticket.assignedTo = adminId;
-    if (category) ticket.category = category;
-    if (status) ticket.status = status;
+    
+    // SPAM Logic: If being marked as spam
+    const isMarkingSpam = (category && category.toLowerCase() === 'spam') || (status && status.toLowerCase() === 'spam');
+
+    if (isMarkingSpam) {
+      ticket.category = 'Spam';
+      ticket.status = 'spam';
+      if (ticket.aiAnalysis) ticket.aiAnalysis.isSpam = true;
+      
+      // Auto-briefing if not already reviewed
+      if (!ticket.spamAdminReviewed) {
+        ticket.messages.push({
+          sender: 'bot',
+          text: `🤖 **Swift AI Admin Briefing**\n\nThis ticket has been flagged as **SPAM** (AI Generated or Unrelated image detected).\n\nAdmin, you can reply with **"keep spam"** to confirm and ask the user for a new photo, or **"not spam"** to reinstate the ticket.`,
+          timestamp: new Date()
+        });
+        ticket.spamAdminReviewed = true;
+      }
+    } else {
+      if (category) ticket.category = category;
+      if (status) ticket.status = status;
+    }
     
     if (internalNote) {
       if (!ticket.internalNotes) ticket.internalNotes = [];
@@ -837,6 +857,7 @@ exports.updateTicketAdmin = async (req, res) => {
     }
     
     await ticket.save();
+    await ticket.populate('userId', 'name email');
     emitTicketUpdated(ticket);
     res.json(ticket);
   } catch (error) {

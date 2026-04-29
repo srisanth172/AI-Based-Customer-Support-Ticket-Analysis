@@ -34,7 +34,7 @@ const ticketSchema = new mongoose.Schema({
     enum: [
       'Payments', 'Orders & Delivery', 'Returns & Refunds', 
       'Product Issues', 'Account Issues', 'Notifications & Communication', 
-      'Subscription & Plans', 'OutOfScope'
+      'Subscription & Plans', 'OutOfScope', 'Spam'
     ],
     default: 'Product Issues' 
   },
