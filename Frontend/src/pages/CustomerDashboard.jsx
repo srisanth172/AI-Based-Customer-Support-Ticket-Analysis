@@ -26,7 +26,7 @@ const CustomerDashboard = () => {
         const response = await api.get('/tickets');
         const fetchedTickets = response.data.tickets || [];
         setTickets(fetchedTickets);
-        const open = fetchedTickets.filter(t => t.status !== 'resolved').length;
+        const open = fetchedTickets.filter(t => t.status === 'open').length;
         const resolved = fetchedTickets.filter(t => t.status === 'resolved').length;
         setStats({ total: fetchedTickets.length, open, resolved });
         setLoading(false);
@@ -47,6 +47,7 @@ const CustomerDashboard = () => {
       iconBg: 'bg-emerald-50',
       accentClass: 'stat-card--emerald',
       description: 'All time tickets',
+      to: '/customer/tickets?status=all',
     },
     { 
       name: 'Open Issues', 
@@ -56,6 +57,7 @@ const CustomerDashboard = () => {
       iconBg: 'bg-amber-50',
       accentClass: 'stat-card--amber',
       description: 'Awaiting resolution',
+      to: '/customer/tickets?status=open',
     },
     { 
       name: 'Resolved', 
@@ -65,6 +67,7 @@ const CustomerDashboard = () => {
       iconBg: 'bg-emerald-50',
       accentClass: 'stat-card--emerald',
       description: 'Successfully closed',
+      to: '/customer/tickets?status=resolved',
     },
   ];
 
@@ -169,30 +172,35 @@ const CustomerDashboard = () => {
             </>
           ) : (
             statCards.map((stat, idx) => (
-              <motion.div
+              <Link
                 key={stat.name}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: idx * 0.1 }}
-                className="relative overflow-hidden p-7 rounded-[24px] border border-white/5 bg-[#0a1f10]/40 backdrop-blur-xl group cursor-default"
+                to={stat.to}
+                className="block"
               >
-                <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <stat.icon className="h-20 w-20 -mr-6 -mt-6" />
-                </div>
-                
-                <div className="relative z-10">
-                  <div className={`h-12 w-12 rounded-2xl flex items-center justify-center mb-5 ${stat.iconBg} ring-1 ring-white/10`}>
-                    <stat.icon className={`h-6 w-6 ${stat.iconColor}`} />
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: idx * 0.1 }}
+                  className="relative overflow-hidden p-7 rounded-[24px] border border-white/5 bg-[#0a1f10]/40 backdrop-blur-xl group cursor-pointer hover:border-emerald-500/30 hover:bg-white/[0.03] transition-all duration-300"
+                >
+                  <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <stat.icon className="h-20 w-20 -mr-6 -mt-6" />
                   </div>
-                  <p className="text-[13px] font-bold text-slate-500 uppercase tracking-wider mb-1">{stat.name}</p>
-                  <div className="flex items-baseline gap-2">
-                    <h3 className="text-[32px] font-black text-white tabular-nums tracking-tighter">
-                      {stat.value}
-                    </h3>
+                  
+                  <div className="relative z-10">
+                    <div className={`h-12 w-12 rounded-2xl flex items-center justify-center mb-5 ${stat.iconBg} ring-1 ring-white/10 group-hover:scale-110 transition-transform`}>
+                      <stat.icon className={`h-6 w-6 ${stat.iconColor}`} />
+                    </div>
+                    <p className="text-[13px] font-bold text-slate-500 uppercase tracking-wider mb-1">{stat.name}</p>
+                    <div className="flex items-baseline gap-2">
+                      <h3 className="text-[32px] font-black text-white tabular-nums tracking-tighter">
+                        {stat.value}
+                      </h3>
+                    </div>
+                    <p className="text-[12px] font-medium text-slate-500 mt-2">{stat.description}</p>
                   </div>
-                  <p className="text-[12px] font-medium text-slate-500 mt-2">{stat.description}</p>
-                </div>
-              </motion.div>
+                </motion.div>
+              </Link>
             ))
           )}
         </motion.div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   MagnifyingGlassIcon, 
@@ -12,10 +12,28 @@ import {
 import api from '../services/api';
 
 const MyTickets = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('all');
+  
+  // Initialize filter from URL query param if it exists
+  const [filter, setFilter] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('status') || 'all';
+  });
+
+  // Sync filter with URL query param changes
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const status = params.get('status');
+    if (status) {
+      setFilter(status);
+    } else {
+      setFilter('all');
+    }
+  }, [location.search]);
 
   useEffect(() => {
     const fetchTickets = async () => {
@@ -92,7 +110,10 @@ const MyTickets = () => {
           ].map(tab => (
             <button
               key={tab.key}
-              onClick={() => setFilter(tab.key)}
+              onClick={() => {
+                setFilter(tab.key);
+                navigate(`/customer/tickets?status=${tab.key}`, { replace: true });
+              }}
               className={`px-3.5 py-1.5 rounded-lg text-[12px] font-semibold transition-all duration-200 ${
                 filter === tab.key
                   ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/20'
