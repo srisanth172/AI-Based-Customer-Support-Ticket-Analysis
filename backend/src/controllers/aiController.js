@@ -97,14 +97,14 @@ exports.analyzeImage = async (req, res) => {
     }
 
     const fileName = path.basename(imageUrl);
-    const filePath = path.join(__dirname, '../../../uploads', fileName);
+    const filePath = path.join(__dirname, '../../uploads', fileName);
     console.log('[AI Vision] Looking for file at:', filePath);
 
     let base64Image = '';
     const ext = path.extname(fileName).toLowerCase().replace('.', '') || 'jpeg';
     
     // Resolve correct uploads directory
-    const uploadsDir = path.join(__dirname, '../../..', 'uploads');
+    const uploadsDir = path.join(__dirname, '../..', 'uploads');
     const resolvedPath = path.join(uploadsDir, fileName);
     console.log('[AI Vision] Resolved uploads path:', resolvedPath);
     

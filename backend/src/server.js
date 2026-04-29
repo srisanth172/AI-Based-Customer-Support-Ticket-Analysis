@@ -26,10 +26,12 @@ const app = express();
 const server = http.createServer(app);
 
 // Ensure uploads directory exists
-const uploadDir = path.join(__dirname, '../../uploads');
+const uploadDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
+
+console.log('[Server] Static uploads directory:', uploadDir);
 
 // Trust proxy for production (Render/Vercel) to handle HTTPS cookies
 app.set('trust proxy', 1);
@@ -92,7 +94,11 @@ app.use((req, res, next) => {
 });
 
 // Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
+app.use('/uploads', express.static(uploadDir, {
+  setHeaders: (res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+  }
+}));
 
 app.get('/', (req, res) => {
   // If the frontend build exists, serve it, otherwise show the API message

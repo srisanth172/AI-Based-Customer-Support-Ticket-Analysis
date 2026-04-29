@@ -8,6 +8,6 @@ backend/.env
 Frontend/.env
 .vite/
 .vscode/
-uploads/
+backend/uploads/
 *.log
 .DS_Store\nscratch/

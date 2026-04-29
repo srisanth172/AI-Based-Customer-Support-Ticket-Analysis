@@ -118,7 +118,7 @@ exports.addMessage = async (req, res) => {
     let attachmentUrl = null;
     if (photoFile) {
       attachmentUrl = `/uploads/${photoFile.filename}`;
-      const fullPath = path.join(__dirname, '../../../uploads', photoFile.filename);
+      const fullPath = path.join(__dirname, '../../uploads', photoFile.filename);
       const verifyResult = await aiService.analyzeTicketWithImage(message || ticket.description, fullPath);
       aiVerification = verifyResult.isSpam ? 'Mismatch' : (verifyResult.isAI ? 'AI Generated' : 'Genuine');
     }
@@ -139,7 +139,7 @@ exports.addMessage = async (req, res) => {
       // === SPAM RESUBMISSION: Customer sends a new photo on a spam ticket ===
       if (ticket.status === 'spam' && photoFile) {
         const newPhotoUrl = `/uploads/${photoFile.filename}`;
-        const fullNewImagePath = path.join(__dirname, '../../../uploads', photoFile.filename);
+        const fullNewImagePath = path.join(__dirname, '../../uploads', photoFile.filename);
 
         // Keep the old photo by pushing to additionalPhotos
         ticket.additionalPhotos.push({ url: newPhotoUrl, uploadedAt: new Date() });
@@ -587,7 +587,7 @@ exports.createTicketWithPhoto = async (req, res) => {
 
     const ticketId = 'TKT-' + Date.now();
     const photoUrl = `/uploads/${photoFile.filename}`;
-    const fullImagePath = path.join(__dirname, '../../../uploads', photoFile.filename);
+    const fullImagePath = path.join(__dirname, '../../uploads', photoFile.filename);
 
     // AI vision analysis (checks category, validity AND image-description match)
     const aiAnalysis = await aiService.analyzeTicketWithImage(description, fullImagePath);

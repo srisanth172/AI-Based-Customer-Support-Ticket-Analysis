@@ -8,7 +8,7 @@ const path = require('path');
 // Configure multer for photo upload
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../../../uploads'));
+    cb(null, path.join(__dirname, '../../uploads'));
   },
   filename: (req, file, cb) => {
     cb(null, `ticket-${Date.now()}${path.extname(file.originalname)}`);
