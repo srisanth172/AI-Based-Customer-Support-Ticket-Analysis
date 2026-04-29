@@ -304,12 +304,13 @@ class AIService {
       6. Notifications & Communication
       7. Subscription & Plans
 
-      If the issue does NOT fall into these categories, or the image is unrelated/spam (e.g., "toilet repair", "fan repair", "broken table"), you MUST return category: "OutOfScope" and isValid: false.
+      If the issue does NOT fall into these categories, or the image is unrelated/spam (e.g., "toilet repair", "fan repair", "broken table"), or if the image is AI-generated, you MUST return category: "OutOfScope" and isValid: false.
 
       Return strictly valid JSON only.
       JSON schema:
       {
         "isValid": boolean,
+        "isAI": boolean,
         "sentiment": "positive|neutral|negative",
         "priority": "low|medium|high",
         "category": "Payments | Orders & Delivery | Returns & Refunds | Product Issues | Account Issues | Notifications & Communication | Subscription & Plans | OutOfScope",
@@ -381,7 +382,8 @@ class AIService {
         reasoning: parsed.reasoning || 'Classified by model output.',
         keywords: Array.isArray(parsed.keywords) ? parsed.keywords : [],
         isValid: parsed.isValid !== undefined ? parsed.isValid : true,
-        isSpam: parsed.category === 'OutOfScope' || parsed.isValid === false
+        isSpam: parsed.category === 'OutOfScope' || parsed.isValid === false,
+        isAI: parsed.isAI === true
       };
 
     } catch (error) {

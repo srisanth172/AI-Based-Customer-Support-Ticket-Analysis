@@ -66,7 +66,7 @@ exports.createTicket = async (req, res) => {
 
 exports.getTickets = async (req, res) => {
   try {
-    const { status, priority, category, search, page = 1, limit = 20 } = req.query;
+    const { status, priority, category, search, page = 1, limit = 1000 } = req.query;
     const query = {};
     if (req.user.role === 'customer') query.userId = req.user.userId;
     if (status) query.status = status;
@@ -113,6 +113,7 @@ exports.addMessage = async (req, res) => {
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
     
     let aiVerification = null;
+    let attachmentUrl = null;
     if (photoFile) {
       attachmentUrl = `/uploads/${photoFile.filename}`;
       const fullPath = path.join(__dirname, '../../../uploads', photoFile.filename);
@@ -149,8 +150,13 @@ exports.addMessage = async (req, res) => {
           // Still a mismatch
           ticket.messages.push({
             sender: 'bot',
-            text: `⚠️ **Still Not Matching**\n\nThe new photo you uploaded still does not appear to match your reported issue. Please upload a clear screenshot or photo that directly shows the problem you described.\n\nAll uploaded photos are preserved for admin review.`,
+            text: `⚠️ **Still Not Matching**\n\nThe new photo you uploaded still does not appear to match your reported issue. Admin, the user has uploaded another invalid image. Shall I close this ticket? Reply "close" to confirm.`,
             aiVerification: 'Mismatch',
+            timestamp: new Date()
+          });
+          
+          ticket.internalNotes.push({
+            text: `Swift AI: User uploaded a second invalid image (${reAnalysis.isAI ? 'AI generated' : 'mismatched'}). Requested admin approval to close.`,
             timestamp: new Date()
           });
         } else {
@@ -596,8 +602,13 @@ exports.createTicketWithPhoto = async (req, res) => {
     const finalPriority = isImageMismatch ? 'low' : (aiAnalysis.priority || 'medium');
 
     const botSpamMessage = isImageMismatch
-      ? `⚠️ **Image Mismatch Detected**\n\nThe photo you uploaded does not appear to match your description: "*${description.slice(0, 100)}*".\n\nThis ticket has been flagged. Please reply with a **correct screenshot or photo** that clearly shows the issue. Once verified, your ticket will be reopened and our team will assist you.`
+      ? `⚠️ **Invalid Image Detected**\n\nThe photo you uploaded appears to be ${aiAnalysis.isAI ? 'AI generated' : 'unrelated to your description'}: "*${description.slice(0, 100)}*".\n\nThis ticket has been flagged. Please reply with a **correct, genuine screenshot or photo** that clearly shows the issue. Once verified, your ticket will be reopened and our team will assist you.`
       : null;
+
+    const internalNotesData = isImageMismatch ? [{
+      text: `Swift AI: The uploaded image is ${aiAnalysis.isAI ? 'AI generated' : 'not matched to the description'}. Ticket marked as spam. Customer prompted to resubmit.`,
+      timestamp: new Date()
+    }] : [];
 
     const initialMessages = [
       { 
@@ -624,6 +635,7 @@ exports.createTicketWithPhoto = async (req, res) => {
       priority: finalPriority,
       sentiment: aiAnalysis.sentiment || 'neutral',
       aiAnalysis,
+      internalNotes: internalNotesData,
       messages: initialMessages,
       activityLog: isImageMismatch ? [{
         actionType: 'SPAM_DETECTED',

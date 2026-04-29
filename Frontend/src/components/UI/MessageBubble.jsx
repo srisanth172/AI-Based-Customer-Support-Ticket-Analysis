@@ -45,9 +45,12 @@ const MessageBubble = ({ message, ticketId, ticketStatus, primaryPhotoUrl, onUpd
     }
   };
 
-  const rawFiles = message.files || [];
+  const rawFiles = [...(message.files || [])];
   if (message.attachmentUrl && message.attachmentUrl !== primaryPhotoUrl) {
-    rawFiles.push({ url: message.attachmentUrl, name: 'Attachment', fileType: 'image' });
+    // Only push if it's not already in the array
+    if (!rawFiles.some(f => f.url === message.attachmentUrl)) {
+      rawFiles.push({ url: message.attachmentUrl, name: 'Attachment', fileType: 'image' });
+    }
   }
 
   return (
@@ -111,7 +114,7 @@ const MessageBubble = ({ message, ticketId, ticketStatus, primaryPhotoUrl, onUpd
                       </div>
                     </div>
                   ) : (
-                    <a href={`http://localhost:5000${file.url}`} target="_blank" rel="noreferrer" className="text-xs underline text-blue-200">
+                    <a href={getAssetUrl(file.url)} target="_blank" rel="noreferrer" className="text-xs underline text-blue-200">
                       📎 {file.name || 'Download Attachment'}
                     </a>
                   )}
