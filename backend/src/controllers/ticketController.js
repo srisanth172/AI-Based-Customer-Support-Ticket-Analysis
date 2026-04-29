@@ -784,28 +784,30 @@ exports.updateTicketAdmin = async (req, res) => {
   }
 };
 
-// 4. AI Solution Suggestions Endpoint
+// 4. AI Solution Suggestions Endpoint — generates dynamic, ticket-specific suggestions via Groq
 exports.generateSuggestions = async (req, res) => {
   try {
     const ticket = await Ticket.findOne({ ticketId: req.params.id });
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
 
-    const text = `Ticket Subject: ${ticket.subject}\nDescription: ${ticket.description}`;
-    const imagePath = ticket.photoUrl ? path.join(__dirname, '../../../uploads', path.basename(ticket.photoUrl)) : null;
+    console.log('[Suggestions] Generating AI suggestions for ticket:', ticket.ticketId);
 
-    console.log('Generating AI suggestions for ticket:', ticket.ticketId);
-    const analysis = await aiService.analyzeTicketWithImage(text, imagePath);
+    let suggestedReply = null;
+    let suggestedSolutions = null;
 
-    res.json({
-      suggestions: analysis.suggestedSolutions || [
-        "Ask customer for clear screenshots of the error.",
-        "Check if the account has active subscription.",
-        "Request the customer to clear browser cache.",
-        "Escalate to technical team if issue persists."
-      ]
-    });
+    try {
+      const result = await aiService.generateAdminSuggestions(ticket);
+      if (result) {
+        suggestedReply = result.suggestedReply || null;
+        suggestedSolutions = Array.isArray(result.suggestedSolutions) ? result.suggestedSolutions : null;
+      }
+    } catch (aiErr) {
+      console.warn('[Suggestions] Groq call failed, will return null so frontend uses fallback:', aiErr.message);
+    }
+
+    res.json({ suggestedReply, suggestedSolutions });
   } catch (error) {
-    console.error('Suggestion generation failed:', error);
+    console.error('[Suggestions] Error:', error.message);
     res.status(500).json({ error: 'Failed to generate suggestions' });
   }
 };

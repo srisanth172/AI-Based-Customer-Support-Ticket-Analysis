@@ -392,6 +392,72 @@ class AIService {
     }
   }
 
+  async generateAdminSuggestions(ticket) {
+    const config = this._getAIConfig();
+    if (!config) return null;
+
+    const { apiKey, apiUrl, model } = config;
+
+    // Build a readable conversation summary from the last 6 messages
+    const recentMessages = (ticket.messages || [])
+      .slice(-6)
+      .filter(m => m.text)
+      .map(m => `${m.sender.toUpperCase()}: ${m.text}`)
+      .join('\n');
+
+    const prompt = `You are an expert customer support agent. A customer has raised a ticket with the following details.
+
+TICKET INFO:
+- Category: ${ticket.category}
+- Priority: ${ticket.priority}
+- Customer's Description: ${ticket.description || ticket.subject || 'No description provided'}
+
+RECENT CONVERSATION:
+${recentMessages || '(No conversation yet)'}
+
+Your task:
+1. Write a "suggestedReply" — a warm, empathetic 1-sentence opening message that directly acknowledges THIS customer's specific issue. Do NOT use generic phrases like "Thanks for contacting us". Make it specific to what the customer described.
+2. Write "suggestedSolutions" — exactly 4 specific, step-by-step actions that an admin agent should take or say to resolve THIS exact ticket. Tailor each step to the category (${ticket.category}) and the customer's exact problem. Do NOT give generic steps like "clear browser cache" unless it is relevant to this ticket.
+
+Return ONLY valid JSON:
+{
+  "suggestedReply": "...",
+  "suggestedSolutions": ["action 1", "action 2", "action 3", "action 4"]
+}`;
+
+    const response = await axios.post(apiUrl, {
+      model,
+      temperature: 0.7,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a senior customer support specialist. Generate specific, contextual solutions for each unique ticket. Output strict JSON only. No markdown, no extra text.'
+        },
+        { role: 'user', content: prompt }
+      ],
+      response_format: { type: 'json_object' }
+    }, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.FRONTEND_URL || 'http://localhost:5173',
+        'X-Title': 'Admin Suggestions Generator'
+      },
+      timeout: 20000
+    });
+
+    const content = response.data?.choices?.[0]?.message?.content;
+    if (!content) return null;
+
+    const normalized = content.trim()
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/```$/, '')
+      .trim();
+
+    return JSON.parse(normalized);
+  }
+
   async askCopilot(question, contextData) {
     const config = this._getAIConfig();
     if (!config) {

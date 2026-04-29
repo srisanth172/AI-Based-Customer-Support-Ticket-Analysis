@@ -9,6 +9,7 @@ import { toast } from 'react-hot-toast';
 import { CheckCircleIcon, RocketLaunchIcon, ArrowLeftIcon, PhotoIcon } from '@heroicons/react/24/outline';
 import io from 'socket.io-client';
 import { getAssetUrl } from '../utils/assets';
+import api from '../services/api';
 
 const TicketDetail = () => {
   const { id } = useParams();
@@ -20,6 +21,8 @@ const TicketDetail = () => {
   const [status, setStatus] = useState('');
   const [noteText, setNoteText] = useState('');
   const [userMessageCount, setUserMessageCount] = useState(0);
+  const [aiSuggestions, setAiSuggestions] = useState(null);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   
   useEffect(() => {
     const fetchTicket = async () => {
@@ -30,9 +33,19 @@ const TicketDetail = () => {
         setTeam(fetched.assignedTeam || 'unassigned');
         setStatus(fetched.status);
         
-        // Count existing user messages to set initial turn count
         const userMsgs = (fetched.messages || []).filter(m => m.sender === 'user').length;
         setUserMessageCount(userMsgs);
+
+        // Fetch fresh AI suggestions in background (non-blocking)
+        setSuggestionsLoading(true);
+        api.post(`/tickets/${fetched.ticketId}/suggestions`)
+          .then(res => {
+            if (res.data?.suggestedSolutions || res.data?.suggestedReply) {
+              setAiSuggestions(res.data);
+            }
+          })
+          .catch(err => console.warn('AI suggestions unavailable:', err.message))
+          .finally(() => setSuggestionsLoading(false));
 
       } catch (error) {
         toast.error('Failed to load ticket');
@@ -206,38 +219,49 @@ const TicketDetail = () => {
               </div>
             </div>
 
-            {/* AI Suggested Solutions Chips */}
-            {ticket.aiAnalysis && (
-              <div className="bg-emerald-900/10 border-b border-white/5 p-3 flex gap-2 overflow-x-auto custom-scrollbar shadow-inner">
-                {/* Quick Reply Chip */}
-                {ticket.aiAnalysis.suggestedReply && (
-                  <button 
-                    onClick={() => handleUseAISuggestion(ticket.aiAnalysis.suggestedReply)}
-                    className="whitespace-nowrap px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-[12px] font-bold rounded-xl border border-amber-500/30 transition-all shadow-sm flex items-center gap-2"
-                  >
-                    <span className="text-amber-400">⚡</span>
-                    Quick Acknowledgment
-                  </button>
-                )}
-
-                {/* Solution Chips */}
-                {ticket.aiAnalysis.suggestedSolutions?.map((sol, idx) => {
-                  const adminTexts = (ticket.messages || []).filter(m => m.sender === 'admin').map(m => m.text);
-                  const isTried = adminTexts.some(text => text.includes(sol.substring(0, 30)));
-                  return (
+            {/* AI Suggested Solutions Chips — loaded fresh from Groq for this specific ticket */}
+            <div className="bg-emerald-900/10 border-b border-white/5 p-3 flex gap-2 overflow-x-auto custom-scrollbar shadow-inner min-h-[52px] items-center">
+              {suggestionsLoading ? (
+                <div className="flex items-center gap-2 text-emerald-400/60 text-[11px] font-bold uppercase tracking-widest">
+                  <span className="w-3 h-3 border-2 border-emerald-400/40 border-t-emerald-400 rounded-full animate-spin" />
+                  Generating AI suggestions...
+                </div>
+              ) : (
+                <>
+                  {/* Quick Acknowledgment chip — dynamic, ticket-specific */}
+                  {(aiSuggestions?.suggestedReply || ticket?.aiAnalysis?.suggestedReply) && (
                     <button 
-                      key={idx}
-                      onClick={() => handleUseAISuggestion(sol)}
-                      className={`whitespace-nowrap px-4 py-2 ${isTried ? 'bg-slate-500/20 hover:bg-slate-500/30 text-slate-400 border-slate-500/30' : 'bg-white/5 hover:bg-emerald-500/20 text-emerald-100 border-white/10 hover:border-emerald-500/30'} text-[12px] font-bold rounded-xl border transition-all shadow-sm flex items-center gap-2`}
+                      onClick={() => handleUseAISuggestion(aiSuggestions?.suggestedReply || ticket.aiAnalysis.suggestedReply)}
+                      className="whitespace-nowrap px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-[12px] font-bold rounded-xl border border-amber-500/30 transition-all shadow-sm flex items-center gap-2"
                     >
-                      <span className={isTried ? 'text-slate-400' : 'text-emerald-400'}>{isTried ? '✓' : '💡'}</span>
-                      {isTried ? 'Tried: ' : 'Solution ' + (idx + 1) + ': '}
-                      {sol.length > 30 ? sol.substring(0, 30) + '...' : sol}
+                      <span className="text-amber-400">⚡</span>
+                      Quick Acknowledgment
                     </button>
-                  );
-                })}
-              </div>
-            )}
+                  )}
+
+                  {/* Solution chips — dynamic from Groq, fall back to stored aiAnalysis */}
+                  {(aiSuggestions?.suggestedSolutions || ticket?.aiAnalysis?.suggestedSolutions || []).map((sol, idx) => {
+                    const adminTexts = (ticket.messages || []).filter(m => m.sender === 'admin').map(m => m.text);
+                    const isTried = adminTexts.some(text => text.includes(sol.substring(0, 30)));
+                    return (
+                      <button 
+                        key={idx}
+                        onClick={() => handleUseAISuggestion(sol)}
+                        className={`whitespace-nowrap px-4 py-2 ${isTried ? 'bg-slate-500/20 hover:bg-slate-500/30 text-slate-400 border-slate-500/30' : 'bg-white/5 hover:bg-emerald-500/20 text-emerald-100 border-white/10 hover:border-emerald-500/30'} text-[12px] font-bold rounded-xl border transition-all shadow-sm flex items-center gap-2`}
+                      >
+                        <span className={isTried ? 'text-slate-400' : 'text-emerald-400'}>{isTried ? '✓' : '💡'}</span>
+                        {isTried ? 'Tried: ' : `Step ${idx + 1}: `}
+                        {sol.length > 32 ? sol.substring(0, 32) + '…' : sol}
+                      </button>
+                    );
+                  })}
+
+                  {!suggestionsLoading && !aiSuggestions && !ticket?.aiAnalysis?.suggestedSolutions && (
+                    <span className="text-slate-500 text-[11px] italic">No suggestions available</span>
+                  )}
+                </>
+              )}
+            </div>
 
             <div className="flex-1 overflow-hidden">
               <ChatBox
