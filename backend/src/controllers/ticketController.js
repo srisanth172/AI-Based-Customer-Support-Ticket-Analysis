@@ -358,25 +358,6 @@ exports.addMessage = async (req, res) => {
   }
 };
 
-          ticket.status = 'in_progress';
-        }
-      }
-    }
-
-    await ticket.save();
-    if (sender === 'admin') {
-      const user = await User.findById(ticket.userId);
-      if (user && user.email) {
-        await emailService.sendTicketNotification(user.email, ticket.ticketId, `New reply from support`);
-      }
-    }
-    await ticket.populate('userId', 'name email');
-    emitTicketUpdated(ticket);
-    res.json(ticket);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
 
 exports.updateTicketStatus = async (req, res) => {
   try {
