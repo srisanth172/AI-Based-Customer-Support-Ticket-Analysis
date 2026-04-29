@@ -66,9 +66,11 @@ exports.createTicket = async (req, res) => {
 
 exports.getTickets = async (req, res) => {
   try {
-    const { status, priority, category, search, page = 1, limit = 1000 } = req.query;
+    const { status, priority, category, search, page = 1, limit = 1000, myTickets } = req.query;
     const query = {};
-    if (req.user.role === 'customer') query.userId = req.user.userId;
+    if (req.user.role === 'customer' || myTickets === 'true') {
+      query.userId = req.user.userId;
+    }
     if (status) query.status = status;
     if (priority) query.priority = priority;
     if (category) query.category = category;
@@ -521,18 +523,24 @@ exports.classifyTicket = async (req, res) => {
     // Use AI service to classify
     const classification = await aiService.analyzeTicketWithAI(text);
     
+    const isValid = classification.isValid !== false && 
+                    classification.category !== 'OutOfScope' && 
+                    VALID_CATEGORIES.includes(classification.category);
+    
     res.json({
       category: classification.category || 'Product Issues',
       priority: classification.priority || 'Medium',
-      keywords: classification.keywords || []
+      keywords: classification.keywords || [],
+      valid: isValid
     });
   } catch (error) {
     console.error('Classification error:', error);
     // Return default classification on error
     res.json({
-      category: 'Product Issues',
-      priority: 'Medium',
-      keywords: []
+      category: 'OutOfScope',
+      priority: 'Low',
+      keywords: [],
+      valid: false
     });
   }
 };

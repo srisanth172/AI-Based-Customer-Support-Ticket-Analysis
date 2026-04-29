@@ -2,7 +2,7 @@ import React, { useState, useRef, useImperativeHandle, forwardRef, useEffect } f
 import MessageBubble from './MessageBubble';
 import { PhotoIcon, XMarkIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline';
 
-const ChatBox = forwardRef(({ messages = [], ticketId, ticketStatus, primaryPhotoUrl, onSendMessage, showRaiseButton = false, onRaiseTicket, disabled = false, onUpdateTicket }, ref) => {
+const ChatBox = forwardRef(({ messages = [], ticketId, ticketStatus, primaryPhotoUrl, additionalPhotoUrls = [], onSendMessage, showRaiseButton = false, onRaiseTicket, disabled = false, onUpdateTicket }, ref) => {
   const [text, setText] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -63,6 +63,7 @@ const ChatBox = forwardRef(({ messages = [], ticketId, ticketStatus, primaryPhot
             ticketId={ticketId} 
             ticketStatus={ticketStatus} 
             primaryPhotoUrl={primaryPhotoUrl}
+            additionalPhotoUrls={additionalPhotoUrls}
             onUpdateTicket={onUpdateTicket} 
           />
         ))}

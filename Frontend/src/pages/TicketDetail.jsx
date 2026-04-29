@@ -179,32 +179,17 @@ const TicketDetail = () => {
               {ticket.photoUrl && (
                 <div>
                   <h4 className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-2">Attached Proof</h4>
-                  <div className="space-y-4">
-                    {/* Primary Photo */}
-                    <div className="relative group cursor-zoom-in rounded-xl overflow-hidden border border-white/10 aspect-video bg-black/40">
-                      <img 
-                        src={getAssetUrl(ticket.photoUrl)} 
-                        alt="Primary Attachment" 
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                      />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <span className="text-white text-xs font-bold bg-emerald-600 px-3 py-1.5 rounded-lg shadow-lg">Primary Proof</span>
-                      </div>
+                  {/* Only show the PRIMARY photo here. Any resubmitted photos appear naturally
+                      inside the conversation timeline where the user actually uploaded them. */}
+                  <div className="relative group cursor-zoom-in rounded-xl overflow-hidden border border-white/10 aspect-video bg-black/40">
+                    <img 
+                      src={getAssetUrl(ticket.photoUrl)} 
+                      alt="Primary Attachment" 
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="text-white text-xs font-bold bg-emerald-600 px-3 py-1.5 rounded-lg shadow-lg">Primary Proof</span>
                     </div>
-
-                    {/* Additional Photos (e.g. 2nd photo after mismatch) */}
-                    {(ticket.additionalPhotos || []).map((photo, idx) => (
-                      <div key={idx} className="relative group cursor-zoom-in rounded-xl overflow-hidden border border-white/10 aspect-video bg-black/40">
-                        <img 
-                          src={getAssetUrl(photo.url)} 
-                          alt={`Additional ${idx + 1}`} 
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                        />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="text-white text-xs font-bold bg-amber-600 px-3 py-1.5 rounded-lg shadow-lg">Resubmitted #{idx + 1}</span>
-                        </div>
-                      </div>
-                    ))}
                   </div>
                 </div>
               )}
@@ -261,6 +246,7 @@ const TicketDetail = () => {
                 ticketId={ticket.ticketId}
                 ticketStatus={ticket.status}
                 primaryPhotoUrl={ticket.photoUrl}
+                additionalPhotoUrls={(ticket.additionalPhotos || []).map(p => p.url)}
                 onSendMessage={handleSendMessage}
                 onUpdateTicket={handleAdminUpdate}
                 disabled={ticket.status === 'closed'}

@@ -272,13 +272,26 @@ const CustomerTicketDetail = () => {
                       )}
                       <p className="text-[15px] leading-relaxed whitespace-pre-wrap font-medium">{msg.text}</p>
                       
-                      {msg.attachmentUrl && msg.attachmentUrl !== ticket.photoUrl && (
+                      {msg.attachmentUrl && 
+                       msg.attachmentUrl !== ticket.photoUrl && 
+                       !(ticket.additionalPhotos || []).find(p => p.url === msg.attachmentUrl) && (
                         <div className="mt-4 overflow-hidden rounded-xl border border-white/10 bg-black/20">
                           <img 
                             src={getAssetUrl(msg.attachmentUrl)} 
                             alt="Attachment" 
                             className="max-h-80 w-full object-contain bg-black/40 hover:scale-105 transition-transform duration-500"
                           />
+                          {msg.aiVerification && (
+                            <div className="px-3 py-2 text-center">
+                              <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg border ${
+                                msg.aiVerification === 'Genuine' 
+                                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
+                                  : 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                              }`}>
+                                {msg.aiVerification}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       )}
                       <div className={`text-[9px] mt-3 font-black uppercase tracking-widest ${isUser ? 'text-emerald-200/60' : msg.sender === 'admin' ? 'text-slate-400' : 'text-slate-500'}`}>

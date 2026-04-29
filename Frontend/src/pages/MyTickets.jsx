@@ -20,7 +20,7 @@ const MyTickets = () => {
   useEffect(() => {
     const fetchTickets = async () => {
       try {
-        const response = await api.get('/tickets');
+        const response = await api.get('/tickets?myTickets=true');
         setTickets(response.data.tickets || []);
         setLoading(false);
       } catch (error) {

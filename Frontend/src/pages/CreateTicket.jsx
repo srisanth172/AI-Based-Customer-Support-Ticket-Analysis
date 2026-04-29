@@ -70,9 +70,6 @@ const CreateTicket = () => {
     if (!formData.description.trim()) {
       newErrors.description = 'Description is required';
     }
-    if (!photo) {
-      newErrors.photo = 'Photo upload is mandatory';
-    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -111,23 +108,19 @@ const CreateTicket = () => {
 
     setLoading(true);
     try {
-      // Step 1: Classify ticket
       toast.loading('Analyzing your issue...');
       const classificationResult = await classifyTicket();
       setClassification(classificationResult);
       setShowClassification(true);
       toast.dismiss();
 
-      // Step 2: Check for duplicates
-      const duplicateResult = await checkDuplicates(classificationResult.category);
-      if (duplicateResult.hasDuplicate) {
-        setDuplicateWarning(duplicateResult.similar);
-        toast.error('Similar ticket(s) already exist. Please review them before proceeding.');
-        return;
+      if (classificationResult.valid !== false) {
+        const duplicateResult = await checkDuplicates(classificationResult.category);
+        if (duplicateResult.hasDuplicate) {
+          setDuplicateWarning(duplicateResult.similar);
+          toast.error('Similar ticket(s) already exist. Please review them before proceeding.');
+        }
       }
-
-      // Step 3: Wait for user confirmation of classification
-      // The classification is now shown and user can proceed
     } catch (error) {
       console.error('Submission error:', error);
       toast.error('Failed to process your ticket. Please try again.');
@@ -137,6 +130,10 @@ const CreateTicket = () => {
   };
 
   const handleFinalSubmit = async () => {
+    if (!photo) {
+      toast.error('Please upload a screenshot or proof of the issue.');
+      return;
+    }
     setLoading(true);
     try {
       const formDataWithFile = new FormData();
@@ -267,49 +264,6 @@ const CreateTicket = () => {
                           errors.description ? 'border-red-500' : 'border-white/10 bg-white/5 text-slate-200'
                         }`}
                       />
-                      {errors.description && <p className="mt-1 text-sm text-red-500 font-medium">{errors.description}</p>}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-300 mb-2">
-                        Proof/Screenshot <span className="text-red-500">*</span>
-                      </label>
-                      {!photoPreview ? (
-                        <div className="relative h-[160px]">
-                          <input
-                            type="file"
-                            accept="image/jpeg,image/png"
-                            onChange={handlePhotoUpload}
-                            className="hidden"
-                            id="photo-input"
-                          />
-                          <label
-                            htmlFor="photo-input"
-                            className={`cursor-pointer flex flex-col items-center justify-center w-full h-full border-2 border-dashed rounded-lg transition-colors ${
-                              errors.photo
-                                ? 'border-red-500 bg-red-50/5'
-                                : 'border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500'
-                            }`}
-                          >
-                            <PhotoIcon className="h-8 w-8 text-emerald-600 mb-2" />
-                            <p className="text-[11px] font-semibold text-slate-300 text-center px-2">Click to upload mandatory screenshot</p>
-                            <p className="text-[10px] text-slate-500 mt-1">PNG/JPG &lt; 5MB</p>
-                          </label>
-                        </div>
-                      ) : (
-                        <div className="relative rounded-lg overflow-hidden border-2 border-emerald-500/50 h-[220px] max-w-md">
-                          <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
-                          <button
-                            type="button"
-                            onClick={removePhoto}
-                            className="absolute top-2 right-2 bg-red-500/80 backdrop-blur-sm text-white p-1.5 rounded-lg hover:bg-red-600 transition-colors"
-                          >
-                            <XMarkIcon className="h-4 w-4" />
-                          </button>
-                        </div>
-                      )}
-                      {errors.photo && <p className="mt-2 text-sm text-red-500 font-medium">{errors.photo}</p>}
-                    </div>
                   </div>
 
                   {/* Submit Button */}
@@ -318,52 +272,106 @@ const CreateTicket = () => {
                     disabled={loading}
                     className="w-full bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {loading ? <Loader size="sm" text="" /> : 'Continue'}
+                    {loading ? <Loader size="sm" text="" /> : 'Validate Issue'}
                   </button>
                 </form>
               ) : (
                 <div className="space-y-6">
                   {/* Classification Result */}
-                  <div className="bg-gradient-to-r from-emerald-500/10 to-green-500/10 border-2 border-emerald-500/20 rounded-xl p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="h-12 w-12 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0">
-                        <CheckCircleIcon className="h-6 w-6 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-bold text-white mb-2">AI Classification Complete</h3>
-                        <div className="space-y-2">
-                          <div>
-                            <p className="text-xs font-semibold text-slate-400">CATEGORY</p>
-                            <p className="text-lg font-bold text-emerald-600">{classification.category}</p>
-                          </div>
+                  {!classification.valid ? (
+                    <div className="bg-red-500/10 border-2 border-red-500/30 rounded-xl p-6">
+                      <div className="flex items-start gap-4">
+                        <div className="h-12 w-12 rounded-full bg-red-600 flex items-center justify-center flex-shrink-0">
+                          <ExclamationCircleIcon className="h-6 w-6 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-bold text-white mb-2">Issue Outside Support Scope</h3>
+                          <p className="text-sm text-slate-300 mb-2">This issue is outside our support scope.</p>
+                          <p className="text-sm text-slate-300">We only support issues related to payments, orders, products, accounts, subscriptions, and communication.</p>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="bg-gradient-to-r from-emerald-500/10 to-green-500/10 border-2 border-emerald-500/20 rounded-xl p-6">
+                        <div className="flex items-start gap-4">
+                          <div className="h-12 w-12 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0">
+                            <CheckCircleIcon className="h-6 w-6 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-bold text-white mb-2">AI Classification Complete</h3>
+                            <div className="space-y-2">
+                              <div>
+                                <p className="text-xs font-semibold text-slate-400">DETECTED</p>
+                                <p className="text-lg font-bold text-emerald-600">{classification.category} ({classification.priority} Priority)</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
 
-                  {/* Duplicate Warning */}
-                  {duplicateWarning && duplicateWarning.length > 0 && (
-                    <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-xl p-6">
-                      <div className="flex items-start gap-3">
-                        <ExclamationCircleIcon className="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <h4 className="font-bold text-white mb-2">Similar Ticket(s) Found</h4>
-                          <p className="text-sm text-slate-300 mb-3">We found similar issues. Please check if they solve your problem:</p>
-                          <div className="space-y-2">
-                            {duplicateWarning.map((dup, idx) => (
-                              <button
-                                key={idx}
-                                onClick={() => navigate(`/customer/tickets/${dup.ticketId || dup._id}`)}
-                                className="block w-full text-left p-3 bg-white/5 border-white/10 rounded-lg hover:border-amber-400 transition-colors"
-                              >
-                                <p className="text-sm font-semibold text-white">{dup.subject || dup.title || 'Untitled Ticket'}</p>
-                                <p className="text-xs text-slate-500">Status: {dup.status}</p>
-                              </button>
-                            ))}
+                      {/* Photo Upload for Valid Tickets */}
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-300 mb-2">
+                          Proof/Screenshot <span className="text-red-500">*</span>
+                        </label>
+                        {!photoPreview ? (
+                          <div className="relative h-[160px]">
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png"
+                              onChange={handlePhotoUpload}
+                              className="hidden"
+                              id="photo-input"
+                            />
+                            <label
+                              htmlFor="photo-input"
+                              className={`cursor-pointer flex flex-col items-center justify-center w-full h-full border-2 border-dashed rounded-lg transition-colors border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500`}
+                            >
+                              <PhotoIcon className="h-8 w-8 text-emerald-600 mb-2" />
+                              <p className="text-[11px] font-semibold text-slate-300 text-center px-2">Click to upload mandatory screenshot</p>
+                              <p className="text-[10px] text-slate-500 mt-1">PNG/JPG &lt; 5MB</p>
+                            </label>
+                          </div>
+                        ) : (
+                          <div className="relative rounded-lg overflow-hidden border-2 border-emerald-500/50 h-[220px] max-w-md">
+                            <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={removePhoto}
+                              className="absolute top-2 right-2 bg-red-500/80 backdrop-blur-sm text-white p-1.5 rounded-lg hover:bg-red-600 transition-colors"
+                            >
+                              <XMarkIcon className="h-4 w-4" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Duplicate Warning */}
+                      {duplicateWarning && duplicateWarning.length > 0 && (
+                        <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-xl p-6">
+                          <div className="flex items-start gap-3">
+                            <ExclamationCircleIcon className="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <h4 className="font-bold text-white mb-2">Similar Ticket(s) Found</h4>
+                              <p className="text-sm text-slate-300 mb-3">We found similar issues. Please check if they solve your problem:</p>
+                              <div className="space-y-2">
+                                {duplicateWarning.map((dup, idx) => (
+                                  <button
+                                    key={idx}
+                                    onClick={() => navigate(`/customer/tickets/${dup.ticketId || dup._id}`)}
+                                    className="block w-full text-left p-3 bg-white/5 border-white/10 rounded-lg hover:border-amber-400 transition-colors"
+                                  >
+                                    <p className="text-sm font-semibold text-white">{dup.subject || dup.title || 'Untitled Ticket'}</p>
+                                    <p className="text-xs text-slate-500">Status: {dup.status}</p>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
+                      )}
+                    </>
                   )}
 
                   {/* Action Buttons */}
@@ -372,18 +380,21 @@ const CreateTicket = () => {
                       onClick={() => {
                         setShowClassification(false);
                         setDuplicateWarning(null);
+                        setClassification(null);
                       }}
                       className="flex-1 bg-white/10 text-white font-bold py-3 rounded-lg hover:bg-white/20 transition-colors"
                     >
                       Back
                     </button>
-                    <button
-                      onClick={handleFinalSubmit}
-                      disabled={loading}
-                      className="flex-1 bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {loading ? <Loader size="sm" text="" /> : 'Submit Ticket'}
-                    </button>
+                    {classification.valid && (
+                      <button
+                        onClick={handleFinalSubmit}
+                        disabled={loading}
+                        className="flex-1 bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {loading ? <Loader size="sm" text="" /> : 'Raise Ticket'}
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

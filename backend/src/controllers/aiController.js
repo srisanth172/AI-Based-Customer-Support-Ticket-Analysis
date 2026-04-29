@@ -101,20 +101,25 @@ exports.analyzeImage = async (req, res) => {
     console.log('[AI Vision] Looking for file at:', filePath);
 
     let base64Image = '';
-    const ext = path.extname(fileName).toLowerCase().replace('.', '');
+    const ext = path.extname(fileName).toLowerCase().replace('.', '') || 'jpeg';
     
-    if (fs.existsSync(filePath)) {
+    // Resolve correct uploads directory
+    const uploadsDir = path.join(__dirname, '../../..', 'uploads');
+    const resolvedPath = path.join(uploadsDir, fileName);
+    console.log('[AI Vision] Resolved uploads path:', resolvedPath);
+    
+    if (fs.existsSync(resolvedPath)) {
       console.log('[AI Vision] File found locally.');
-      const fileData = fs.readFileSync(filePath);
-      base64Image = `data:image/${ext || 'jpeg'};base64,${fileData.toString('base64')}`;
+      const fileData = fs.readFileSync(resolvedPath);
+      base64Image = `data:image/${ext};base64,${fileData.toString('base64')}`;
     } else {
-      console.log('[AI Vision] File NOT found locally.');
+      console.log('[AI Vision] File NOT found locally at:', resolvedPath);
       if (imageUrl.startsWith('http') && !imageUrl.includes('localhost')) {
          base64Image = imageUrl;
       } else {
          return res.status(404).json({ 
-           error: 'Image not found locally or invalid URL',
-           checkedPath: filePath 
+           error: 'Image not found on server',
+           checkedPath: resolvedPath 
          });
       }
     }
@@ -131,7 +136,9 @@ exports.analyzeImage = async (req, res) => {
       ? "https://api.groq.com/openai/v1/chat/completions" 
       : "https://openrouter.ai/api/v1/chat/completions";
     
-    const model = groqKey ? "llama-3.2-11b-vision-preview" : (process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini");
+    // Use vision-capable model. Groq's llama-3.2-11b-vision-preview is deprecated;
+    // use meta-llama/llama-4-scout-17b-16e-instruct which has vision support.
+    const model = groqKey ? "meta-llama/llama-4-scout-17b-16e-instruct" : "google/gemini-2.0-flash-001";
     
     console.log(`[AI Vision] Sending to ${groqKey ? 'Groq' : 'OpenRouter'} model:`, model);
 
@@ -143,7 +150,10 @@ exports.analyzeImage = async (req, res) => {
           {
             role: "user",
             content: [
-              { type: "text", text: "Determine if this image is AI-generated (stable diffusion/midjourney style) or a genuine, real-world screenshot/photo. Return ONLY 'AI Generated' or 'Human-Verified Genuine' based on your analysis." },
+              { 
+                type: "text", 
+                text: "You are an image authenticity checker. Analyze this image carefully. Determine if it is AI-generated (created by Stable Diffusion, Midjourney, DALL-E, or similar AI art tools) OR a real, genuine screenshot/photo. Look for tell-tale signs: unnatural textures, perfect symmetry, dreamlike quality, watermarks, UI elements, etc. Respond with ONLY one of these exact strings: 'AI Generated' or 'Human-Verified Genuine'." 
+              },
               { type: "image_url", image_url: { url: base64Image } }
             ]
           }
@@ -156,7 +166,7 @@ exports.analyzeImage = async (req, res) => {
           "HTTP-Referer": process.env.FRONTEND_URL || "http://localhost:5173",
           "X-Title": "Support AI Vision",
         },
-        timeout: 15000 // 15s timeout
+        timeout: 30000 // 30s timeout for vision tasks
       }
     );
 

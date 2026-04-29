@@ -339,15 +339,13 @@ const TicketTable = ({ tickets, updateTicketAdmin, externalFilters }) => {
                                {analysisResults[selectedTicket.photoUrl]}
                              </span>
                            ) : (
-                             // Only show manual verification for spam or if it's the primary proof
-                             (selectedTicket.category === 'spam') && (
-                               <button 
-                                 onClick={() => verifyFile(selectedTicket.photoUrl)}
-                                 className="text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-500"
-                               >
-                                 {verifying === selectedTicket.photoUrl ? 'Analyzing...' : 'Verify Authenticity'}
-                               </button>
-                             )
+                             // Always allow manual verification
+                             <button 
+                               onClick={() => verifyFile(selectedTicket.photoUrl)}
+                               className="text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-500"
+                             >
+                               {verifying === selectedTicket.photoUrl ? 'Analyzing...' : 'Verify Authenticity'}
+                             </button>
                            )}
                         </div>
                       </div>
@@ -370,7 +368,7 @@ const TicketTable = ({ tickets, updateTicketAdmin, externalFilters }) => {
                     {/* Message Attachments */}
                     {selectedTicket.messages.map((m, msgIdx) => (
                       <React.Fragment key={msgIdx}>
-                        {m.attachmentUrl && (
+                        {m.attachmentUrl && m.attachmentUrl !== selectedTicket.photoUrl && !(selectedTicket.additionalPhotos || []).find(p => p.url === m.attachmentUrl) && (
                           <div className="space-y-2">
                             <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
                               <img 
@@ -405,7 +403,7 @@ const TicketTable = ({ tickets, updateTicketAdmin, externalFilters }) => {
                         {(m.files || []).map((file, i) => (
                           <div key={`${msgIdx}-${i}`} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800">
                             <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{file.name}</span>
-                            <button onClick={() => verifyFile(file.name)} className="text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-500">{verifying === file.name ? 'Analyzing...' : 'Verify Authenticity'}</button>
+                            <button onClick={() => verifyFile(file.url)} className="text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-500">{verifying === file.url ? 'Analyzing...' : 'Verify Authenticity'}</button>
                           </div>
                         ))}
                       </React.Fragment>
