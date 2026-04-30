@@ -236,6 +236,15 @@ class AIService {
     const priorityAnalysis = this.predictPriority(text, sentimentAnalysis.sentiment, category);
     const suggestedReply = this.generateSuggestedReply(text, category, sentimentAnalysis.sentiment);
     const reasoning = [];
+    let isValid = true;
+    
+    // Fallback gibberish check
+    const gibberishRegex = /^[a-zA-Z0-9;']+$/;
+    if (text.length < 5 || (text.length < 20 && gibberishRegex.test(text.replace(/\s/g, '')))) {
+      isValid = false;
+      reasoning.push(`Text appears to be gibberish or too short`);
+    }
+
     if (sentimentAnalysis.sentiment === 'negative') reasoning.push(`Negative sentiment detected`);
     if (priorityAnalysis.priority === 'high') reasoning.push(`Assigned High Priority (Billing issue or Critical Keywords)`);
     if (priorityAnalysis.keywords.length) reasoning.push(`Key indicators: ${priorityAnalysis.keywords.join(', ')}`);
@@ -251,9 +260,10 @@ class AIService {
     const suggestedTeam = teamMap[category] || 'Support Team';
 
     return {
+      isValid,
       sentiment: sentimentAnalysis.sentiment,
       priority: priorityAnalysis.priority,
-      category,
+      category: isValid ? category : 'OutOfScope',
       suggestedReply,
       suggestedSolutions: [
         "Please provide more details about the issue.",
@@ -304,12 +314,16 @@ class AIService {
       6. Notifications & Communication
       7. Subscription & Plans
 
-      If the issue does NOT fall into these categories, or if the image is unrelated to the text description (e.g., description talks about "billing" but image is a "scenic photo"), or if the image is AI-generated, you MUST return category: "OutOfScope" and isValid: false.
+      Rules:
+      1. If the text description is gibberish (e.g., "kjd;t';ujyuy"), meaningless, or completely unrelated to the 7 categories, you MUST set "isValid": false and "category": "OutOfScope".
+      2. If the text description is valid, but the attached image does NOT match the description at all (e.g., describing a payment issue but attaching a megaphone or scenic photo), you MUST set "isImageMismatch": true.
+      3. If the attached image appears to be AI-generated, you MUST set "isAI": true.
 
       Return strictly valid JSON only.
       JSON schema:
       {
         "isValid": boolean,
+        "isImageMismatch": boolean,
         "isAI": boolean,
         "sentiment": "positive|neutral|negative",
         "priority": "low|medium|high",
@@ -381,8 +395,8 @@ class AIService {
         suggestedSolutions: Array.isArray(parsed.suggestedSolutions) ? parsed.suggestedSolutions : ['Please provide more details.', 'Restart your device.', 'Clear your cache.', 'Contact our team.'],
         reasoning: parsed.reasoning || 'Classified by model output.',
         keywords: Array.isArray(parsed.keywords) ? parsed.keywords : [],
-        isValid: parsed.isValid !== undefined ? parsed.isValid : true,
-        isSpam: parsed.category === 'OutOfScope' || parsed.isValid === false,
+        isValid: parsed.isValid !== undefined ? parsed.isValid : (parsed.category !== 'OutOfScope'),
+        isSpam: parsed.isImageMismatch === true || parsed.isAI === true || parsed.category === 'OutOfScope',
         isAI: parsed.isAI === true
       };
 

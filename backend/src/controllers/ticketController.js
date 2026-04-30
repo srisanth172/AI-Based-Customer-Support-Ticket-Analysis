@@ -620,7 +620,8 @@ exports.createTicketWithPhoto = async (req, res) => {
     const fullImagePath = path.join(__dirname, '../../uploads', photoFile.filename);
 
     // AI vision analysis (checks category, validity AND image-description match)
-    const aiAnalysis = await aiService.analyzeTicketWithImage(description, fullImagePath);
+    const textContext = `Title: ${title}\nDescription: ${description}`;
+    const aiAnalysis = await aiService.analyzeTicketWithImage(textContext, fullImagePath);
 
     // Hard out-of-scope rejection (no ticket created)
     if (aiAnalysis.category === 'OutOfScope' || aiAnalysis.isValid === false || !VALID_CATEGORIES.includes(aiAnalysis.category)) {
