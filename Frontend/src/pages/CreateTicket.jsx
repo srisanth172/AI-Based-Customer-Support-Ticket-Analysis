@@ -22,6 +22,8 @@ const CreateTicket = () => {
   const [submittedTicketId, setSubmittedTicketId] = useState(null);
   const [outOfScopeError, setOutOfScopeError] = useState(false);
   const [isSpamTicket, setIsSpamTicket] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [duplicateWarning, setDuplicateWarning] = useState(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
