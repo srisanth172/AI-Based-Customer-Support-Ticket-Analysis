@@ -299,11 +299,19 @@ class AIService {
       if (uniqueWords.size === 1) return true;
     }
 
-    // 5. Common nonsense/test phrases
-    const nonsense = ['hello', 'hi', 'test', 'testing', 'asdf', 'ghjk', 'nonsense', 'nothing'];
-    if (words.length <= 2 && words.every(w => nonsense.includes(w))) return true;
+    // 5. Common nonsense/test/conversational phrases
+    const nonsense = ['hello', 'hi', 'test', 'testing', 'asdf', 'ghjk', 'nonsense', 'nothing', 'console', 'chatter', 'talk', 'chat', 'someone'];
+    if (words.length <= 4 && words.every(w => nonsense.includes(w))) return true;
+
+    // 6. Support Relevance Check
+    const supportKeywords = [
+      'pay', 'order', 'delivery', 'return', 'refund', 'product', 'account', 'login', 'password', 'notification', 'subscription', 'plan',
+      'broken', 'damaged', 'failed', 'issue', 'problem', 'help', 'support', 'working', 'error', 'billing', 'charge', 'track', 'shipping', 'sign', 'reset', 'email'
+    ];
+    const hasSupportIntent = words.some(w => supportKeywords.some(k => w.includes(k)));
+    if (words.length < 15 && !hasSupportIntent) return true;
     
-    // 6. No alphabetic characters
+    // 7. No alphabetic characters
     if (!/[a-zA-Z]/.test(cleanText)) return true;
     
     return false;
@@ -367,7 +375,7 @@ class AIService {
       7. Subscription & Plans
 
       STRICT REJECTION RULES:
-      1. If the text is nonsense, gibberish, "test", "hello", personal chatter, or unrelated to the 7 categories above, you MUST set "isValid": false and "category": "OutOfScope". Do NOT assign any other category.
+      1. If the text is nonsense, gibberish, "test", "hello", "hi", "how are you", personal chatter, conversational requests (e.g. "i need to talk", "console me"), or completely unrelated to the 7 categories above, you MUST set "isValid": false and "category": "OutOfScope". Do NOT force it into one of the 7 categories.
       2. If the text is valid but the attached image is unrelated to the description, set "isImageMismatch": true.
       3. If the image is AI-generated, set "isAI": true.
 
