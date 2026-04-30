@@ -279,7 +279,34 @@ class AIService {
     };
   }
 
+  isGibberish(text) {
+    // Remove "Title: " and "Description: " prefixes and whitespace
+    const rawText = text.replace(/Title:/gi, '').replace(/Description:/gi, '').replace(/\s+/g, '').trim();
+    
+    // Less than 8 meaningful characters is too short
+    if (rawText.length < 8) return true;
+    
+    // Repeated single character (e.g., "fffff") or repeated two characters (e.g., "fgfgfgfg")
+    if (/^([a-zA-Z])\1+$/.test(rawText) || /^([a-zA-Z]{2})\1+$/.test(rawText)) return true;
+    
+    // No alphabetic characters at all
+    if (!/[a-zA-Z]/.test(rawText)) return true;
+    
+    return false;
+  }
+
   async analyzeTicketWithAI(text) {
+    if (this.isGibberish(text)) {
+      return {
+        category: 'OutOfScope',
+        priority: 'Low',
+        keywords: ['gibberish', 'invalid'],
+        isValid: false,
+        isSpam: false,
+        isImageMismatch: false
+      };
+    }
+
     try {
       const modelAnalysis = await this.callCategorizationAPI(text);
       if (modelAnalysis) return modelAnalysis;
@@ -291,6 +318,17 @@ class AIService {
   }
 
   async analyzeTicketWithImage(text, imagePath) {
+    if (this.isGibberish(text)) {
+      return {
+        category: 'OutOfScope',
+        priority: 'Low',
+        keywords: ['gibberish', 'invalid'],
+        isValid: false,
+        isSpam: false,
+        isImageMismatch: false
+      };
+    }
+
     try {
       const config = this._getAIConfig();
       if (!config) return { ...this.analyzeTicket(text), isSpam: false };
@@ -305,7 +343,7 @@ class AIService {
 
       const promptText = `
       Analyze the customer support message and the attached image.
-      You MUST classify the issue into ONE of these 7 categories:
+      Classify the issue into ONE of these 7 categories, UNLESS it is gibberish or unrelated:
       1. Payments
       2. Orders & Delivery
       3. Returns & Refunds
@@ -314,8 +352,8 @@ class AIService {
       6. Notifications & Communication
       7. Subscription & Plans
 
-      Rules:
-      1. If the text description is gibberish (e.g., "kjd;t';ujyuy"), meaningless, or completely unrelated to the 7 categories, you MUST set "isValid": false and "category": "OutOfScope".
+      CRITICAL RULES:
+      1. If the text description is gibberish (e.g. "fgfg", "test", repeated letters), meaningless, too short, or completely unrelated to customer support or the 7 categories, you MUST set "isValid": false and "category": "OutOfScope". Do NOT force it into one of the 7 categories.
       2. If the text description is valid, but the attached image does NOT match the description at all (e.g., describing a payment issue but attaching a megaphone or scenic photo), you MUST set "isImageMismatch": true.
       3. If the attached image appears to be AI-generated, you MUST set "isAI": true.
 
