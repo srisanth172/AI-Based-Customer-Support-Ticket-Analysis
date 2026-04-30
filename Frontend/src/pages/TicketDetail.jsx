@@ -179,32 +179,68 @@ const TicketDetail = () => {
           
           {/* User Issue Summary & Image */}
           <div className="bg-[#041209]/60 backdrop-blur-xl rounded-[24px] border border-white/5 overflow-hidden shadow-2xl">
-            <div className="p-6 border-b border-white/5 bg-white/[0.02]">
+            <div className="p-6 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
               <h3 className="font-bold text-white text-lg">Customer Issue Report</h3>
+              {ticket.status === 'spam' && (
+                <span className="px-3 py-1 bg-rose-500/10 border border-rose-500/30 text-rose-500 text-[10px] font-black uppercase tracking-widest rounded-lg animate-pulse">
+                  Spam Verification Required
+                </span>
+              )}
             </div>
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-6 space-y-6">
               <div>
                 <h4 className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-2">Description</h4>
                 <p className="text-slate-200 text-sm leading-relaxed whitespace-pre-wrap">
                   {ticket.description || ticket.subject}
                 </p>
               </div>
-              {ticket.photoUrl && (
-                <div>
-                  <h4 className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-2">Attached Proof</h4>
-                  {/* Only show the PRIMARY photo here. Any resubmitted photos appear naturally
-                      inside the conversation timeline where the user actually uploaded them. */}
-                  <div className="relative group cursor-zoom-in rounded-xl overflow-hidden border border-white/10 aspect-video bg-black/40">
-                    <img 
-                      src={getAssetUrl(ticket.photoUrl)} 
-                      alt="Primary Attachment" 
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <span className="text-white text-xs font-bold bg-emerald-600 px-3 py-1.5 rounded-lg shadow-lg">Primary Proof</span>
+
+              {/* PHOTO COMPARISON FOR SPAM TICKETS */}
+              {ticket.status === 'spam' && (ticket.additionalPhotos || []).length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/5">
+                  <div>
+                    <h4 className="text-xs font-bold text-rose-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-rose-500" />
+                      Original Proof (Rejected)
+                    </h4>
+                    <div className="relative group cursor-zoom-in rounded-xl overflow-hidden border border-rose-500/20 aspect-video bg-black/40">
+                      <img 
+                        src={getAssetUrl(ticket.photoUrl)} 
+                        alt="Original Rejected Proof" 
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-emerald-500 animate-bounce" />
+                      Latest Resubmission (Awaiting Review)
+                    </h4>
+                    <div className="relative group cursor-zoom-in rounded-xl overflow-hidden border border-emerald-500/20 aspect-video bg-black/40">
+                      <img 
+                        src={getAssetUrl(ticket.additionalPhotos[ticket.additionalPhotos.length - 1].url)} 
+                        alt="Latest Resubmitted Proof" 
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 shadow-[0_0_20px_rgba(16,185,129,0.2)]" 
+                      />
                     </div>
                   </div>
                 </div>
+              ) : (
+                ticket.photoUrl && (
+                  <div className="pt-4 border-t border-white/5">
+                    <h4 className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-2">Attached Proof</h4>
+                    <div className="relative group cursor-zoom-in rounded-xl overflow-hidden border border-white/10 max-w-md aspect-video bg-black/40">
+                      <img 
+                        src={getAssetUrl(ticket.photoUrl)} 
+                        alt="Primary Attachment" 
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-white text-[10px] font-bold bg-emerald-600 px-3 py-1.5 rounded-lg shadow-lg uppercase tracking-widest">View Full Image</span>
+                      </div>
+                    </div>
+                  </div>
+                )
               )}
             </div>
           </div>

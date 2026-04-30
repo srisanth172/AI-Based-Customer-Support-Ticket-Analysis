@@ -266,35 +266,70 @@ exports.addMessage = async (req, res) => {
         const lastMsg = ticket.messages[ticket.messages.length - 1];
         if (lastMsg && !lastMsg.attachmentUrl) lastMsg.attachmentUrl = newPhotoUrl;
 
-        // Re-analyze via Groq
+        // Re-analyze via AI (Groq with OpenRouter fallback)
         console.log(`[Spam Resubmit] Re-analyzing image for ticket ${ticket.ticketId}, resubmit #${ticket.spamResubmitCount}`);
-        const reAnalysis = await aiService.analyzeTicketWithImage(ticket.description || ticket.subject, fullNewImagePath);
-        const isStillMismatch = reAnalysis.isSpam === true;
+        
+        try {
+          const reAnalysis = await aiService.analyzeTicketWithImage(ticket.description || ticket.subject, fullNewImagePath);
+          const isStillMismatch = reAnalysis.isSpam === true;
 
-        if (!isStillMismatch) {
-          // ── Photo now valid → reopen ticket ──
-          ticket.status = 'open';
-          ticket.priority = reAnalysis.priority || ticket.priority;
-          ticket.category = reAnalysis.category || ticket.aiAnalysis.category || 'Product Issues';
-          ticket.aiAnalysis = { ...ticket.aiAnalysis, ...reAnalysis };
-          ticket.activityLog.push({ actionType: 'SPAM_CLEARED', message: 'Ticket reopened: resubmitted photo verified and matches the issue description.' });
+          if (!isStillMismatch) {
+            // ── Photo now valid → reopen ticket ──
+            const previousCategory = ticket.category;
+            ticket.status = 'open';
+            ticket.priority = reAnalysis.priority || ticket.priority;
+            ticket.category = (reAnalysis.category && reAnalysis.category !== 'Spam') ? reAnalysis.category : 'Product Issues';
+            
+            // Log activity
+            ticket.activityLog.push({ 
+              actionType: 'SPAM_CLEARED', 
+              message: `Ticket reinstated: resubmitted photo verified. Category changed from Spam to ${ticket.category}.` 
+            });
+
+            ticket.messages.push({
+              sender: 'bot',
+              text: `✅ **Verification Successful!**\n\nYour new photo matches your description. I have moved your ticket from **Spam** to **${ticket.category}** and our team will assist you shortly.`,
+              aiVerification: 'Genuine',
+              timestamp: new Date()
+            });
+
+            await Notification.create({ 
+              recipient: 'admin', 
+              title: 'Spam Verification Success', 
+              description: `Ticket ${ticket.ticketId} reopened after valid photo resubmission.`, 
+              type: 'success', 
+              ticketId: ticket.ticketId 
+            });
+          } else {
+            // ── Second invalid image (resubmission) → ask admin to close ──
+            const mismatchReason = reAnalysis.isAI ? 'appears to be AI-generated' : 'still does not match the issue description';
+            
+            ticket.messages.push({
+              sender: 'bot',
+              text: `🚨 **Admin Intervention Required**\n\nCustomer submitted a second invalid image. The latest photo ${mismatchReason}.\n\n**Admin, shall I close this ticket?** Reply with **"close"** to confirm or **"not spam"** to manually override.`,
+              timestamp: new Date()
+            });
+
+            ticket.internalNotes.push({ 
+              text: `Swift AI: Second verification failed. Photo ${mismatchReason}. Prompted admin to close.`, 
+              timestamp: new Date() 
+            });
+
+            await Notification.create({ 
+              recipient: 'admin', 
+              title: 'Repeated Verification Failure', 
+              description: `Customer failed photo verification for the second time on ticket ${ticket.ticketId}.`, 
+              type: 'warning', 
+              ticketId: ticket.ticketId 
+            });
+          }
+        } catch (aiError) {
+          console.error('[Spam Resubmit] AI analysis failed:', aiError);
           ticket.messages.push({
             sender: 'bot',
-            text: `✅ **Photo Verified!**\n\nYour new photo has been analyzed and matches your reported issue. This ticket has been reopened and our support team will now assist you shortly.`,
-            aiVerification: 'Genuine',
+            text: `⚠️ My analysis system is temporarily overloaded. An admin will review your resubmitted photo manually.`,
             timestamp: new Date()
           });
-          await Notification.create({ recipient: 'admin', title: 'Spam Ticket Reopened', description: `Ticket ${ticket.ticketId} was reopened after the customer resubmitted a valid photo.`, type: 'warning', ticketId: ticket.ticketId });
-        } else {
-          // ── Second invalid image (first resubmission) → ask admin to close ──
-          const mismatchReason = reAnalysis.isAI ? 'appears to be AI-generated' : 'still does not match the issue description';
-          ticket.messages.push({
-            sender: 'bot',
-            text: `🚨 **Admin Notice — Close Ticket?**\n\nThe customer has now submitted a second invalid image. The latest photo ${mismatchReason}.\n\nDo you want to **close this ticket**? Reply **"close"** to confirm, or **"not spam"** if you believe this is a valid submission.`,
-            timestamp: new Date()
-          });
-          ticket.internalNotes.push({ text: `Swift AI: Customer submitted second invalid image. Latest image ${mismatchReason}. Admin prompted to close.`, timestamp: new Date() });
-          await Notification.create({ recipient: 'admin', title: 'Repeated Invalid Images', description: `Customer has submitted a second invalid image on ticket ${ticket.ticketId}. Admin action required.`, type: 'warning', ticketId: ticket.ticketId });
         }
 
         await ticket.save();
@@ -630,13 +665,19 @@ exports.createTicketWithPhoto = async (req, res) => {
     const textContext = `Title: ${title}\nDescription: ${description}`;
     const aiAnalysis = await aiService.analyzeTicketWithImage(textContext, fullImagePath);
 
+    console.log(`[CreateTicket] AI Analysis for ${ticketId}:`, JSON.stringify(aiAnalysis, null, 2));
+
     // Hard out-of-scope rejection (no ticket created)
-    if (aiAnalysis.category === 'OutOfScope' || aiAnalysis.isValid === false || !VALID_CATEGORIES.includes(aiAnalysis.category)) {
-      console.log('Ticket rejected: Out of Scope or Invalid');
+    const isOutOfScope = aiAnalysis.category === 'OutOfScope' || aiAnalysis.isValid === false;
+    const isInvalidCategory = !VALID_CATEGORIES.includes(aiAnalysis.category);
+
+    if (isOutOfScope || isInvalidCategory) {
+      console.warn(`[CreateTicket] Ticket ${ticketId} REJECTED. Reason: ${isOutOfScope ? 'OutOfScope/Invalid' : 'Unsupported Category (' + aiAnalysis.category + ')'}`);
       return res.status(400).json({
         message: 'This issue is outside our support scope. Please ensure your description is relevant to our supported categories.',
         category: aiAnalysis.category,
-        reasoning: aiAnalysis.reasoning
+        reasoning: aiAnalysis.reasoning,
+        isValid: aiAnalysis.isValid
       });
     }
 

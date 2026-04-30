@@ -137,11 +137,17 @@ const CreateTicket = () => {
     } catch (error) {
       toast.dismiss('submit-ticket');
       
-      const errRes = error.response?.data;
-      if (error.response?.status === 400 && errRes?.message?.includes('outside our support scope')) {
+      const status = error.status || error.response?.status;
+      const data = error.data || error.response?.data;
+      
+      if (status === 400) {
         setOutOfScopeError(true);
+        // Smoothly scroll to the error at the bottom
+        setTimeout(() => {
+          document.getElementById('out-of-scope-banner')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
       } else {
-        toast.error(errRes?.message || error.message || 'Failed to create ticket');
+        toast.error(error.message || 'Failed to create ticket');
       }
     } finally {
       setLoading(false);
@@ -150,6 +156,7 @@ const CreateTicket = () => {
 
   return (
     <div className="min-h-screen relative py-8 px-4">
+
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <motion.div
@@ -207,6 +214,7 @@ const CreateTicket = () => {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
+
                   {/* Title */}
                   <div>
                     <label htmlFor="title" className="block text-sm font-semibold text-slate-300 mb-2">
@@ -283,9 +291,10 @@ const CreateTicket = () => {
                     )}
                   </div>
 
-                  {/* Out of Scope Error Banner */}
+
+                  {/* Out of Scope Error Banner - BACK AT BOTTOM AS REQUESTED */}
                   {outOfScopeError && (
-                    <div className="bg-[#2A1215] border border-red-500/20 rounded-xl p-4">
+                    <div id="out-of-scope-banner" className="bg-[#2A1215] border border-red-500/20 rounded-xl p-4 my-4">
                       <div className="flex items-start gap-3">
                         <ExclamationCircleIcon className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
                         <p className="text-sm text-red-400">
