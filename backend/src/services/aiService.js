@@ -279,28 +279,42 @@ class AIService {
     };
   }
 
-  isGibberish(text) {
-    // Remove "Title: " and "Description: " prefixes and whitespace
-    const rawText = text.replace(/Title:/gi, '').replace(/Description:/gi, '').replace(/\s+/g, '').trim();
+  isInvalidDescription(text) {
+    const cleanText = text.replace(/Title:/gi, '').replace(/Description:/gi, '').trim();
+    const rawTextNoSpace = cleanText.replace(/\s+/g, '');
     
-    // Less than 8 meaningful characters is too short
-    if (rawText.length < 8) return true;
+    // 1. Too short (less than 10 chars of actual content)
+    if (cleanText.length < 10) return true;
     
-    // Repeated single character (e.g., "fffff") or repeated two characters (e.g., "fgfgfgfg")
-    if (/^([a-zA-Z])\1+$/.test(rawText) || /^([a-zA-Z]{2})\1+$/.test(rawText)) return true;
+    // 2. Repeated single character (e.g., "aaaaaaa") or two characters (e.g., "abababa")
+    if (/^([a-zA-Z])\1+$/.test(rawTextNoSpace) || /^([a-zA-Z]{2})\1+$/.test(rawTextNoSpace)) return true;
     
-    // No alphabetic characters at all
-    if (!/[a-zA-Z]/.test(rawText)) return true;
+    // 3. No spaces in a long string (e.g., "asdfghjklqwertyuiop")
+    if (cleanText.length > 15 && !cleanText.includes(' ')) return true;
+    
+    // 4. Repeated words (e.g., "test test test test")
+    const words = cleanText.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+    if (words.length >= 3) {
+      const uniqueWords = new Set(words);
+      if (uniqueWords.size === 1) return true;
+    }
+
+    // 5. Common nonsense/test phrases
+    const nonsense = ['hello', 'hi', 'test', 'testing', 'asdf', 'ghjk', 'nonsense', 'nothing'];
+    if (words.length <= 2 && words.every(w => nonsense.includes(w))) return true;
+    
+    // 6. No alphabetic characters
+    if (!/[a-zA-Z]/.test(cleanText)) return true;
     
     return false;
   }
 
   async analyzeTicketWithAI(text) {
-    if (this.isGibberish(text)) {
+    if (this.isInvalidDescription(text)) {
       return {
         category: 'OutOfScope',
         priority: 'Low',
-        keywords: ['gibberish', 'invalid'],
+        keywords: ['invalid'],
         isValid: false,
         isSpam: false,
         isImageMismatch: false
@@ -318,11 +332,11 @@ class AIService {
   }
 
   async analyzeTicketWithImage(text, imagePath) {
-    if (this.isGibberish(text)) {
+    if (this.isInvalidDescription(text)) {
       return {
         category: 'OutOfScope',
         priority: 'Low',
-        keywords: ['gibberish', 'invalid'],
+        keywords: ['invalid'],
         isValid: false,
         isSpam: false,
         isImageMismatch: false
@@ -343,7 +357,7 @@ class AIService {
 
       const promptText = `
       Analyze the customer support message and the attached image.
-      Classify the issue into ONE of these 7 categories, UNLESS it is gibberish or unrelated:
+      Classify the issue into ONE of these 7 categories ONLY if it is a genuine support request:
       1. Payments
       2. Orders & Delivery
       3. Returns & Refunds
@@ -352,10 +366,10 @@ class AIService {
       6. Notifications & Communication
       7. Subscription & Plans
 
-      CRITICAL RULES:
-      1. If the text description is gibberish (e.g. "fgfg", "test", repeated letters), meaningless, too short, or completely unrelated to customer support or the 7 categories, you MUST set "isValid": false and "category": "OutOfScope". Do NOT force it into one of the 7 categories.
-      2. If the text description is valid, but the attached image does NOT match the description at all (e.g., describing a payment issue but attaching a megaphone or scenic photo), you MUST set "isImageMismatch": true.
-      3. If the attached image appears to be AI-generated, you MUST set "isAI": true.
+      STRICT REJECTION RULES:
+      1. If the text is nonsense, gibberish, "test", "hello", personal chatter, or unrelated to the 7 categories above, you MUST set "isValid": false and "category": "OutOfScope". Do NOT assign any other category.
+      2. If the text is valid but the attached image is unrelated to the description, set "isImageMismatch": true.
+      3. If the image is AI-generated, set "isAI": true.
 
       Return strictly valid JSON only.
       JSON schema:
