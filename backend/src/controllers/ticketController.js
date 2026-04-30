@@ -275,6 +275,7 @@ exports.addMessage = async (req, res) => {
           // ── Photo now valid → reopen ticket ──
           ticket.status = 'open';
           ticket.priority = reAnalysis.priority || ticket.priority;
+          ticket.category = reAnalysis.category || ticket.aiAnalysis.category || 'Product Issues';
           ticket.aiAnalysis = { ...ticket.aiAnalysis, ...reAnalysis };
           ticket.activityLog.push({ actionType: 'SPAM_CLEARED', message: 'Ticket reopened: resubmitted photo verified and matches the issue description.' });
           ticket.messages.push({
@@ -284,27 +285,16 @@ exports.addMessage = async (req, res) => {
             timestamp: new Date()
           });
           await Notification.create({ recipient: 'admin', title: 'Spam Ticket Reopened', description: `Ticket ${ticket.ticketId} was reopened after the customer resubmitted a valid photo.`, type: 'warning', ticketId: ticket.ticketId });
-        } else if (ticket.spamResubmitCount >= 2) {
-          // ── Second invalid resubmission → ask admin to close ──
+        } else {
+          // ── Second invalid image (first resubmission) → ask admin to close ──
           const mismatchReason = reAnalysis.isAI ? 'appears to be AI-generated' : 'still does not match the issue description';
           ticket.messages.push({
             sender: 'bot',
-            text: `🚨 **Admin Notice — Close Ticket?**\n\nThe customer has now submitted **${ticket.spamResubmitCount} invalid images**. The latest photo ${mismatchReason}.\n\nDo you want to **close this ticket**? Reply **"close"** to confirm, or **"not spam"** if you believe this is a valid submission.`,
+            text: `🚨 **Admin Notice — Close Ticket?**\n\nThe customer has now submitted a second invalid image. The latest photo ${mismatchReason}.\n\nDo you want to **close this ticket**? Reply **"close"** to confirm, or **"not spam"** if you believe this is a valid submission.`,
             timestamp: new Date()
           });
-          ticket.internalNotes.push({ text: `Swift AI: Customer submitted ${ticket.spamResubmitCount} invalid images. Latest image ${mismatchReason}. Admin prompted to close.`, timestamp: new Date() });
-          await Notification.create({ recipient: 'admin', title: 'Repeated Invalid Images', description: `Customer has submitted ${ticket.spamResubmitCount} invalid images on ticket ${ticket.ticketId}. Admin action required.`, type: 'warning', ticketId: ticket.ticketId });
-        } else {
-          // ── First invalid resubmission → tell user and notify admin ──
-          const mismatchReason = reAnalysis.isAI ? 'appears to be AI-generated' : 'still does not match your described issue';
-          ticket.messages.push({
-            sender: 'bot',
-            text: `⚠️ **Still Not Valid**\n\nThe new image you uploaded ${mismatchReason}. Please submit a clear, genuine screenshot or photo that directly shows the problem you described.\n\nIf you need help, our support team is monitoring this ticket.`,
-            aiVerification: 'Mismatch',
-            timestamp: new Date()
-          });
-          ticket.internalNotes.push({ text: `Swift AI: First resubmission also failed. Image ${mismatchReason}. Awaiting customer's next submission or admin action.`, timestamp: new Date() });
-          await Notification.create({ recipient: 'admin', title: 'Invalid Resubmission', description: `Customer resubmitted an invalid image on spam ticket ${ticket.ticketId}.`, type: 'warning', ticketId: ticket.ticketId });
+          ticket.internalNotes.push({ text: `Swift AI: Customer submitted second invalid image. Latest image ${mismatchReason}. Admin prompted to close.`, timestamp: new Date() });
+          await Notification.create({ recipient: 'admin', title: 'Repeated Invalid Images', description: `Customer has submitted a second invalid image on ticket ${ticket.ticketId}. Admin action required.`, type: 'warning', ticketId: ticket.ticketId });
         }
 
         await ticket.save();
@@ -623,7 +613,6 @@ exports.createTicketWithPhoto = async (req, res) => {
 
     if (!title || !description) return res.status(400).json({ message: 'Title and description are required' });
     if (!photoFile) return res.status(400).json({ message: 'Photo is required' });
-    if (!category) return res.status(400).json({ message: 'Category is required' });
     if (!userId) return res.status(401).json({ message: 'User authentication failed' });
 
     const ticketId = 'TKT-' + Date.now();
@@ -679,7 +668,7 @@ exports.createTicketWithPhoto = async (req, res) => {
       title,
       photoUrl,
       status: ticketStatus,
-      category: normalizedCategory,
+      category: isImageMismatch ? 'Spam' : normalizedCategory,
       priority: finalPriority,
       sentiment: aiAnalysis.sentiment || 'neutral',
       aiAnalysis,

@@ -18,12 +18,10 @@ const CreateTicket = () => {
   const [photo, setPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [classification, setClassification] = useState(null);
-  const [showClassification, setShowClassification] = useState(false);
-  const [duplicateWarning, setDuplicateWarning] = useState(null);
-  const [errors, setErrors] = useState({});
   const [ticketSubmitted, setTicketSubmitted] = useState(false);
   const [submittedTicketId, setSubmittedTicketId] = useState(null);
+  const [outOfScopeError, setOutOfScopeError] = useState(false);
+  const [isSpamTicket, setIsSpamTicket] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -105,79 +103,44 @@ const CreateTicket = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-
-    setLoading(true);
-    try {
-      toast.loading('Analyzing your issue...');
-      const classificationResult = await classifyTicket();
-      setClassification(classificationResult);
-      setShowClassification(true);
-      toast.dismiss();
-
-      if (classificationResult.valid !== false) {
-        const duplicateResult = await checkDuplicates(classificationResult.category);
-        if (duplicateResult.hasDuplicate) {
-          setDuplicateWarning(duplicateResult.similar);
-          toast.error('Similar ticket(s) already exist. Please review them before proceeding.');
-        }
-      }
-    } catch (error) {
-      console.error('Submission error:', error);
-      toast.error('Failed to process your ticket. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleFinalSubmit = async () => {
     if (!photo) {
       toast.error('Please upload a screenshot or proof of the issue.');
       return;
     }
+
     setLoading(true);
+    setOutOfScopeError(false);
+    setDuplicateWarning(null);
+
     try {
+      toast.loading('Analyzing your ticket...', { id: 'submit-ticket' });
+      
       const formDataWithFile = new FormData();
       formDataWithFile.append('title', formData.title);
       formDataWithFile.append('description', formData.description);
-      formDataWithFile.append('category', classification.category);
       formDataWithFile.append('photo', photo);
-
-      console.log('Submitting ticket with:', {
-        title: formData.title,
-        description: formData.description,
-        category: classification.category,
-        photoName: photo?.name
-      });
 
       const response = await apiClient.post('/tickets/create', formDataWithFile, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      console.log('Ticket created response:', response.data);
-
+      toast.dismiss('submit-ticket');
+      
       const createdTicket = response.data.ticket || response.data;
-      const ticketNumber = createdTicket.ticketId;
       
-      toast.success(
-        `Ticket submitted successfully`,
-        {
-          duration: 4000,
-          icon: '✅',
-        }
-      );
-
-      // Show success screen
-      setSubmittedTicketId(ticketNumber);
+      setSubmittedTicketId(createdTicket.ticketId);
+      setIsSpamTicket(response.data.isSpam || false);
       setTicketSubmitted(true);
-    } catch (error) {
-      console.error('=== FINAL SUBMISSION ERROR ===');
-      console.error('Error:', error);
-      console.error('Error response:', error.response);
-      console.error('Error response data:', error.response?.data);
-      console.error('Error message:', error.message);
       
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to create ticket';
-      toast.error(errorMessage);
+    } catch (error) {
+      toast.dismiss('submit-ticket');
+      
+      const errRes = error.response?.data;
+      if (error.response?.status === 400 && errRes?.message?.includes('outside our support scope')) {
+        setOutOfScopeError(true);
+      } else {
+        toast.error(errRes?.message || error.message || 'Failed to create ticket');
+      }
     } finally {
       setLoading(false);
     }
@@ -211,6 +174,20 @@ const CreateTicket = () => {
                   </div>
                   <h2 className="text-2xl font-bold text-white mb-2">Ticket Submitted Successfully</h2>
                   <p className="text-slate-400 mb-8">Your ticket #{submittedTicketId} has been created and securely logged.</p>
+                  
+                  {isSpamTicket && (
+                    <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-xl p-6 mb-8 text-left">
+                      <div className="flex items-start gap-3">
+                        <ExclamationCircleIcon className="h-6 w-6 text-amber-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="font-bold text-amber-500 mb-1">Photo Verification Required</h4>
+                          <p className="text-sm text-amber-200/80">
+                            Swift AI noticed that your uploaded photo does not perfectly match your description or appears to be AI-generated. Please open the ticket chat and follow the instructions from Swift AI to provide the correct proof.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   <button
                     onClick={() => {
                       setTicketSubmitted(false);
@@ -218,15 +195,15 @@ const CreateTicket = () => {
                       setFormData({ title: '', description: '' });
                       setPhoto(null);
                       setPhotoPreview(null);
-                      setClassification(null);
-                      setShowClassification(false);
+                      setOutOfScopeError(false);
+                      setIsSpamTicket(false);
                     }}
                     className="bg-emerald-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-emerald-700 transition-colors"
                   >
                     Create Another Ticket
                   </button>
                 </div>
-              ) : !showClassification ? (
+              ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Title */}
                   <div>
@@ -265,6 +242,54 @@ const CreateTicket = () => {
                         }`}
                       />
                   </div>
+                  {/* Photo Upload Section */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-300 mb-2">
+                      Proof/Screenshot <span className="text-red-500">*</span>
+                    </label>
+                    {!photoPreview ? (
+                      <div className="relative h-[160px]">
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png"
+                          onChange={handlePhotoUpload}
+                          className="hidden"
+                          id="photo-input"
+                        />
+                        <label
+                          htmlFor="photo-input"
+                          className="cursor-pointer flex flex-col items-center justify-center w-full h-full border-2 border-dashed rounded-lg transition-colors border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500"
+                        >
+                          <PhotoIcon className="h-8 w-8 text-emerald-600 mb-2" />
+                          <p className="text-[11px] font-semibold text-slate-300 text-center px-2">Click to upload mandatory screenshot</p>
+                          <p className="text-[10px] text-slate-500 mt-1">PNG/JPG &lt; 5MB</p>
+                        </label>
+                      </div>
+                    ) : (
+                      <div className="relative rounded-lg overflow-hidden border-2 border-emerald-500/50 h-[220px] max-w-md">
+                        <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={removePhoto}
+                          className="absolute top-2 right-2 bg-red-500/80 backdrop-blur-sm text-white p-1.5 rounded-lg hover:bg-red-600 transition-colors"
+                        >
+                          <XMarkIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Out of Scope Error Banner */}
+                  {outOfScopeError && (
+                    <div className="bg-[#2A1215] border border-red-500/20 rounded-xl p-4">
+                      <div className="flex items-start gap-3">
+                        <ExclamationCircleIcon className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        <p className="text-sm text-red-400">
+                          This issue is not within our support scope. Please provide a valid customer support request.
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Submit Button */}
                   <button
@@ -272,131 +297,9 @@ const CreateTicket = () => {
                     disabled={loading}
                     className="w-full bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {loading ? <Loader size="sm" text="" /> : 'Validate Issue'}
+                    {loading ? <Loader size="sm" text="" /> : 'Raise Ticket'}
                   </button>
                 </form>
-              ) : (
-                <div className="space-y-6">
-                  {/* Classification Result */}
-                  {!classification.valid ? (
-                    <div className="bg-red-500/10 border-2 border-red-500/30 rounded-xl p-6">
-                      <div className="flex items-start gap-4">
-                        <div className="h-12 w-12 rounded-full bg-red-600 flex items-center justify-center flex-shrink-0">
-                          <ExclamationCircleIcon className="h-6 w-6 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-bold text-white mb-2">Issue Outside Support Scope</h3>
-                          <p className="text-sm text-slate-300 mb-2">This issue is outside our support scope.</p>
-                          <p className="text-sm text-slate-300">We only support issues related to payments, orders, products, accounts, subscriptions, and communication.</p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="bg-gradient-to-r from-emerald-500/10 to-green-500/10 border-2 border-emerald-500/20 rounded-xl p-6">
-                        <div className="flex items-start gap-4">
-                          <div className="h-12 w-12 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0">
-                            <CheckCircleIcon className="h-6 w-6 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="font-bold text-white mb-2">AI Classification Complete</h3>
-                            <div className="space-y-2">
-                              <div>
-                                <p className="text-xs font-semibold text-slate-400">DETECTED</p>
-                                <p className="text-lg font-bold text-emerald-600">{classification.category} ({classification.priority} Priority)</p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Photo Upload for Valid Tickets */}
-                      <div>
-                        <label className="block text-sm font-semibold text-slate-300 mb-2">
-                          Proof/Screenshot <span className="text-red-500">*</span>
-                        </label>
-                        {!photoPreview ? (
-                          <div className="relative h-[160px]">
-                            <input
-                              type="file"
-                              accept="image/jpeg,image/png"
-                              onChange={handlePhotoUpload}
-                              className="hidden"
-                              id="photo-input"
-                            />
-                            <label
-                              htmlFor="photo-input"
-                              className={`cursor-pointer flex flex-col items-center justify-center w-full h-full border-2 border-dashed rounded-lg transition-colors border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500`}
-                            >
-                              <PhotoIcon className="h-8 w-8 text-emerald-600 mb-2" />
-                              <p className="text-[11px] font-semibold text-slate-300 text-center px-2">Click to upload mandatory screenshot</p>
-                              <p className="text-[10px] text-slate-500 mt-1">PNG/JPG &lt; 5MB</p>
-                            </label>
-                          </div>
-                        ) : (
-                          <div className="relative rounded-lg overflow-hidden border-2 border-emerald-500/50 h-[220px] max-w-md">
-                            <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
-                            <button
-                              type="button"
-                              onClick={removePhoto}
-                              className="absolute top-2 right-2 bg-red-500/80 backdrop-blur-sm text-white p-1.5 rounded-lg hover:bg-red-600 transition-colors"
-                            >
-                              <XMarkIcon className="h-4 w-4" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Duplicate Warning */}
-                      {duplicateWarning && duplicateWarning.length > 0 && (
-                        <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-xl p-6">
-                          <div className="flex items-start gap-3">
-                            <ExclamationCircleIcon className="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" />
-                            <div>
-                              <h4 className="font-bold text-white mb-2">Similar Ticket(s) Found</h4>
-                              <p className="text-sm text-slate-300 mb-3">We found similar issues. Please check if they solve your problem:</p>
-                              <div className="space-y-2">
-                                {duplicateWarning.map((dup, idx) => (
-                                  <button
-                                    key={idx}
-                                    onClick={() => navigate(`/customer/tickets/${dup.ticketId || dup._id}`)}
-                                    className="block w-full text-left p-3 bg-white/5 border-white/10 rounded-lg hover:border-amber-400 transition-colors"
-                                  >
-                                    <p className="text-sm font-semibold text-white">{dup.subject || dup.title || 'Untitled Ticket'}</p>
-                                    <p className="text-xs text-slate-500">Status: {dup.status}</p>
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => {
-                        setShowClassification(false);
-                        setDuplicateWarning(null);
-                        setClassification(null);
-                      }}
-                      className="flex-1 bg-white/10 text-white font-bold py-3 rounded-lg hover:bg-white/20 transition-colors"
-                    >
-                      Back
-                    </button>
-                    {classification.valid && (
-                      <button
-                        onClick={handleFinalSubmit}
-                        disabled={loading}
-                        className="flex-1 bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                      >
-                        {loading ? <Loader size="sm" text="" /> : 'Raise Ticket'}
-                      </button>
-                    )}
-                  </div>
-                </div>
               )}
             </div>
           </motion.div>
