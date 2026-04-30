@@ -549,10 +549,15 @@ exports.getDashboardStats = async (req, res) => {
 exports.classifyTicket = async (req, res) => {
   try {
     const { title, description } = req.body;
-    const text = `${title} ${description}`;
-    
-    // Use AI service to classify
-    const classification = await aiService.analyzeTicketWithAI(text);
+    const textContext = `Title: ${title}\nDescription: ${description}`;
+    let classification;
+
+    if (req.file) {
+      const fullImagePath = path.join(__dirname, '../../uploads', req.file.filename);
+      classification = await aiService.analyzeTicketWithImage(textContext, fullImagePath);
+    } else {
+      classification = await aiService.analyzeTicketWithAI(textContext);
+    }
     
     const isValid = classification.isValid !== false && 
                     classification.category !== 'OutOfScope' && 
@@ -562,7 +567,8 @@ exports.classifyTicket = async (req, res) => {
       category: classification.category || 'Product Issues',
       priority: classification.priority || 'Medium',
       keywords: classification.keywords || [],
-      valid: isValid
+      valid: isValid,
+      isImageMismatch: classification.isSpam === true
     });
   } catch (error) {
     console.error('Classification error:', error);
@@ -571,7 +577,8 @@ exports.classifyTicket = async (req, res) => {
       category: 'OutOfScope',
       priority: 'Low',
       keywords: [],
-      valid: false
+      valid: false,
+      isImageMismatch: false
     });
   }
 };

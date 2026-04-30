@@ -29,7 +29,7 @@ const upload = multer({
 });
 
 // New routes for ticket creation flow
-router.post('/classify', authMiddleware, ticketController.classifyTicket);
+router.post('/classify', authMiddleware, upload.single('photo'), ticketController.classifyTicket);
 router.post('/check-duplicates', authMiddleware, ticketController.checkDuplicates);
 router.post('/create', authMiddleware, upload.single('photo'), ticketController.createTicketWithPhoto);
 

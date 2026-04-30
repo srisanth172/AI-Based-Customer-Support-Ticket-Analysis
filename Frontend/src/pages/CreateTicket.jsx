@@ -65,9 +65,15 @@ const CreateTicket = () => {
   };
 
   const classifyTicket = async () => {
-    const response = await apiClient.post('/tickets/classify', {
-      title: formData.title,
-      description: formData.description,
+    const formDataWithFile = new FormData();
+    formDataWithFile.append('title', formData.title);
+    formDataWithFile.append('description', formData.description);
+    if (photo) {
+      formDataWithFile.append('photo', photo);
+    }
+    
+    const response = await apiClient.post('/tickets/classify', formDataWithFile, {
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
   };
@@ -85,10 +91,14 @@ const CreateTicket = () => {
     }
   };
 
-  // Step 1: Classify the issue
+  // Step 1: Validate the issue (text + photo)
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
+    if (!photo) {
+      toast.error('Please upload a screenshot or proof of the issue.');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -259,6 +269,43 @@ const CreateTicket = () => {
                     {errors.description && <p className="mt-1 text-sm text-red-500 font-medium">{errors.description}</p>}
                   </div>
 
+                  {/* Photo Upload */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-300 mb-2">
+                      Proof/Screenshot <span className="text-red-500">*</span>
+                    </label>
+                    {!photoPreview ? (
+                      <div className="relative h-[160px]">
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png"
+                          onChange={handlePhotoUpload}
+                          className="hidden"
+                          id="photo-input"
+                        />
+                        <label
+                          htmlFor="photo-input"
+                          className="cursor-pointer flex flex-col items-center justify-center w-full h-full border-2 border-dashed rounded-lg transition-colors border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500"
+                        >
+                          <PhotoIcon className="h-8 w-8 text-emerald-600 mb-2" />
+                          <p className="text-[11px] font-semibold text-slate-300 text-center px-2">Click to upload mandatory screenshot</p>
+                          <p className="text-[10px] text-slate-500 mt-1">PNG/JPG &lt; 5MB</p>
+                        </label>
+                      </div>
+                    ) : (
+                      <div className="relative rounded-lg overflow-hidden border-2 border-emerald-500/50 h-[220px] max-w-md">
+                        <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={removePhoto}
+                          className="absolute top-2 right-2 bg-red-500/80 backdrop-blur-sm text-white p-1.5 rounded-lg hover:bg-red-600 transition-colors"
+                        >
+                          <XMarkIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Validate button */}
                   <button
                     type="submit"
@@ -303,52 +350,43 @@ const CreateTicket = () => {
                           <div className="h-12 w-12 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0">
                             <CheckCircleIcon className="h-6 w-6 text-white" />
                           </div>
-                          <div className="flex-1">
-                            <h3 className="font-bold text-white mb-2">AI Classification Complete</h3>
-                            <p className="text-xs font-semibold text-slate-400 mb-1">DETECTED</p>
-                            <p className="text-lg font-bold text-emerald-400">
-                              {classification.category} <span className="text-slate-400 text-sm font-normal">({classification.priority} Priority)</span>
+                        <div>
+                          <h3 className="font-bold text-white mb-2">AI Classification Complete</h3>
+                          <p className="text-xs font-semibold text-slate-400 mb-1">DETECTED</p>
+                          <p className="text-lg font-bold text-emerald-400">
+                            {classification.category} <span className="text-slate-400 text-sm font-normal">({classification.priority} Priority)</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Image Mismatch / AI Spam Warning */}
+                    {classification.isImageMismatch && (
+                      <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-xl p-6 mb-6">
+                        <div className="flex items-start gap-4">
+                          <div className="h-12 w-12 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0">
+                            <ExclamationCircleIcon className="h-6 w-6 text-white" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-amber-400 mb-1">⚠️ Photo Verification Required</h4>
+                            <p className="text-sm text-amber-200/80">
+                              Swift AI noticed that your uploaded photo does not perfectly match your description or appears to be AI-generated.
+                              You can still submit, but your ticket will be flagged for review and you may be asked to provide a genuine photo in the chat.
                             </p>
                           </div>
                         </div>
                       </div>
+                    )}
 
-                      {/* Photo upload */}
-                      <div>
-                        <label className="block text-sm font-semibold text-slate-300 mb-2">
-                          Proof/Screenshot <span className="text-red-500">*</span>
-                        </label>
-                        {!photoPreview ? (
-                          <div className="relative h-[160px]">
-                            <input
-                              type="file"
-                              accept="image/jpeg,image/png"
-                              onChange={handlePhotoUpload}
-                              className="hidden"
-                              id="photo-input"
-                            />
-                            <label
-                              htmlFor="photo-input"
-                              className="cursor-pointer flex flex-col items-center justify-center w-full h-full border-2 border-dashed rounded-lg transition-colors border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500"
-                            >
-                              <PhotoIcon className="h-8 w-8 text-emerald-600 mb-2" />
-                              <p className="text-[11px] font-semibold text-slate-300 text-center px-2">Click to upload mandatory screenshot</p>
-                              <p className="text-[10px] text-slate-500 mt-1">PNG/JPG &lt; 5MB</p>
-                            </label>
-                          </div>
-                        ) : (
-                          <div className="relative rounded-lg overflow-hidden border-2 border-emerald-500/50 h-[220px] max-w-md">
+                      {/* Photo preview (already uploaded in Step 1) */}
+                      {photoPreview && (
+                        <div>
+                          <label className="block text-sm font-semibold text-slate-300 mb-2">Uploaded Screenshot</label>
+                          <div className="relative rounded-lg overflow-hidden border-2 border-emerald-500/50 h-[180px] max-w-md">
                             <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
-                            <button
-                              type="button"
-                              onClick={removePhoto}
-                              className="absolute top-2 right-2 bg-red-500/80 backdrop-blur-sm text-white p-1.5 rounded-lg hover:bg-red-600 transition-colors"
-                            >
-                              <XMarkIcon className="h-4 w-4" />
-                            </button>
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
 
                       {/* Duplicate warning */}
                       {duplicateWarning && duplicateWarning.length > 0 && (
