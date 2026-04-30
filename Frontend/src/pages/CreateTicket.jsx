@@ -11,43 +11,47 @@ import Loader from '../components/UI/Loader';
 const CreateTicket = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-
-  const [formData, setFormData] = useState({ title: '', description: '' });
-  const [errors, setErrors] = useState({});
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+  });
   const [photo, setPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [loading, setLoading] = useState(false);
-
-  // Step control
-  const [classification, setClassification] = useState(null);
-  const [showClassification, setShowClassification] = useState(false);
-  const [duplicateWarning, setDuplicateWarning] = useState(null);
-
-  // Final submission state
   const [ticketSubmitted, setTicketSubmitted] = useState(false);
   const [submittedTicketId, setSubmittedTicketId] = useState(null);
+  const [outOfScopeError, setOutOfScopeError] = useState(false);
   const [isSpamTicket, setIsSpamTicket] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    //Validate file type
     if (!['image/jpeg', 'image/png'].includes(file.type)) {
       toast.error('Only JPG and PNG files are allowed');
       return;
     }
+
+    // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
       toast.error('File size must be less than 5MB');
       return;
     }
+
     setPhoto(file);
     const reader = new FileReader();
-    reader.onloadend = () => setPhotoPreview(reader.result);
+    reader.onloadend = () => {
+      setPhotoPreview(reader.result);
+    };
     reader.readAsDataURL(file);
   };
 
@@ -58,24 +62,28 @@ const CreateTicket = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.title.trim()) newErrors.title = 'Issue title is required';
-    if (!formData.description.trim()) newErrors.description = 'Description is required';
+    if (!formData.title.trim()) {
+      newErrors.title = 'Issue title is required';
+    }
+    if (!formData.description.trim()) {
+      newErrors.description = 'Description is required';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const classifyTicket = async () => {
-    const formDataWithFile = new FormData();
-    formDataWithFile.append('title', formData.title);
-    formDataWithFile.append('description', formData.description);
-    if (photo) {
-      formDataWithFile.append('photo', photo);
+    try {
+      const response = await apiClient.post('/tickets/classify', {
+        title: formData.title,
+        description: formData.description,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Classification error:', error);
+      // Return default category on error
+      return { category: 'Product Issues', priority: 'Medium' };
     }
-    
-    const response = await apiClient.post('/tickets/classify', formDataWithFile, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return response.data;
   };
 
   const checkDuplicates = async (category) => {
@@ -86,12 +94,12 @@ const CreateTicket = () => {
         category,
       });
       return response.data;
-    } catch {
+    } catch (error) {
+      console.error('Duplicate check error:', error);
       return { hasDuplicate: false, similar: [] };
     }
   };
 
-  // Step 1: Validate the issue (text + photo)
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -101,136 +109,102 @@ const CreateTicket = () => {
     }
 
     setLoading(true);
+    setOutOfScopeError(false);
+    setDuplicateWarning(null);
+
     try {
-      toast.loading('Analyzing your issue...', { id: 'classify' });
-      const classificationResult = await classifyTicket();
-      setClassification(classificationResult);
-      setShowClassification(true);
-      toast.dismiss('classify');
-
-      if (classificationResult.valid !== false) {
-        const duplicateResult = await checkDuplicates(classificationResult.category);
-        if (duplicateResult.hasDuplicate) {
-          setDuplicateWarning(duplicateResult.similar);
-        }
-      }
-    } catch (error) {
-      toast.dismiss('classify');
-      toast.error('Failed to analyze your ticket. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Step 2: Submit with photo
-  const handleFinalSubmit = async () => {
-    if (!photo) {
-      toast.error('Please upload a screenshot or proof of the issue.');
-      return;
-    }
-    setLoading(true);
-    try {
-      toast.loading('Submitting your ticket...', { id: 'submit' });
-
+      toast.loading('Analyzing your ticket...', { id: 'submit-ticket' });
+      
       const formDataWithFile = new FormData();
       formDataWithFile.append('title', formData.title);
       formDataWithFile.append('description', formData.description);
-      formDataWithFile.append('category', classification.category);
       formDataWithFile.append('photo', photo);
 
       const response = await apiClient.post('/tickets/create', formDataWithFile, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      toast.dismiss('submit');
+      toast.dismiss('submit-ticket');
+      
       const createdTicket = response.data.ticket || response.data;
+      
       setSubmittedTicketId(createdTicket.ticketId);
       setIsSpamTicket(response.data.isSpam || false);
       setTicketSubmitted(true);
+      
     } catch (error) {
-      toast.dismiss('submit');
+      toast.dismiss('submit-ticket');
+      
       const errRes = error.response?.data;
-      toast.error(errRes?.message || error.message || 'Failed to create ticket');
+      if (error.response?.status === 400 && errRes?.message?.includes('outside our support scope')) {
+        setOutOfScopeError(true);
+      } else {
+        toast.error(errRes?.message || error.message || 'Failed to create ticket');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleReset = () => {
-    setTicketSubmitted(false);
-    setSubmittedTicketId(null);
-    setFormData({ title: '', description: '' });
-    setErrors({});
-    setPhoto(null);
-    setPhotoPreview(null);
-    setClassification(null);
-    setShowClassification(false);
-    setDuplicateWarning(null);
-    setIsSpamTicket(false);
-  };
-
   return (
     <div className="min-h-screen relative py-8 px-4">
       <div className="max-w-4xl mx-auto">
-
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
           <h1 className="text-3xl font-bold text-white mb-2">Create New Ticket</h1>
           <p className="text-slate-400">Describe your issue and our AI will help classify it</p>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-          {/* Main Panel */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-2">
+          {/* Main Form - Left Side */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="lg:col-span-2"
+          >
             <div className="bg-[#041209]/60 backdrop-blur-xl rounded-[24px] shadow-2xl p-8 border border-white/5">
-
-              {/* ── SUCCESS SCREEN ── */}
               {ticketSubmitted ? (
                 <div className="text-center py-12">
                   <div className="h-24 w-24 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-6">
                     <CheckCircleIcon className="h-12 w-12 text-emerald-500" />
                   </div>
                   <h2 className="text-2xl font-bold text-white mb-2">Ticket Submitted Successfully</h2>
-                  <p className="text-slate-400 mb-6">Your ticket #{submittedTicketId} has been created and securely logged.</p>
-
-                  {/* Spam / Image-mismatch warning */}
+                  <p className="text-slate-400 mb-8">Your ticket #{submittedTicketId} has been created and securely logged.</p>
+                  
                   {isSpamTicket && (
-                    <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-xl p-5 mb-6 text-left">
+                    <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-xl p-6 mb-8 text-left">
                       <div className="flex items-start gap-3">
                         <ExclamationCircleIcon className="h-6 w-6 text-amber-500 flex-shrink-0 mt-0.5" />
                         <div>
-                          <h4 className="font-bold text-amber-400 mb-1">⚠️ Photo Verification Required</h4>
+                          <h4 className="font-bold text-amber-500 mb-1">Photo Verification Required</h4>
                           <p className="text-sm text-amber-200/80">
-                            Swift AI noticed that your uploaded photo does not match your description or appears to be AI-generated.
-                            Please open the ticket chat and follow the instructions from Swift AI to provide a genuine, matching photo.
+                            Swift AI noticed that your uploaded photo does not perfectly match your description or appears to be AI-generated. Please open the ticket chat and follow the instructions from Swift AI to provide the correct proof.
                           </p>
                         </div>
                       </div>
                     </div>
                   )}
-
-                  <div className="flex gap-3 justify-center">
-                    <button
-                      onClick={() => navigate(`/customer/tickets/${submittedTicketId}`)}
-                      className="bg-white/10 text-white font-bold py-3 px-6 rounded-lg hover:bg-white/20 transition-colors"
-                    >
-                      View Ticket
-                    </button>
-                    <button
-                      onClick={handleReset}
-                      className="bg-emerald-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-emerald-700 transition-colors"
-                    >
-                      Create Another Ticket
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => {
+                      setTicketSubmitted(false);
+                      setSubmittedTicketId(null);
+                      setFormData({ title: '', description: '' });
+                      setPhoto(null);
+                      setPhotoPreview(null);
+                      setOutOfScopeError(false);
+                      setIsSpamTicket(false);
+                    }}
+                    className="bg-emerald-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-emerald-700 transition-colors"
+                  >
+                    Create Another Ticket
+                  </button>
                 </div>
-
-              ) : !showClassification ? (
-
-                /* ── STEP 1: DESCRIBE ISSUE ── */
+              ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
-
                   {/* Title */}
                   <div>
                     <label htmlFor="title" className="block text-sm font-semibold text-slate-300 mb-2">
@@ -250,26 +224,27 @@ const CreateTicket = () => {
                     {errors.title && <p className="mt-1 text-sm text-red-500 font-medium">{errors.title}</p>}
                   </div>
 
-                  {/* Description */}
-                  <div>
-                    <label htmlFor="description" className="block text-sm font-semibold text-slate-300 mb-2">
-                      Description <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      id="description"
-                      name="description"
-                      value={formData.description}
-                      onChange={handleChange}
-                      placeholder="Please provide detailed information about your issue..."
-                      rows="6"
-                      className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-emerald-600 transition-colors resize-none h-[180px] ${
-                        errors.description ? 'border-red-500' : 'border-white/10 bg-white/5 text-slate-200'
-                      }`}
-                    />
-                    {errors.description && <p className="mt-1 text-sm text-red-500 font-medium">{errors.description}</p>}
+                  {/* Description & Photo Section */}
+                  <div className="space-y-6">
+                    <div>
+                      <label htmlFor="description" className="block text-sm font-semibold text-slate-300 mb-2">
+                        Description <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        id="description"
+                        name="description"
+                        value={formData.description}
+                        onChange={handleChange}
+                        placeholder="Please provide detailed information about your issue..."
+                        rows="6"
+                        className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:border-emerald-600 transition-colors resize-none h-[180px] ${
+                          errors.description ? 'border-red-500' : 'border-white/10 bg-white/5 text-slate-200'
+                        }`}
+                      />
+                      {errors.description && <p className="mt-1 text-sm text-red-500 font-medium">{errors.description}</p>}
+                    </div>
                   </div>
-
-                  {/* Photo Upload */}
+                  {/* Photo Upload Section */}
                   <div>
                     <label className="block text-sm font-semibold text-slate-300 mb-2">
                       Proof/Screenshot <span className="text-red-500">*</span>
@@ -306,152 +281,62 @@ const CreateTicket = () => {
                     )}
                   </div>
 
-                  {/* Validate button */}
+                  {/* Out of Scope Error Banner */}
+                  {outOfScopeError && (
+                    <div className="bg-[#2A1215] border border-red-500/20 rounded-xl p-4">
+                      <div className="flex items-start gap-3">
+                        <ExclamationCircleIcon className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        <p className="text-sm text-red-400">
+                          This issue is not within our support scope. Please provide a valid customer support request.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Submit Button */}
                   <button
                     type="submit"
                     disabled={loading}
                     className="w-full bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {loading ? <Loader size="sm" text="" /> : 'Validate Issue'}
+                    {loading ? <Loader size="sm" text="" /> : 'Raise Ticket'}
                   </button>
                 </form>
-
-              ) : (
-
-                /* ── STEP 2: CLASSIFICATION RESULT + PHOTO ── */
-                <div className="space-y-6">
-
-                  {/* Out-of-scope error */}
-                  {!classification.valid ? (
-                    <div className="bg-red-500/10 border-2 border-red-500/30 rounded-xl p-6">
-                      <div className="flex items-start gap-4">
-                        <div className="h-12 w-12 rounded-full bg-red-600 flex items-center justify-center flex-shrink-0">
-                          <ExclamationCircleIcon className="h-6 w-6 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-white mb-1">Issue Outside Support Scope</h3>
-                          <p className="text-sm text-slate-300 mb-2">
-                            Your issue does not fall into any of our 7 supported categories.
-                          </p>
-                          <p className="text-sm text-slate-400">
-                            We support: <span className="text-emerald-400">Payments, Orders &amp; Delivery, Returns &amp; Refunds, Product Issues, Account Issues, Notifications &amp; Communication, Subscription &amp; Plans.</span>
-                          </p>
-                          <p className="text-sm text-slate-300 mt-3">
-                            Please revise your description and try again.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      {/* AI Classification badge */}
-                      <div className="bg-gradient-to-r from-emerald-500/10 to-green-500/10 border-2 border-emerald-500/20 rounded-xl p-6">
-                        <div className="flex items-start gap-4">
-                          <div className="h-12 w-12 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0">
-                            <CheckCircleIcon className="h-6 w-6 text-white" />
-                          </div>
-                        <div>
-                          <h3 className="font-bold text-white mb-2">AI Classification Complete</h3>
-                          <p className="text-xs font-semibold text-slate-400 mb-1">DETECTED</p>
-                          <p className="text-lg font-bold text-emerald-400">
-                            {classification.category} <span className="text-slate-400 text-sm font-normal">({classification.priority} Priority)</span>
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Image Mismatch / AI Spam Warning */}
-                    {classification.isImageMismatch && (
-                      <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-xl p-6 mb-6">
-                        <div className="flex items-start gap-4">
-                          <div className="h-12 w-12 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0">
-                            <ExclamationCircleIcon className="h-6 w-6 text-white" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-amber-400 mb-1">⚠️ Photo Verification Required</h4>
-                            <p className="text-sm text-amber-200/80">
-                              Swift AI noticed that your uploaded photo does not perfectly match your description or appears to be AI-generated.
-                              You can still submit, but your ticket will be flagged for review and you may be asked to provide a genuine photo in the chat.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                      {/* Photo preview (already uploaded in Step 1) */}
-                      {photoPreview && (
-                        <div>
-                          <label className="block text-sm font-semibold text-slate-300 mb-2">Uploaded Screenshot</label>
-                          <div className="relative rounded-lg overflow-hidden border-2 border-emerald-500/50 h-[180px] max-w-md">
-                            <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Duplicate warning */}
-                      {duplicateWarning && duplicateWarning.length > 0 && (
-                        <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-xl p-6">
-                          <div className="flex items-start gap-3">
-                            <ExclamationCircleIcon className="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" />
-                            <div>
-                              <h4 className="font-bold text-white mb-2">Similar Ticket(s) Found</h4>
-                              <p className="text-sm text-slate-300 mb-3">We found similar issues. Please check if they solve your problem:</p>
-                              <div className="space-y-2">
-                                {duplicateWarning.map((dup, idx) => (
-                                  <button
-                                    key={idx}
-                                    onClick={() => navigate(`/customer/tickets/${dup.ticketId || dup._id}`)}
-                                    className="block w-full text-left p-3 bg-white/5 border border-white/10 rounded-lg hover:border-amber-400 transition-colors"
-                                  >
-                                    <p className="text-sm font-semibold text-white">{dup.subject || dup.title || 'Untitled Ticket'}</p>
-                                    <p className="text-xs text-slate-500">Status: {dup.status}</p>
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {/* Action buttons */}
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => { setShowClassification(false); setDuplicateWarning(null); setClassification(null); }}
-                      className="flex-1 bg-white/10 text-white font-bold py-3 rounded-lg hover:bg-white/20 transition-colors"
-                    >
-                      Back
-                    </button>
-                    {classification.valid && (
-                      <button
-                        onClick={handleFinalSubmit}
-                        disabled={loading}
-                        className="flex-1 bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                      >
-                        {loading ? <Loader size="sm" text="" /> : 'Submit Ticket'}
-                      </button>
-                    )}
-                  </div>
-                </div>
               )}
-
             </div>
           </motion.div>
 
-          {/* Info Panel */}
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+          {/* Info Panel - Right Side */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="space-y-6"
+          >
+            {/* Tips Card */}
             <div className="bg-[#041209]/60 backdrop-blur-xl rounded-[24px] shadow-2xl p-6 border border-white/5">
               <h3 className="font-bold text-white mb-4">💡 Tips for Better Results</h3>
               <ul className="space-y-3 text-sm text-slate-300">
-                <li className="flex gap-2"><span className="text-emerald-600 font-bold">✓</span><span>Be specific with your issue title</span></li>
-                <li className="flex gap-2"><span className="text-emerald-600 font-bold">✓</span><span>Include relevant details in description</span></li>
-                <li className="flex gap-2"><span className="text-emerald-600 font-bold">✓</span><span>Upload a screenshot showing the problem</span></li>
-                <li className="flex gap-2"><span className="text-emerald-600 font-bold">✓</span><span>AI will classify your issue automatically</span></li>
+                <li className="flex gap-2">
+                  <span className="text-emerald-600 font-bold">✓</span>
+                  <span>Be specific with your issue title</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-emerald-600 font-bold">✓</span>
+                  <span>Include relevant details in description</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-emerald-600 font-bold">✓</span>
+                  <span>Upload a screenshot showing the problem</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-emerald-600 font-bold">✓</span>
+                  <span>AI will classify your issue automatically</span>
+                </li>
               </ul>
             </div>
-          </motion.div>
 
+
+          </motion.div>
         </div>
       </div>
     </div>
