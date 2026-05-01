@@ -301,17 +301,25 @@ exports.addMessage = async (req, res) => {
               ticketId: ticket.ticketId 
             });
           } else {
-            // ── Second invalid image (resubmission) → ask admin to close ──
+            // ── Second invalid image (resubmission) → Message USER ──
             const mismatchReason = reAnalysis.isAI ? 'appears to be AI-generated' : 'still does not match the issue description';
             
+            // Message to USER
             ticket.messages.push({
               sender: 'bot',
-              text: `🚨 **Admin Intervention Required**\n\nCustomer submitted a second invalid image. The latest photo ${mismatchReason}.\n\n**Admin, shall I close this ticket?** Reply with **"close"** to confirm or **"not spam"** to manually override.`,
+              text: `⚠️ **Verification Failed Again**\n\nYour resubmitted photo ${mismatchReason}.\n\nPlease upload a **correct, genuine photo** that clearly shows the issue. If you continue to provide incorrect proof, your ticket will be permanently closed.`,
+              timestamp: new Date()
+            });
+
+            // Briefing for ADMIN (Hidden from user in a real UI, but here as a notice)
+            ticket.messages.push({
+              sender: 'bot',
+              text: `🤖 **Swift AI Admin Notice**\n\nCustomer has failed verification twice. **Admin, should I close this ticket?** Reply with **"close"** to finalize or **"not spam"** to override.`,
               timestamp: new Date()
             });
 
             ticket.internalNotes.push({ 
-              text: `Swift AI: Second verification failed. Photo ${mismatchReason}. Prompted admin to close.`, 
+              text: `Swift AI: Second verification failed. User prompted for 3rd attempt. Admin prompted to close.`, 
               timestamp: new Date() 
             });
 
