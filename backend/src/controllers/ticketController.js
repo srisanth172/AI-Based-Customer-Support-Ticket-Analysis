@@ -102,11 +102,10 @@ exports.getTicketById = async (req, res) => {
     if (req.user.role === 'customer' && ticket.userId._id.toString() !== req.user.userId) return res.status(403).json({ error: 'Access denied' });
 
     // === SPAM WORKFLOW: Admin Briefing ===
-    // If admin is opening a spam ticket for the first time, Swift AI explains why it's spam
     if (req.user.role === 'admin' && ticket.status === 'spam' && !ticket.spamAdminReviewed) {
       ticket.messages.push({
         sender: 'bot',
-        text: `🤖 **Swift AI Admin Briefing**\n\nThis ticket has been automatically flagged as **SPAM** because the customer's description did not match the uploaded image.\n\nAdmin, please review the description and attachment. Reply with **"keep spam"** to confirm the flag (which will ask the user for a better photo) or **"not spam"** to reinstate the ticket as legitimate.`,
+        text: `🤖 **Swift AI Admin Briefing**\n\nThis ticket has been automatically flagged as **SPAM** because the customer's description did not match the uploaded image. \n\nPlease review the comparison below. You can override this by typing **"not spam"** or close it by typing **"close"**.`,
         timestamp: new Date()
       });
       ticket.spamAdminReviewed = true;
@@ -301,36 +300,37 @@ exports.addMessage = async (req, res) => {
               ticketId: ticket.ticketId 
             });
           } else {
-            // ── Second invalid image (resubmission) → Message USER ──
+            // ── Second invalid image (resubmission) → Message BOTH in Chat ──
             const mismatchReason = reAnalysis.isAI ? 'appears to be AI-generated' : 'still does not match the issue description';
             
             // Message to USER
             ticket.messages.push({
               sender: 'bot',
-              text: `⚠️ **Verification Failed Again**\n\nYour resubmitted photo ${mismatchReason}.\n\nPlease upload a **correct, genuine photo** that clearly shows the issue. If you continue to provide incorrect proof, your ticket will be permanently closed.`,
+              text: `⚠️ **Action Required: Verification Failed**\n\nYour resubmitted photo ${mismatchReason}.\n\nPlease upload a **correct, genuine photo** that clearly shows the issue. Our team cannot assist you until a valid image is provided.`,
               timestamp: new Date()
             });
 
-            // Briefing for ADMIN (Hidden from user in a real UI, but here as a notice)
+            // Message to ADMIN (Visible to user too)
             ticket.messages.push({
               sender: 'bot',
-              text: `🤖 **Swift AI Admin Notice**\n\nCustomer has failed verification twice. **Admin, should I close this ticket?** Reply with **"close"** to finalize or **"not spam"** to override.`,
+              text: `🤖 **Swift AI Admin Prompt**\n\nThe customer has failed photo verification for the second time. **Admin, shall I close this ticket?** Reply with **"close"** to finalize or **"not spam"** to override.`,
               timestamp: new Date()
             });
 
-            ticket.internalNotes.push({ 
-              text: `Swift AI: Second verification failed. User prompted for 3rd attempt. Admin prompted to close.`, 
-              timestamp: new Date() 
+            ticket.activityLog.push({ 
+              actionType: 'SPAM_REJECTED', 
+              message: `Second resubmission rejected by AI. User prompted for another attempt. Admin prompted for closure.` 
             });
 
             await Notification.create({ 
               recipient: 'admin', 
-              title: 'Repeated Verification Failure', 
-              description: `Customer failed photo verification for the second time on ticket ${ticket.ticketId}.`, 
+              title: 'Verification Failed Again', 
+              description: `Ticket ${ticket.ticketId} failed photo verification for the second time.`, 
               type: 'warning', 
               ticketId: ticket.ticketId 
             });
           }
+        }
         } catch (aiError) {
           console.error('[Spam Resubmit] AI analysis failed:', aiError);
           ticket.messages.push({
