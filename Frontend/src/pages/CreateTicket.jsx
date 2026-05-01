@@ -10,7 +10,7 @@ import Loader from '../components/UI/Loader';
 
 const CreateTicket = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -135,6 +135,28 @@ const CreateTicket = () => {
       setLoading(false);
     }
   };
+
+  // Prevent admins from creating tickets under the admin account accidentally
+  if (user?.role === 'admin') {
+    return (
+      <div className="min-h-screen relative py-8 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-[#041209]/60 backdrop-blur-xl rounded-[24px] shadow-2xl p-8 border border-white/5 text-center">
+            <h2 className="text-2xl font-bold text-white mb-4">You are logged in as an admin</h2>
+            <p className="text-slate-400 mb-6">Tickets created while signed in as an admin will be recorded under the admin account ({user.name}). Please logout or switch to a customer account to raise customer tickets.</p>
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={() => logout && logout()}
+                className="bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-emerald-700 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen relative py-8 px-4">
