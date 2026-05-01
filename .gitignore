@@ -1,0 +1,13 @@
+*(2)*
+node_modules/
+dist/
+mongo-data/
+.env
+*.env
+backend/.env
+Frontend/.env
+.vite/
+.vscode/
+backend/uploads/
+*.log
+.DS_Store\nscratch/
