@@ -449,13 +449,37 @@ exports.requestResolution = async (req, res) => {
   try {
     const ticket = await Ticket.findOne({ ticketId: req.params.id });
     if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
-    
+    // If a customer requests resolution, mark the ticket resolved immediately
+    if (req.user && req.user.role !== 'admin') {
+      ticket.status = 'resolved';
+      ticket.resolvedAt = new Date();
+      ticket.resolutionTime = Math.round((ticket.resolvedAt - ticket.createdAt) / (1000 * 60));
+      ticket.messages.push({
+        sender: 'bot',
+        text: 'Great! I have marked the ticket as Resolved. Admin, the customer has confirmed resolution. Please reply with "ok" or "close" to finalize and close the ticket.',
+        timestamp: new Date()
+      });
+
+      await Notification.create({ 
+        recipient: 'admin', 
+        title: 'Resolution Approval Needed', 
+        description: `Customer confirmed resolution for ticket ${ticket.ticketId}. Please review and close.`, 
+        type: 'warning', 
+        ticketId: ticket.ticketId 
+      });
+
+      await ticket.save();
+      emitTicketUpdated(ticket);
+      return res.json(ticket);
+    }
+
+    // Default behavior (e.g., admin or passive request): ask for confirmation in chat
     ticket.messages.push({
       sender: 'bot',
       text: 'Glad to hear it is working! Just to be sure, should I mark this ticket as Resolved? (Reply "Yes" to confirm)',
       timestamp: new Date()
     });
-    
+
     await ticket.save();
     emitTicketUpdated(ticket);
     res.json(ticket);
