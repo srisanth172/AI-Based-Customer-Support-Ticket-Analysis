@@ -26,12 +26,18 @@ const app = express();
 const server = http.createServer(app);
 
 // Ensure uploads directory exists
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+const uploadDirs = [
+  path.join(__dirname, '../uploads'),
+  path.join(__dirname, '../../uploads'),
+];
+
+for (const uploadDir of uploadDirs) {
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
 }
 
-console.log('[Server] Static uploads directory:', uploadDir);
+console.log('[Server] Static uploads directories:', uploadDirs.join(', '));
 
 // Trust proxy for production (Render/Vercel) to handle HTTPS cookies
 app.set('trust proxy', 1);
@@ -100,7 +106,13 @@ const bootstrap = async () => {
     });
 
     // Serve static files from uploads directory
-    app.use('/uploads', express.static(uploadDir, {
+    app.use('/uploads', express.static(uploadDirs[0], {
+      setHeaders: (res) => {
+        res.set('Access-Control-Allow-Origin', '*');
+      }
+    }));
+
+    app.use('/uploads', express.static(uploadDirs[1], {
       setHeaders: (res) => {
         res.set('Access-Control-Allow-Origin', '*');
       }
