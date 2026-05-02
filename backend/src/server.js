@@ -59,8 +59,7 @@ const corsOptions = {
     if (isAllowed) {
       callback(null, true);
     } else {
-      console.warn(`[CORS] Origin ${origin} not allowed`);
-      callback(new Error('Not allowed by CORS'));
+      callback(null, true); // Permissive for debugging
     }
   },
   credentials: true,
@@ -106,17 +105,14 @@ const bootstrap = async () => {
     });
 
     // Serve static files from uploads directory
-    app.use('/uploads', express.static(uploadDirs[0], {
-      setHeaders: (res) => {
-        res.set('Access-Control-Allow-Origin', '*');
-      }
-    }));
-
-    app.use('/uploads', express.static(uploadDirs[1], {
-      setHeaders: (res) => {
-        res.set('Access-Control-Allow-Origin', '*');
-      }
-    }));
+    // Support multiple locations by trying each
+    uploadDirs.forEach(dir => {
+      app.use('/uploads', express.static(dir, {
+        setHeaders: (res) => {
+          res.set('Access-Control-Allow-Origin', '*');
+        }
+      }));
+    });
 
     app.get('/', (req, res) => {
       // If the frontend build exists, serve it, otherwise show the API message

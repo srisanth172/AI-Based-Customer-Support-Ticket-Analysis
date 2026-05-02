@@ -213,7 +213,7 @@ const TicketDetail = () => {
               <div>
                 <h4 className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-2">Description</h4>
                 <p className="text-slate-200 text-sm leading-relaxed whitespace-pre-wrap">
-                  {ticket.description || ticket.subject}
+                  {ticket.description || ticket.subject || (ticket.messages && ticket.messages[0]?.text) || "No description provided."}
                 </p>
               </div>
               {ticket.photoUrl && (
@@ -368,15 +368,6 @@ const TicketDetail = () => {
                 </div>
                 {/* Admin Actions */}
                 <div className="mt-6 pt-6 border-t border-white/5 space-y-3">
-                  {ticket.status !== 'resolved' && ticket.status !== 'closed' && (
-                    <button 
-                      onClick={() => handleAdminUpdate('status', 'resolved')}
-                      className="w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-xs font-bold uppercase tracking-widest rounded-xl border border-emerald-500/30 transition-all flex items-center justify-center gap-2"
-                    >
-                      <CheckCircleIcon className="h-4 w-4" />
-                      Resolve Ticket
-                    </button>
-                  )}
                   <button 
                     onClick={handleEscalate}
                     className="w-full py-3 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 text-xs font-bold uppercase tracking-widest rounded-xl border border-amber-500/30 transition-all flex items-center justify-center gap-2"
