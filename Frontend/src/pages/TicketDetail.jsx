@@ -439,7 +439,7 @@ const TicketDetail = () => {
                 </div>
                 <div>
                   <h4 className="text-xl font-bold text-white">Case Resolved</h4>
-                  <p className="text-sm text-slate-400 font-medium mt-1">This ticket has been finalized. You can reopen it if the issue persists.</p>
+                  <p className="text-sm text-slate-400 font-medium mt-1">This ticket has been finalized by Admin.</p>
                 </div>
               </div>
             )}
