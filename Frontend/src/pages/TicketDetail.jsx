@@ -23,6 +23,8 @@ const TicketDetail = () => {
   const [userMessageCount, setUserMessageCount] = useState(0);
   const [aiSuggestions, setAiSuggestions] = useState(null);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [verifying, setVerifying] = useState(null);
+  const [analysisResults, setAnalysisResults] = useState({});
   
   useEffect(() => {
     const fetchTicket = async () => {
@@ -112,6 +114,67 @@ const TicketDetail = () => {
       toast.success('Ticket updated');
     } catch {
       toast.error('Failed to update ticket');
+    }
+  };
+
+  const verifyFile = async (imageUrl, isResubmitted = false) => {
+    if (!imageUrl) return;
+    setVerifying(imageUrl);
+    try {
+      const response = await api.post('/ai/analyze-image', { imageUrl });
+      const result = response.data.analysis;
+      setAnalysisResults(prev => ({ ...prev, [imageUrl]: result }));
+      
+      if (result === 'AI Generated' && ticket) {
+        toast.error('AI Generated Image Detected!', { icon: '⚠️', duration: 4000 });
+        
+        if (isResubmitted) {
+          setTimeout(async () => {
+            const shouldClose = window.confirm('Reuploaded photo is also AI or not matched with description. Would you like to CLOSE this ticket?');
+            
+            if (shouldClose) {
+              const updated = await updateTicketAdmin(id, { status: 'closed' });
+              setTicket(updated);
+              toast.success('Ticket closed');
+            }
+          }, 500);
+        } else {
+          // 1. Mark as spam
+          const updatedSpam = await updateTicketAdmin(id, { category: 'spam' });
+          setTicket(updatedSpam);
+          
+          // 2. Ask admin whether to close
+          setTimeout(async () => {
+            const shouldClose = window.confirm('AI generated image detected. This ticket has been automatically marked as spam. Would you like to CLOSE this ticket?');
+            
+            if (shouldClose) {
+              const updatedClosed = await updateTicketAdmin(id, { status: 'closed' });
+              setTicket(updatedClosed);
+              toast.success('Ticket closed as spam');
+            } else {
+              toast.success('Opening conversation for manual resolution...');
+            }
+          }, 500);
+        }
+      } else {
+        toast.success('Verification Complete: Image is Genuine');
+        if (isResubmitted && ticket) {
+          // Requirement: convert ticket from spam back to its original state (Open)
+          const updates = { status: 'open' };
+          if (ticket.category === 'spam' || ticket.category === 'Spam') {
+            updates.category = ticket.aiAnalysis?.suggestedTeam || 'Product Issues';
+          }
+          const updated = await updateTicketAdmin(id, updates);
+          setTicket(updated);
+          toast.success('Ticket restored to Open status.');
+        }
+      }
+    } catch (error) {
+      console.error('Verification failed:', error);
+      toast.error('AI Verification Service Offline');
+      setAnalysisResults(prev => ({ ...prev, [imageUrl]: 'Error' }));
+    } finally {
+      setVerifying(null);
     }
   };
 
@@ -209,30 +272,94 @@ const TicketDetail = () => {
             <div className="p-6 border-b border-white/5 bg-white/[0.02]">
               <h3 className="font-bold text-white text-lg">Customer Issue Report</h3>
             </div>
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-6 flex flex-col gap-6">
               <div>
                 <h4 className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-2">Description</h4>
                 <p className="text-slate-200 text-sm leading-relaxed whitespace-pre-wrap">
                   {ticket.description || ticket.subject || (ticket.messages && ticket.messages[0]?.text) || "No description provided."}
                 </p>
               </div>
-              {ticket.photoUrl && (
-                <div>
-                  <h4 className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-2">Attached Proof</h4>
-                  {/* Only show the PRIMARY photo here. Any resubmitted photos appear naturally
-                      inside the conversation timeline where the user actually uploaded them. */}
-                  <div className="relative group cursor-zoom-in rounded-xl overflow-hidden border border-white/10 aspect-video bg-black/40">
-                    <img 
-                      src={getAssetUrl(ticket.photoUrl)} 
-                      alt="Primary Attachment" 
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <span className="text-white text-xs font-bold bg-emerald-600 px-3 py-1.5 rounded-lg shadow-lg">Primary Proof</span>
+              {/* Proofs Section */}
+              <div className="flex overflow-x-auto gap-6 custom-scrollbar pb-4 w-full">
+                {ticket.photoUrl && (
+                  <div className="min-w-[300px] max-w-[400px] flex-1 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Primary Proof</h4>
+                      {analysisResults[ticket.photoUrl] && (
+                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                          analysisResults[ticket.photoUrl].includes('AI Generated') 
+                            ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30' 
+                            : 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
+                        }`}>
+                          {analysisResults[ticket.photoUrl]}
+                        </span>
+                      )}
                     </div>
+                    
+                    <div className="relative group cursor-zoom-in rounded-xl overflow-hidden border border-white/10 aspect-video bg-black/40">
+                      <img 
+                        src={getAssetUrl(ticket.photoUrl)} 
+                        alt="Primary Attachment" 
+                        onError={(e) => {
+                          e.target.src = 'https://placehold.co/600x400/020B06/emerald?text=Image+Not+Found';
+                          e.target.onerror = null;
+                        }}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-white text-xs font-bold bg-emerald-600 px-3 py-1.5 rounded-lg shadow-lg">Primary Proof</span>
+                      </div>
+                    </div>
+
+                    {!analysisResults[ticket.photoUrl] && (
+                      <button 
+                        onClick={() => verifyFile(ticket.photoUrl)}
+                        className="w-full py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-xl border border-emerald-500/20 transition-all"
+                      >
+                        {verifying === ticket.photoUrl ? 'Analyzing...' : 'Verify Authenticity'}
+                      </button>
+                    )}
                   </div>
-                </div>
-              )}
+                )}
+                
+                {(ticket.additionalPhotos || []).map((photo, idx) => (
+                  <div key={idx} className="min-w-[300px] max-w-[400px] flex-1 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Resubmitted #{idx + 1}</h4>
+                      {analysisResults[photo.url] && (
+                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                          analysisResults[photo.url].includes('AI Generated') 
+                            ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30' 
+                            : 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
+                        }`}>
+                          {analysisResults[photo.url]}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="relative group cursor-zoom-in rounded-xl overflow-hidden border border-white/10 aspect-video bg-black/40">
+                      <img 
+                        src={getAssetUrl(photo.url)} 
+                        alt={`Resubmitted Attachment ${idx + 1}`} 
+                        onError={(e) => {
+                          e.target.src = 'https://placehold.co/600x400/020B06/emerald?text=Resubmission+Not+Found';
+                          e.target.onerror = null;
+                        }}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                      />
+                    </div>
+
+                    {!analysisResults[photo.url] && (
+                      <button 
+                        onClick={() => verifyFile(photo.url, true)}
+                        className="w-full py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-xl border border-emerald-500/20 transition-all"
+                      >
+                        {verifying === photo.url ? 'Analyzing...' : 'Verify Authenticity'}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 

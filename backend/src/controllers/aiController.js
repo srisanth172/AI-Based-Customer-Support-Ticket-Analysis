@@ -111,7 +111,10 @@ exports.analyzeImage = async (req, res) => {
         const ext = path.extname(fileName).toLowerCase().replace('.', '') || 'jpeg';
         base64Image = `data:image/${ext};base64,${fileData.toString('base64')}`;
       } else {
-        return res.status(404).json({ error: 'Image not found on server' });
+        // If not found locally, maybe it's a partial URL that needs the Cloudinary base?
+        // But for now, we'll just try to use the imageUrl as-is if it's not a local file
+        console.warn('[AI Vision] File not found locally, using URL as-is:', imageUrl);
+        base64Image = imageUrl;
       }
     }
 

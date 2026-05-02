@@ -24,8 +24,6 @@ const TicketTable = ({ tickets, updateTicketAdmin, externalFilters }) => {
   const [sentimentFilter, setSentimentFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState('urgency'); 
   const [selectedTicket, setSelectedTicket] = useState(null);
-  const [verifying, setVerifying] = useState(null);
-  const [analysisResults, setAnalysisResults] = useState({});
   
   useEffect(() => {
     if (globalSearch !== undefined) setSearchTerm(globalSearch);
@@ -98,44 +96,6 @@ const TicketTable = ({ tickets, updateTicketAdmin, externalFilters }) => {
     }
   };
 
-  const verifyFile = async (imageUrl) => {
-    if (!imageUrl) return;
-    setVerifying(imageUrl);
-    try {
-      const response = await api.post('/ai/analyze-image', { imageUrl });
-      const result = response.data.analysis;
-      setAnalysisResults(prev => ({ ...prev, [imageUrl]: result }));
-      
-      if (result === 'AI Generated' && selectedTicket) {
-        toast.error('AI Generated Image Detected!', { icon: '⚠️', duration: 4000 });
-        
-        // 1. Mark as spam
-        await handleInlineChange(selectedTicket.id, 'category', 'spam');
-        
-        // 2. Ask admin whether to close
-        setTimeout(async () => {
-          const shouldClose = window.confirm('AI generated image detected. This ticket has been automatically marked as spam. Would you like to CLOSE this ticket?');
-          
-          if (shouldClose) {
-            await handleInlineChange(selectedTicket.id, 'status', 'closed');
-            setSelectedTicket(null);
-            toast.success('Ticket closed as spam');
-          } else {
-            toast.success('Opening conversation for manual resolution...');
-            navigate(`/admin/tickets/${selectedTicket.ticketId}`);
-          }
-        }, 500);
-      } else {
-        toast.success('Verification Complete: Image is Genuine');
-      }
-    } catch (error) {
-      console.error('Verification failed:', error);
-      toast.error('AI Verification Service Offline');
-      setAnalysisResults(prev => ({ ...prev, [imageUrl]: 'Error' }));
-    } finally {
-      setVerifying(null);
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -332,23 +292,6 @@ const TicketTable = ({ tickets, updateTicketAdmin, externalFilters }) => {
                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight truncate max-w-[150px]">
                              {selectedTicket.photoUrl.split('/').pop()}
                            </span>
-                           {analysisResults[selectedTicket.photoUrl] ? (
-                             <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                               analysisResults[selectedTicket.photoUrl].includes('AI Generated') 
-                                 ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30' 
-                                 : 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
-                             }`}>
-                               {analysisResults[selectedTicket.photoUrl]}
-                             </span>
-                           ) : (
-                             // Always allow manual verification
-                             <button 
-                               onClick={() => verifyFile(selectedTicket.photoUrl)}
-                               className="text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-500"
-                             >
-                               {verifying === selectedTicket.photoUrl ? 'Analyzing...' : 'Verify Authenticity'}
-                             </button>
-                           )}
                         </div>
                       </div>
                     )}
@@ -364,6 +307,11 @@ const TicketTable = ({ tickets, updateTicketAdmin, externalFilters }) => {
                             onError={(e) => { e.target.style.display = 'none'; }}
                             className="w-full h-auto max-h-64 object-cover"
                           />
+                        </div>
+                        <div className="flex items-center justify-between px-1">
+                           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight truncate max-w-[150px]">
+                             {photo.url.split('/').pop()}
+                           </span>
                         </div>
                       </div>
                     ))}
@@ -387,29 +335,12 @@ const TicketTable = ({ tickets, updateTicketAdmin, externalFilters }) => {
                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight truncate max-w-[150px]">
                                  {m.attachmentUrl.split('/').pop()}
                                </span>
-                            {analysisResults[m.attachmentUrl] ? (
-                               <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                                 analysisResults[m.attachmentUrl].includes('AI Generated') 
-                                   ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30' 
-                                   : 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
-                               }`}>
-                                 {analysisResults[m.attachmentUrl]}
-                               </span>
-                             ) : (
-                               <button 
-                                 onClick={() => verifyFile(m.attachmentUrl)}
-                                 className="text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-500"
-                               >
-                                 {verifying === m.attachmentUrl ? 'Analyzing...' : 'Verify Authenticity'}
-                               </button>
-                             )}
                             </div>
                           </div>
                         )}
                         {(m.files || []).map((file, i) => (
                           <div key={`${msgIdx}-${i}`} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800">
                             <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{file.name}</span>
-                            <button onClick={() => verifyFile(file.url)} className="text-[10px] font-black uppercase text-emerald-600 hover:text-emerald-500">{verifying === file.url ? 'Analyzing...' : 'Verify Authenticity'}</button>
                           </div>
                         ))}
                       </React.Fragment>

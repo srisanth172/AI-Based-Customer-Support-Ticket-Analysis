@@ -6,14 +6,6 @@ const authMiddleware = (req, res, next) => {
   const token = authHeader?.replace('Bearer ', '');
 
   if (!token) {
-    // Check for session-based auth (cookies) as fallback
-    if (req.session && req.session.userId) {
-      req.user = { 
-        userId: req.session.userId, 
-        role: req.session.role 
-      };
-      return next();
-    }
     return res.status(401).json({ error: 'Access denied. No token provided.' });
   }
 

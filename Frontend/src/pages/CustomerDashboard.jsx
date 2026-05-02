@@ -10,6 +10,7 @@ import {
   ArrowRightIcon,
   InboxIcon,
 } from '@heroicons/react/24/outline';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
@@ -43,30 +44,27 @@ const CustomerDashboard = () => {
       name: 'Total Tickets', 
       value: stats.total, 
       icon: TicketIcon, 
-      iconColor: 'text-emerald-600', 
-      iconBg: 'bg-emerald-50',
-      accentClass: 'stat-card--emerald',
-      description: 'All time tickets',
+      glowColor: 'bg-emerald-500',
+      trend: '+12%',
+      trendUp: true,
       to: '/customer/tickets?status=all',
     },
     { 
-      name: 'Open Issues', 
+      name: 'Open Tickets', 
       value: stats.open, 
       icon: ClockIcon, 
-      iconColor: 'text-amber-600', 
-      iconBg: 'bg-amber-50',
-      accentClass: 'stat-card--amber',
-      description: 'Awaiting resolution',
+      glowColor: 'bg-amber-500',
+      trend: '-5%',
+      trendUp: false,
       to: '/customer/tickets?status=open',
     },
     { 
-      name: 'Resolved', 
+      name: 'Closed Tickets', 
       value: stats.resolved, 
       icon: CheckCircleIcon, 
-      iconColor: 'text-emerald-600', 
-      iconBg: 'bg-emerald-50',
-      accentClass: 'stat-card--emerald',
-      description: 'Successfully closed',
+      glowColor: 'bg-emerald-500',
+      trend: '+24%',
+      trendUp: true,
       to: '/customer/tickets?status=resolved',
     },
   ];
@@ -178,26 +176,27 @@ const CustomerDashboard = () => {
                 className="block"
               >
                 <motion.div
+                  whileHover={{ y: -4, scale: 1.01 }}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: idx * 0.1 }}
-                  className="relative overflow-hidden p-7 rounded-[24px] border border-white/5 bg-[#0a1f10]/40 backdrop-blur-xl group cursor-pointer hover:border-emerald-500/30 hover:bg-white/[0.03] transition-all duration-300"
+                  className="relative overflow-hidden rounded-2xl bg-white/70 dark:bg-[#041209]/70 backdrop-blur-xl border border-slate-200/60 dark:border-emerald-900/20 p-6 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer active:scale-95"
                 >
-                  <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <stat.icon className="h-20 w-20 -mr-6 -mt-6" />
+                  <div className={`absolute -right-10 -top-10 w-32 h-32 rounded-full blur-3xl opacity-20 ${stat.glowColor}`}></div>
+                  <div className="flex justify-between items-start mb-2 relative z-10">
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-500 dark:text-slate-400 capitalize">{stat.name}</h3>
+                      <p className="text-4xl font-extrabold text-slate-800 dark:text-slate-100 mt-2">{stat.value}</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-white dark:bg-[#020B06] shadow-sm border border-slate-100 dark:border-emerald-900/30">
+                      <stat.icon className="w-5 h-5 text-emerald-500" />
+                    </div>
                   </div>
-                  
-                  <div className="relative z-10">
-                    <div className={`h-12 w-12 rounded-2xl flex items-center justify-center mb-5 ${stat.iconBg} ring-1 ring-white/10 group-hover:scale-110 transition-transform`}>
-                      <stat.icon className={`h-6 w-6 ${stat.iconColor}`} />
-                    </div>
-                    <p className="text-[13px] font-bold text-slate-500 uppercase tracking-wider mb-1">{stat.name}</p>
-                    <div className="flex items-baseline gap-2">
-                      <h3 className="text-[32px] font-black text-white tabular-nums tracking-tighter">
-                        {stat.value}
-                      </h3>
-                    </div>
-                    <p className="text-[12px] font-medium text-slate-500 mt-2">{stat.description}</p>
+
+                  <div className="flex items-center gap-1.5 mt-4 relative z-10">
+                    {stat.trendUp ? <TrendingUp className="w-4 h-4 text-emerald-500" /> : <TrendingDown className="w-4 h-4 text-rose-500" />}
+                    <span className={`text-sm font-semibold ${stat.trendUp ? 'text-emerald-500' : 'text-rose-500'}`}>{stat.trend}</span>
+                    <span className="text-sm font-medium text-slate-400">this week</span>
                   </div>
                 </motion.div>
               </Link>

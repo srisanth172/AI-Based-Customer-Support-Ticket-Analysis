@@ -16,7 +16,14 @@ const generateTicketId = () => 'TKT-' + Date.now() + '-' + Math.random().toStrin
 
 exports.createTicket = async (req, res) => {
   try {
-    const { messages = [], userId } = req.body;
+    const { messages = [] } = req.body;
+    
+    // Safety: ensure only customers raise tickets, and use the ID from the authenticated user
+    if (req.user.role === 'admin') {
+      return res.status(403).json({ message: 'Admins cannot create support tickets. Please use a customer account.' });
+    }
+
+    const userId = req.user.userId;
     const ticketText = messages.map((message) => message?.text).filter(Boolean).join(' ').trim();
     const firstUserMessage = messages.find((message) => message?.sender === 'user' && message?.text)?.text || ticketText;
     const aiAnalysis = await aiService.analyzeTicketWithAI(ticketText || firstUserMessage);
@@ -29,7 +36,7 @@ exports.createTicket = async (req, res) => {
 
     const ticket = new Ticket({
       ticketId: generateTicketId(),
-      userId: userId || req.user.userId,
+      userId,
       subject: firstUserMessage?.slice(0, 120) || 'Support request',
       description: ticketText || firstUserMessage || 'Support request',
       messages,
@@ -255,8 +262,8 @@ exports.addMessage = async (req, res) => {
 
       // ── PHOTO UPLOAD (FIRST TIME OR SPAM RESUBMISSION) ────────────────────
       if (photoFile) {
-        const newPhotoUrl = `/uploads/${photoFile.filename}`;
-        const fullNewImagePath = path.join(__dirname, '../../uploads', photoFile.filename);
+        const newPhotoUrl = photoFile.path;
+        // const fullNewImagePath = path.join(__dirname, '../../uploads', photoFile.filename); // Not needed for Cloudinary
 
         // Track resubmission
         ticket.additionalPhotos.push({ url: newPhotoUrl, uploadedAt: new Date() });
@@ -265,9 +272,9 @@ exports.addMessage = async (req, res) => {
         const lastMsg = ticket.messages[ticket.messages.length - 1];
         if (lastMsg && !lastMsg.attachmentUrl) lastMsg.attachmentUrl = newPhotoUrl;
 
-        // Re-analyze via Groq
-        console.log(`[Photo Upload] Analyzing image for ticket ${ticket.ticketId}`);
-        const reAnalysis = await aiService.analyzeTicketWithImage(ticket.description || ticket.subject, fullNewImagePath);
+        // Re-analyze via Groq/Cloudinary URL
+        console.log(`[Photo Upload] Analyzing image for ticket ${ticket.ticketId} at ${newPhotoUrl}`);
+        const reAnalysis = await aiService.analyzeTicketWithImage(ticket.description || ticket.subject, newPhotoUrl);
         const isStillMismatch = reAnalysis.isSpam === true;
 
         if (!isStillMismatch) {
@@ -656,8 +663,14 @@ exports.checkDuplicates = async (req, res) => {
 // Updated endpoint: Create ticket with photo upload
 exports.createTicketWithPhoto = async (req, res) => {
   try {
-    const { title, description, category, attemptCount } = req.body;
-    const userId = req.user?.userId || req.user?._id || req.user?.id;
+    const { title, description, category } = req.body;
+    
+    // Safety: ensure only customers raise tickets
+    if (req.user.role === 'admin') {
+      return res.status(403).json({ message: 'Admins cannot create support tickets. Please use a customer account.' });
+    }
+
+    const userId = req.user.userId;
     const photoFile = req.file;
 
     if (!title || !description) return res.status(400).json({ message: 'Title and description are required' });

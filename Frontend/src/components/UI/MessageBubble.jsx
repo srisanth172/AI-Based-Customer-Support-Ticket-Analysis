@@ -7,44 +7,6 @@ const MessageBubble = ({ message, ticketId, ticketStatus, primaryPhotoUrl, addit
   const isOwnMessage = message.sender === 'admin';
   const isUser = message.sender === 'user';
   const isBot = message.sender === 'bot';
-  const [analyzingMap, setAnalyzingMap] = useState({});
-  const [analysisResultMap, setAnalysisResultMap] = useState({});
-
-  const handleAnalyzeImage = async (url, idx) => {
-    setAnalyzingMap(prev => ({ ...prev, [idx]: true }));
-    try {
-      const res = await api.post('/ai/analyze-image', { imageUrl: url });
-      const result = res.data.analysis;
-      setAnalysisResultMap(prev => ({ ...prev, [idx]: result || 'Checked' }));
-      
-      if (result === 'AI Generated' && onUpdateTicket && ticketId) {
-        toast.error('AI Generated Image Detected!', { icon: '⚠️', duration: 4000 });
-        
-        // 1. Mark as spam
-        await onUpdateTicket('category', 'spam');
-        
-        // 2. Ask admin whether to close
-        setTimeout(async () => {
-          const shouldClose = window.confirm('AI generated image detected. This ticket has been automatically marked as spam. Would you like to CLOSE this ticket?');
-          
-          if (shouldClose) {
-            await onUpdateTicket('status', 'closed');
-            toast.success('Ticket closed as spam');
-          } else {
-            toast.success('Ticket kept open for manual resolution');
-          }
-        }, 500);
-      } else {
-        toast.success('Image Verified as Genuine');
-      }
-    } catch (error) {
-      toast.error('Failed to analyze image');
-      setAnalysisResultMap(prev => ({ ...prev, [idx]: 'Analysis failed' }));
-    } finally {
-      setAnalyzingMap(prev => ({ ...prev, [idx]: false }));
-    }
-  };
-
   const rawFiles = [...(message.files || [])];
   // Only push attachmentUrl if it's not already displayed elsewhere (primary proof or additional photos)
   if (message.attachmentUrl && 
@@ -97,25 +59,13 @@ const MessageBubble = ({ message, ticketId, ticketStatus, primaryPhotoUrl, addit
                       />
                       <div className="mt-2 flex items-center justify-between px-1">
                         <span className="text-[11px] text-slate-500 truncate font-bold uppercase tracking-wider">{file.name}</span>
-                        {(!analysisResultMap[idx] && !message.aiVerification) ? (
-                          // Only show manual verification button if backend hasn't verified it yet
-                          // and it's a flagged or customer chat
-                          (onUpdateTicket && ticketId && (ticketStatus === 'spam' || ticketStatus === 'reopened' || isUser)) && (
-                            <button
-                              onClick={() => handleAnalyzeImage(file.url, idx)}
-                              disabled={analyzingMap[idx]}
-                              className="text-[10px] font-black bg-white/10 text-white px-2.5 py-1 rounded-lg hover:bg-emerald-500 transition-all uppercase tracking-widest whitespace-nowrap active:scale-95"
-                            >
-                              {analyzingMap[idx] ? 'Analyzing...' : 'Verify Authenticity'}
-                            </button>
-                          )
-                        ) : (
+                        {message.aiVerification && (
                           <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg border ${
-                            (analysisResultMap[idx] || message.aiVerification)?.includes('Genuine') 
+                            message.aiVerification.includes('Genuine') 
                               ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
                               : 'bg-rose-500/20 text-rose-500 border-rose-500/30'
                           }`}>
-                            {analysisResultMap[idx] || message.aiVerification}
+                            {message.aiVerification}
                           </span>
                         )}
                       </div>
