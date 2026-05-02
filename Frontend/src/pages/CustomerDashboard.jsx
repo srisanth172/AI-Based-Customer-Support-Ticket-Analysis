@@ -193,11 +193,6 @@ const CustomerDashboard = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 mt-4 relative z-10">
-                    {stat.trendUp ? <TrendingUp className="w-4 h-4 text-emerald-500" /> : <TrendingDown className="w-4 h-4 text-rose-500" />}
-                    <span className={`text-sm font-semibold ${stat.trendUp ? 'text-emerald-500' : 'text-rose-500'}`}>{stat.trend}</span>
-                    <span className="text-sm font-medium text-slate-400">this week</span>
-                  </div>
                 </motion.div>
               </Link>
             ))
