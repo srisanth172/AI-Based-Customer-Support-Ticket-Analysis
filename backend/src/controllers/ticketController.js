@@ -457,6 +457,10 @@ exports.reopenTicket = async (req, res) => {
 };
 
 exports.requestResolution = async (req, res) => {
+  try {
+    const ticket = await Ticket.findOne({ ticketId: req.params.id });
+    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+
     // Default behavior: ask for confirmation in chat
     ticket.messages.push({
       sender: 'bot',
