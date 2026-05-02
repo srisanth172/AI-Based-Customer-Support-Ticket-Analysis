@@ -663,7 +663,7 @@ exports.checkDuplicates = async (req, res) => {
 // Updated endpoint: Create ticket with photo upload
 exports.createTicketWithPhoto = async (req, res) => {
   try {
-    const { title, description, category } = req.body;
+    const { title, description, category, attemptCount } = req.body;
     
     // Safety: ensure only customers raise tickets
     if (req.user.role === 'admin') {
