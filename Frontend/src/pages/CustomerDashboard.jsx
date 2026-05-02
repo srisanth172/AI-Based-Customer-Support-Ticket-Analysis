@@ -27,8 +27,8 @@ const CustomerDashboard = () => {
         const response = await api.get('/tickets');
         const fetchedTickets = response.data.tickets || [];
         setTickets(fetchedTickets);
-        const open = fetchedTickets.filter(t => t.status === 'open').length;
-        const resolved = fetchedTickets.filter(t => t.status === 'resolved').length;
+        const open = fetchedTickets.filter(t => ['open', 'in_progress', 'reopened', 'escalated', 'waiting_for_customer'].includes(t.status?.toLowerCase())).length;
+        const resolved = fetchedTickets.filter(t => ['resolved', 'closed'].includes(t.status?.toLowerCase())).length;
         setStats({ total: fetchedTickets.length, open, resolved });
         setLoading(false);
       } catch (error) {
