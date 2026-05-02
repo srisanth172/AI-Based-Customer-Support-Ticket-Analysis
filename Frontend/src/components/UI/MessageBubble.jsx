@@ -89,7 +89,12 @@ const MessageBubble = ({ message, ticketId, ticketStatus, primaryPhotoUrl, addit
                 <div key={idx} className="relative group">
                   {isImage ? (
                     <div className="rounded-xl overflow-hidden border border-white/10 bg-black/20 p-1.5 shadow-2xl">
-                      <img src={getAssetUrl(file.url)} alt={file.name || 'attachment'} className="max-w-full h-auto max-h-64 rounded-lg object-cover" />
+                      <img 
+                        src={getAssetUrl(file.url)} 
+                        alt={file.name || 'attachment'} 
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                        className="max-w-full h-auto max-h-64 rounded-lg object-cover" 
+                      />
                       <div className="mt-2 flex items-center justify-between px-1">
                         <span className="text-[11px] text-slate-500 truncate font-bold uppercase tracking-wider">{file.name}</span>
                         {(!analysisResultMap[idx] && !message.aiVerification) ? (

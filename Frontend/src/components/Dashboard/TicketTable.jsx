@@ -324,6 +324,7 @@ const TicketTable = ({ tickets, updateTicketAdmin, externalFilters }) => {
                           <img 
                             src={getAssetUrl(selectedTicket.photoUrl)} 
                             alt="Primary Proof" 
+                            onError={(e) => { e.target.style.display = 'none'; }}
                             className="w-full h-auto max-h-64 object-cover"
                           />
                         </div>
@@ -360,6 +361,7 @@ const TicketTable = ({ tickets, updateTicketAdmin, externalFilters }) => {
                           <img 
                             src={getAssetUrl(photo.url)} 
                             alt={`Additional Proof ${idx + 1}`} 
+                            onError={(e) => { e.target.style.display = 'none'; }}
                             className="w-full h-auto max-h-64 object-cover"
                           />
                         </div>
@@ -377,6 +379,7 @@ const TicketTable = ({ tickets, updateTicketAdmin, externalFilters }) => {
                               <img 
                                 src={getAssetUrl(m.attachmentUrl)} 
                                 alt="Attachment" 
+                                onError={(e) => { e.target.style.display = 'none'; }}
                                 className="w-full h-auto max-h-48 object-cover"
                               />
                             </div>
