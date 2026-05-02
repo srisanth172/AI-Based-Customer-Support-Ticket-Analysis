@@ -49,10 +49,20 @@ const MyTickets = () => {
     fetchTickets();
   }, []);
 
-  const filteredTickets = tickets.filter(t => {
     const matchesSearch = t.ticketId.toLowerCase().includes(search.toLowerCase()) || 
                           (t.messages[0]?.text || '').toLowerCase().includes(search.toLowerCase());
-    const matchesFilter = filter === 'all' || t.status === filter;
+    
+    let matchesFilter = filter === 'all';
+    const status = t.status?.toLowerCase();
+    
+    if (filter === 'open') {
+      matchesFilter = ['open', 'reopened', 'escalated', 'waiting_for_customer'].includes(status);
+    } else if (filter === 'in_progress') {
+      matchesFilter = status === 'in_progress';
+    } else if (filter === 'resolved') {
+      matchesFilter = ['resolved', 'closed'].includes(status);
+    }
+    
     return matchesSearch && matchesFilter;
   });
 
@@ -60,16 +70,17 @@ const MyTickets = () => {
     switch(status) {
       case 'open': return { classes: 'bg-amber-50 text-amber-700 ring-amber-200', dot: 'bg-amber-500' };
       case 'in_progress': return { classes: 'bg-emerald-50 text-emerald-700 ring-emerald-200', dot: 'bg-green-500' };
-      case 'resolved': return { classes: 'bg-emerald-500/10 text-emerald-700 ring-emerald-200', dot: 'bg-emerald-500/100' };
+      case 'resolved': 
+      case 'closed': return { classes: 'bg-emerald-500/10 text-emerald-700 ring-emerald-200', dot: 'bg-emerald-500/100' };
       default: return { classes: 'bg-white/5 text-slate-300 ring-slate-200', dot: 'bg-white/50' };
     }
   };
 
   const statusCounts = {
     all: tickets.length,
-    open: tickets.filter(t => t.status === 'open').length,
-    in_progress: tickets.filter(t => t.status === 'in_progress').length,
-    resolved: tickets.filter(t => t.status === 'resolved').length,
+    open: tickets.filter(t => ['open', 'reopened', 'escalated', 'waiting_for_customer'].includes(t.status?.toLowerCase())).length,
+    in_progress: tickets.filter(t => t.status?.toLowerCase() === 'in_progress').length,
+    resolved: tickets.filter(t => ['resolved', 'closed'].includes(t.status?.toLowerCase())).length,
   };
 
   const containerVariants = {
