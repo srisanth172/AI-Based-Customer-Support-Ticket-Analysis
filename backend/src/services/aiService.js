@@ -283,7 +283,7 @@ class AIService {
     return this.analyzeTicket(text);
   }
 
-  async analyzeTicketWithImage(text, imagePath) {
+  async analyzeTicketWithImage(text, imageUrl) {
     try {
       const config = this._getAIConfig();
       if (!config) return { ...(await this.analyzeTicket(text)), isSpam: false };
@@ -291,9 +291,17 @@ class AIService {
       const { apiKey, apiUrl, visionModel: model } = config;
 
       let base64Image = '';
-      if (imagePath && fs.existsSync(imagePath)) {
-        const imageBuffer = fs.readFileSync(imagePath);
-        base64Image = imageBuffer.toString('base64');
+      let mimeType = 'image/jpeg';
+
+      if (imageUrl && !imageUrl.startsWith('http')) {
+        // Handle local file
+        if (fs.existsSync(imageUrl)) {
+          const imageBuffer = fs.readFileSync(imageUrl);
+          base64Image = imageBuffer.toString('base64');
+          const extension = imageUrl.split('.').pop().toLowerCase();
+          if (extension === 'png') mimeType = 'image/png';
+          if (extension === 'webp') mimeType = 'image/webp';
+        }
       }
 
       const promptText = `
@@ -334,15 +342,17 @@ class AIService {
       let messagesContent = [{ type: 'text', text: promptText }];
       
       if (base64Image) {
-        const extension = imagePath.split('.').pop().toLowerCase();
-        let mimeType = 'image/jpeg';
-        if (extension === 'png') mimeType = 'image/png';
-        if (extension === 'webp') mimeType = 'image/webp';
-
         messagesContent.push({
           type: "image_url",
           image_url: {
             url: `data:${mimeType};base64,${base64Image}`
+          }
+        });
+      } else if (imageUrl && imageUrl.startsWith('http')) {
+        messagesContent.push({
+          type: "image_url",
+          image_url: {
+            url: imageUrl
           }
         });
       }

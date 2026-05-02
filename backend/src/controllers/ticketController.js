@@ -132,7 +132,7 @@ exports.addMessage = async (req, res) => {
     let attachmentUrl = null;
 
     if (photoFile) {
-      attachmentUrl = `/uploads/${photoFile.filename}`;
+      attachmentUrl = photoFile.path;
     }
 
     // Don't push an empty message when only a file was sent
@@ -668,11 +668,10 @@ exports.createTicketWithPhoto = async (req, res) => {
     const currentAttempt = parseInt(attemptCount) || 1;
 
     const ticketId = 'TKT-' + Date.now();
-    const photoUrl = `/uploads/${photoFile.filename}`;
-    const fullImagePath = path.join(__dirname, '../../uploads', photoFile.filename);
+    const photoUrl = photoFile.path; // Cloudinary URL
 
     // AI vision analysis (checks category, validity AND image-description match)
-    const aiAnalysis = await aiService.analyzeTicketWithImage(description, fullImagePath);
+    const aiAnalysis = await aiService.analyzeTicketWithImage(description, photoUrl);
     console.log('--- AI ANALYSIS RESULT ---');
     console.log('Category:', aiAnalysis.category);
     console.log('Is Spam:', aiAnalysis.isSpam);

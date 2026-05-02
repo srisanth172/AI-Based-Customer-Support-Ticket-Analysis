@@ -96,31 +96,22 @@ exports.analyzeImage = async (req, res) => {
       return res.status(400).json({ error: 'Image URL is required' });
     }
 
-    const fileName = path.basename(imageUrl);
-    const filePath = path.join(__dirname, '../../uploads', fileName);
-    console.log('[AI Vision] Looking for file at:', filePath);
-
-    let base64Image = '';
-    const ext = path.extname(fileName).toLowerCase().replace('.', '') || 'jpeg';
+    let base64Image = imageUrl; // Default to using the URL directly
     
-    // Resolve correct uploads directory
-    const uploadsDir = path.join(__dirname, '../..', 'uploads');
-    const resolvedPath = path.join(uploadsDir, fileName);
-    console.log('[AI Vision] Resolved uploads path:', resolvedPath);
-    
-    if (fs.existsSync(resolvedPath)) {
-      console.log('[AI Vision] File found locally.');
-      const fileData = fs.readFileSync(resolvedPath);
-      base64Image = `data:image/${ext};base64,${fileData.toString('base64')}`;
-    } else {
-      console.log('[AI Vision] File NOT found locally at:', resolvedPath);
-      if (imageUrl.startsWith('http') && !imageUrl.includes('localhost')) {
-         base64Image = imageUrl;
+    if (!imageUrl.startsWith('http')) {
+      // Resolve correct uploads directory for local files
+      const fileName = path.basename(imageUrl);
+      const uploadsDir = path.join(__dirname, '../..', 'uploads');
+      const resolvedPath = path.join(uploadsDir, fileName);
+      console.log('[AI Vision] Resolved local uploads path:', resolvedPath);
+      
+      if (fs.existsSync(resolvedPath)) {
+        console.log('[AI Vision] File found locally.');
+        const fileData = fs.readFileSync(resolvedPath);
+        const ext = path.extname(fileName).toLowerCase().replace('.', '') || 'jpeg';
+        base64Image = `data:image/${ext};base64,${fileData.toString('base64')}`;
       } else {
-         return res.status(404).json({ 
-           error: 'Image not found on server',
-           checkedPath: resolvedPath 
-         });
+        return res.status(404).json({ error: 'Image not found on server' });
       }
     }
 
