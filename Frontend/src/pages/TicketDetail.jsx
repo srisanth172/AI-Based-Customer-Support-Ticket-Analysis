@@ -6,7 +6,7 @@ import ChatBox from '../components/UI/ChatBox';
 import AIPanel from '../components/Ticket/AIPanel';
 import Button from '../components/UI/Button';
 import { toast } from 'react-hot-toast';
-import { CheckCircleIcon, RocketLaunchIcon, ArrowLeftIcon, PhotoIcon } from '@heroicons/react/24/outline';
+import { CheckCircleIcon, RocketLaunchIcon, ArrowLeftIcon, PhotoIcon, CheckIcon } from '@heroicons/react/24/outline';
 import io from 'socket.io-client';
 import { getAssetUrl } from '../utils/assets';
 import api from '../services/api';
@@ -431,6 +431,18 @@ const TicketDetail = () => {
               />
               <div ref={chatEndRef} />
             </div>
+
+            {(ticket.status?.toLowerCase() === 'resolved' || ticket.status?.toLowerCase() === 'closed') && (
+              <div className="p-10 bg-emerald-500/5 border-t border-white/5 text-center space-y-4">
+                <div className="h-16 w-16 bg-emerald-500/20 text-emerald-500 rounded-3xl flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/10">
+                  <CheckIcon className="h-8 w-8" />
+                </div>
+                <div>
+                  <h4 className="text-xl font-bold text-white">Case Resolved</h4>
+                  <p className="text-sm text-slate-400 font-medium mt-1">This ticket has been finalized. You can reopen it if the issue persists.</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Activity Timeline */}

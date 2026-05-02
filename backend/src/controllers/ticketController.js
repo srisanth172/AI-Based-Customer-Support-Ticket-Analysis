@@ -335,7 +335,11 @@ exports.addMessage = async (req, res) => {
       const reopenKeywords = ['still not working', 'not fixed', 'problem persists', 'issue persists', 'still failing'];
       const isReopen = reopenKeywords.some(k => lowerMsg.includes(k));
 
-      if (isResolution) {
+      // Check if user is confirming resolution after bot asked
+      const lastBotMsg = ticket.messages.filter(m => m.sender === 'bot').pop();
+      const isConfirming = lastBotMsg && lastBotMsg.text.includes('mark this ticket as Resolved?') && lowerMsg === 'yes';
+
+      if (isConfirming || isResolution) {
         ticket.status = 'resolved';
         ticket.resolvedAt = new Date();
         ticket.resolutionTime = Math.round((ticket.resolvedAt - ticket.createdAt) / (1000 * 60));
@@ -453,34 +457,7 @@ exports.reopenTicket = async (req, res) => {
 };
 
 exports.requestResolution = async (req, res) => {
-  try {
-    const ticket = await Ticket.findOne({ ticketId: req.params.id });
-    if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
-    // If a customer requests resolution, mark the ticket resolved immediately
-    if (req.user && req.user.role !== 'admin') {
-      ticket.status = 'resolved';
-      ticket.resolvedAt = new Date();
-      ticket.resolutionTime = Math.round((ticket.resolvedAt - ticket.createdAt) / (1000 * 60));
-      ticket.messages.push({
-        sender: 'bot',
-        text: 'Great! I have marked the ticket as Resolved. Admin, the customer has confirmed resolution. Please reply with "ok" or "close" to finalize and close the ticket.',
-        timestamp: new Date()
-      });
-
-      await Notification.create({ 
-        recipient: 'admin', 
-        title: 'Resolution Approval Needed', 
-        description: `Customer confirmed resolution for ticket ${ticket.ticketId}. Please review and close.`, 
-        type: 'warning', 
-        ticketId: ticket.ticketId 
-      });
-
-      await ticket.save();
-      emitTicketUpdated(ticket);
-      return res.json(ticket);
-    }
-
-    // Default behavior (e.g., admin or passive request): ask for confirmation in chat
+    // Default behavior: ask for confirmation in chat
     ticket.messages.push({
       sender: 'bot',
       text: 'Glad to hear it is working! Just to be sure, should I mark this ticket as Resolved? (Reply "Yes" to confirm)',
@@ -489,7 +466,7 @@ exports.requestResolution = async (req, res) => {
 
     await ticket.save();
     emitTicketUpdated(ticket);
-    res.json(ticket);
+    return res.json(ticket);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

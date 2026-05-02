@@ -160,7 +160,7 @@ const CustomerTicketDetail = () => {
     );
   }
 
-  const isResolved = ticket?.status === 'resolved' || ticket?.status === 'closed';
+  const isResolved = ticket?.status?.toLowerCase() === 'resolved' || ticket?.status?.toLowerCase() === 'closed';
 
   return (
     <div className="max-w-5xl mx-auto flex flex-col gap-6 animate-in fade-in duration-500">
