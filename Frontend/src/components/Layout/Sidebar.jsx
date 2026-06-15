@@ -1,0 +1,74 @@
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+import { LayoutDashboard, TicketIcon, Users, Settings, Filter, Activity, MessageSquare, LogOut } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useAuth } from '../../context/AuthContext';
+
+const Sidebar = () => {
+  const { user, logout } = useAuth();
+  const links = [
+    { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
+    { to: '/admin/tickets', icon: Activity, label: 'Workflows' },
+    { to: '/admin/customers', icon: Users, label: 'Customers' },
+    { to: '/admin/analytics', icon: Activity, label: 'Analytics' },
+    { to: '/admin/settings', icon: Settings, label: 'Settings' }
+  ];
+
+  return (
+    <aside className="fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 border-r border-emerald-50 dark:border-emerald-900/20 bg-white/50 dark:bg-[#020B06]/90 backdrop-blur-xl transition-colors duration-200 p-4 z-20 hidden lg:flex flex-col">
+      
+      <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4 px-3 mt-4">Main Menu</div>
+      
+      <nav className="space-y-1.5 flex-1">
+        {links.map((link) => (
+          <NavLink
+            key={link.to}
+            to={link.to}
+            end={link.end}
+            className={({ isActive }) => 
+              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 group relative ${
+                isActive 
+                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' 
+                  : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-100'
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <link.icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
+                {link.label}
+                {isActive && (
+                  <motion.div layoutId="sidebar-active" className="absolute left-0 w-1 h-6 bg-white rounded-r-full shadow-[0_0_8px_rgba(255,255,255,0.8)]"></motion.div>
+                )}
+              </>
+            )}
+          </NavLink>
+        ))}
+      </nav>
+
+      <div className="mt-auto space-y-4">
+        <div className="p-4 bg-white/[0.04] border border-white/5 rounded-2xl mx-1">
+           <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 font-bold text-lg shrink-0">
+                {user?.name ? user.name.substring(0, 1).toUpperCase() : 'S'}
+              </div>
+              <div className="min-w-0">
+                <p className="text-[14px] font-bold text-white truncate">{user?.name || 'shivaniiii'}</p>
+                <p className="text-[11px] text-slate-400 truncate mt-0.5">{user?.email || 'bonguukinguu@gmail.com'}</p>
+              </div>
+           </div>
+        </div>
+
+        <button 
+          onClick={logout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-white hover:bg-rose-500/10 transition-all group mt-2"
+        >
+          <LogOut className="w-5 h-5 group-hover:text-rose-400 transition-colors" />
+          Sign Out
+        </button>
+      </div>
+    </aside>
+  );
+};
+
+export default Sidebar;
